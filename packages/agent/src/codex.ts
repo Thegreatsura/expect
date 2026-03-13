@@ -17,24 +17,18 @@ export const createCodexModel = (settings: AgentProviderSettings = {}): Language
   supportedUrls: {},
 
   async doGenerate(options: LanguageModelV3CallOptions) {
-    const { userPrompt, systemPrompt } = convertPrompt(options.prompt);
-    const thread = createThread(settings);
-    const input = buildInput(userPrompt, systemPrompt);
-
+    const { thread, input, userPrompt } = prepareRun(settings, options);
     const result = await thread.run(input, { signal: options.abortSignal });
-    const content = result.items.flatMap(convertItem);
-
-    const usage = result.usage
-      ? {
-          inputTokens: { total: result.usage.input_tokens, noCache: undefined, cacheRead: result.usage.cached_input_tokens, cacheWrite: undefined },
-          outputTokens: { total: result.usage.output_tokens, text: undefined, reasoning: undefined },
-        }
-      : EMPTY_USAGE;
 
     return {
-      content,
+      content: result.items.flatMap(convertItem),
       finishReason: STOP_REASON,
-      usage,
+      usage: result.usage
+        ? {
+            inputTokens: { total: result.usage.input_tokens, noCache: undefined, cacheRead: result.usage.cached_input_tokens, cacheWrite: undefined },
+            outputTokens: { total: result.usage.output_tokens, text: undefined, reasoning: undefined },
+          }
+        : EMPTY_USAGE,
       warnings: [],
       request: { body: userPrompt },
       response: { id: thread.id ?? crypto.randomUUID(), timestamp: new Date(), modelId: "codex" },
@@ -43,9 +37,7 @@ export const createCodexModel = (settings: AgentProviderSettings = {}): Language
   },
 
   async doStream(options: LanguageModelV3CallOptions) {
-    const { userPrompt, systemPrompt } = convertPrompt(options.prompt);
-    const thread = createThread(settings);
-    const input = buildInput(userPrompt, systemPrompt);
+    const { thread, input, userPrompt } = prepareRun(settings, options);
     let sessionId: string | undefined;
 
     const stream = new ReadableStream<LanguageModelV3StreamPart>({
@@ -76,18 +68,20 @@ export const createCodexModel = (settings: AgentProviderSettings = {}): Language
   },
 });
 
-const createThread = (settings: AgentProviderSettings) => {
-  const codex = new Codex();
-  return settings.sessionId
+const prepareRun = (settings: AgentProviderSettings, options: LanguageModelV3CallOptions) => {
+  const { userPrompt, systemPrompt } = convertPrompt(options.prompt);
+  // HACK: Codex SDK config types only accept primitives, but mcp_servers needs nested objects
+  const codex = new Codex(settings.mcpServers
+    ? { config: { mcp_servers: JSON.parse(JSON.stringify(settings.mcpServers)) } }
+    : undefined);
+  const thread = settings.sessionId
     ? codex.resumeThread(settings.sessionId, { workingDirectory: settings.cwd })
     : codex.startThread({ workingDirectory: settings.cwd });
-};
+  const input: UserInput[] = systemPrompt
+    ? [{ type: "text", text: systemPrompt }, { type: "text", text: userPrompt }]
+    : [{ type: "text", text: userPrompt }];
 
-const buildInput = (userPrompt: string, systemPrompt: string): UserInput[] => {
-  const inputs: UserInput[] = [];
-  if (systemPrompt) inputs.push({ type: "text", text: systemPrompt });
-  inputs.push({ type: "text", text: userPrompt });
-  return inputs;
+  return { thread, input, userPrompt };
 };
 
 const convertItem = (item: ThreadItem): LanguageModelV3Content[] => {
@@ -95,28 +89,21 @@ const convertItem = (item: ThreadItem): LanguageModelV3Content[] => {
   if (item.type === "reasoning") return [{ type: "reasoning", text: item.text }];
 
   if (item.type === "command_execution") {
-    return toolPair(item.id, "exec", { command: item.command }, {
-      command: item.command, aggregatedOutput: item.aggregated_output, exitCode: item.exit_code, status: item.status,
-    }, item.status === "failed" || (item.exit_code !== undefined && item.exit_code !== 0));
+    const isError = item.status === "failed" || (item.exit_code !== undefined && item.exit_code !== 0);
+    return toolPair(item.id, "exec", { command: item.command }, { command: item.command, aggregatedOutput: item.aggregated_output, exitCode: item.exit_code, status: item.status }, isError);
   }
 
-  if (item.type === "file_change") {
-    return toolPair(item.id, "patch", { changes: item.changes }, { changes: item.changes, status: item.status }, item.status === "failed");
-  }
+  if (item.type === "file_change") return toolPair(item.id, "patch", { changes: item.changes }, { changes: item.changes, status: item.status }, item.status === "failed");
 
   if (item.type === "mcp_tool_call") {
-    return toolPair(item.id, `mcp__${item.server}__${item.tool}`, {
-      server: item.server, tool: item.tool, arguments: item.arguments,
-    }, {
+    return toolPair(item.id, `mcp__${item.server}__${item.tool}`, { server: item.server, tool: item.tool, arguments: item.arguments }, {
       server: item.server, tool: item.tool, status: item.status,
       ...(item.result ? { result: item.result } : {}),
       ...(item.error ? { error: item.error } : {}),
     }, item.status === "failed");
   }
 
-  if (item.type === "web_search") {
-    return toolPair(item.id, "web_search", { query: item.query }, { query: item.query }, false);
-  }
+  if (item.type === "web_search") return toolPair(item.id, "web_search", { query: item.query }, { query: item.query }, false);
 
   return [];
 };
@@ -150,13 +137,18 @@ const emitItemParts = (
     return;
   }
 
-  for (const part of convertItem(item)) {
-    if (part.type === "tool-call") {
-      controller.enqueue({ type: "tool-input-start", id: part.toolCallId, toolName: part.toolName, providerExecuted: true });
-      controller.enqueue({ type: "tool-input-delta", id: part.toolCallId, delta: part.input });
-      controller.enqueue({ type: "tool-input-end", id: part.toolCallId });
-      controller.enqueue(part);
-    }
-    if (part.type === "tool-result") controller.enqueue(part);
-  }
+  const toolCallId = item.id;
+  const converted = convertItem(item);
+  if (converted.length === 0) return;
+
+  const toolCall = converted[0];
+  if (toolCall.type !== "tool-call") return;
+
+  controller.enqueue({ type: "tool-input-start", id: toolCallId, toolName: toolCall.toolName, providerExecuted: true });
+  controller.enqueue({ type: "tool-input-delta", id: toolCallId, delta: toolCall.input });
+  controller.enqueue({ type: "tool-input-end", id: toolCallId });
+  controller.enqueue(toolCall);
+
+  const toolResult = converted[1];
+  if (toolResult?.type === "tool-result") controller.enqueue(toolResult);
 };

@@ -92,6 +92,7 @@ const buildQueryOptions = (settings: AgentProviderSettings, abortController: Abo
   ...(systemPrompt ? { appendSystemPrompt: systemPrompt } : {}),
   ...(settings.sessionId ? { resume: settings.sessionId } : {}),
   ...(settings.env ? { env: settings.env } : {}),
+  ...(settings.mcpServers ? { mcpServers: settings.mcpServers } : {}),
 });
 
 const extractSessionId = (event: Record<string, unknown>): string | undefined =>
