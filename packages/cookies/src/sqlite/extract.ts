@@ -27,6 +27,7 @@ export const extractCookies = async (options: ExtractOptions): Promise<ExtractRe
         names: options.names,
         includeExpired: options.includeExpired,
         timeoutMs: options.timeoutMs,
+        onKeychainAccess: options.onKeychainAccess,
       });
     }
     if (browser === "firefox") {

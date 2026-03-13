@@ -99,6 +99,7 @@ export const extractChromiumCookies = async (
     names?: string[];
     includeExpired?: boolean;
     timeoutMs?: number;
+    onKeychainAccess?: (browser: ChromiumBrowser) => void;
   } = {},
 ): Promise<ExtractResult> => {
   const warnings: string[] = [];
@@ -127,7 +128,7 @@ export const extractChromiumCookies = async (
     const metaVersion = await readMetaVersion(tempDatabasePath);
     const stripHashPrefix = metaVersion >= CHROMIUM_META_VERSION_HASH_PREFIX;
 
-    const decryptValue = buildDecryptor(browser, stripHashPrefix, options.timeoutMs, warnings);
+    const decryptValue = await buildDecryptor(browser, stripHashPrefix, options.timeoutMs, warnings, options.onKeychainAccess);
     if (!decryptValue) return { cookies: [], warnings };
 
     const sql =
@@ -189,15 +190,17 @@ export const extractChromiumCookies = async (
   }
 };
 
-const buildDecryptor = (
+const buildDecryptor = async (
   browser: ChromiumBrowser,
   stripHashPrefix: boolean,
   timeoutMs: number | undefined,
   warnings: string[],
-): ((encrypted: Uint8Array) => string | null) | null => {
+  onKeychainAccess?: (browser: ChromiumBrowser) => void | Promise<void>,
+): Promise<((encrypted: Uint8Array) => string | null) | null> => {
   const currentPlatform = platform();
 
   if (currentPlatform === "darwin") {
+    await onKeychainAccess?.(browser);
     const password = getKeychainPassword(browser, timeoutMs);
     if (!password) {
       warnings.push(`${browser}: keychain password not found`);
@@ -208,6 +211,7 @@ const buildDecryptor = (
   }
 
   if (currentPlatform === "linux") {
+    await onKeychainAccess?.(browser);
     const password = getLinuxPassword(browser, timeoutMs);
     const keys = new Set<string>([password, "peanuts", ""]);
     const candidates = Array.from(keys).map((key) => deriveKey(key, PBKDF2_ITERATIONS_LINUX));
@@ -215,6 +219,7 @@ const buildDecryptor = (
   }
 
   if (currentPlatform === "win32") {
+    await onKeychainAccess?.(browser);
     const masterKey = getWindowsMasterKey(browser, timeoutMs);
     if (!masterKey) {
       warnings.push(`${browser}: DPAPI master key not found`);

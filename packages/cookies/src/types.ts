@@ -42,6 +42,7 @@ export interface ExtractOptions {
   names?: string[];
   includeExpired?: boolean;
   timeoutMs?: number;
+  onKeychainAccess?: (browser: Browser) => void | Promise<void>;
 }
 
 export interface ExtractResult {

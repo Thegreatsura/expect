@@ -21,6 +21,10 @@ const { cookies, warnings } = await extractCookies({
   names: ["session"], // optional, filter by cookie name
   includeExpired: false, // optional, default false
   timeoutMs: 5000, // optional, keychain command timeout
+  onKeychainAccess: async (browser) => {
+    // optional, fires before keychain/DPAPI/secret-tool prompt
+    console.log(`Requesting credential access for ${browser}...`);
+  },
 });
 ```
 
@@ -115,6 +119,7 @@ interface ExtractOptions {
   names?: string[];
   includeExpired?: boolean;
   timeoutMs?: number;
+  onKeychainAccess?: (browser: Browser) => void | Promise<void>;
 }
 
 interface ExtractResult {

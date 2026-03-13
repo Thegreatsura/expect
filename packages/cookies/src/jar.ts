@@ -1,7 +1,7 @@
 import { getEpochSeconds } from "@browser-tester/utils";
 import { SESSION_EXPIRES } from "./constants.js";
 import type { Cookie, SameSitePolicy } from "./types.js";
-import { formatCookieHeader } from "./utils/format-cookie-header.js";
+import { toCookieHeader } from "./utils/format-cookie-header.js";
 import { hostMatchesCookieDomain } from "./utils/host-matching.js";
 
 export interface PlaywrightCookie {
@@ -62,7 +62,7 @@ export class CookieJar {
   }
 
   toCookieHeader(url: string): string {
-    return formatCookieHeader(this.match(url));
+    return toCookieHeader(this.match(url));
   }
 
   toPlaywright(): PlaywrightCookie[] {

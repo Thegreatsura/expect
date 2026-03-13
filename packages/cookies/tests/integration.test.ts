@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { extractCookies } from "../src/sqlite/extract.js";
 import { CookieJar } from "../src/jar.js";
-import { formatCookieHeader } from "../src/utils/format-cookie-header.js";
+import { toCookieHeader } from "../src/utils/format-cookie-header.js";
 
 const GOOGLE_URL = "https://google.com";
 
@@ -129,7 +129,7 @@ describe("toCookieHeader", () => {
     const result = await extractCookies({ url: GOOGLE_URL });
     if (result.cookies.length === 0) return;
 
-    const header = formatCookieHeader(result.cookies);
+    const header = toCookieHeader(result.cookies);
     expect(header.length).toBeGreaterThan(0);
     expect(header).not.toContain("\n");
 
