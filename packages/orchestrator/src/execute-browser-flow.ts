@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { LanguageModelV3, LanguageModelV3StreamPart } from "@ai-sdk/provider";
 import { createClaudeModel } from "@browser-tester/agent";
-import { DEFAULT_BROWSER_MCP_SERVER_NAME } from "./constants.js";
+import { BROWSER_TEST_MODEL, DEFAULT_BROWSER_MCP_SERVER_NAME } from "./constants.js";
 import { buildBrowserMcpSettings, resolveLiveChromeConnectionMode } from "./browser-mcp-config.js";
 import type {
   BrowserRunEvent,
@@ -68,17 +68,16 @@ const createExecutionModel = (
 ): LanguageModelV3 =>
   options.model ??
   createClaudeModel(
-    buildBrowserMcpSettings(
-      {
-        providerSettings: {
+    buildBrowserMcpSettings({
+      providerSettings: {
         cwd: options.target.cwd,
+        model: BROWSER_TEST_MODEL,
         ...(options.providerSettings ?? {}),
-        },
-        browserMcpServerName: options.browserMcpServerName,
-        environment: options.environment,
-        videoOutputPath: options.videoOutputPath,
       },
-    ),
+      browserMcpServerName: options.browserMcpServerName,
+      environment: options.environment,
+      videoOutputPath: options.videoOutputPath,
+    }),
   );
 
 const formatPlanSteps = (steps: PlanStep[]): string =>

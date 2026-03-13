@@ -1,3 +1,4 @@
+export const BROWSER_TEST_MODEL = "claude-sonnet-4-6";
 export const GIT_TIMEOUT_MS = 5000;
 export const RECENT_COMMIT_LIMIT = 10;
 export const CHANGED_FILE_LIMIT = 40;

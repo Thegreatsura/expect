@@ -76,7 +76,7 @@ export const createClaudeModel = (settings: AgentProviderSettings = {}): Languag
       response: {
         id: sessionId ?? crypto.randomUUID(),
         timestamp: new Date(),
-        modelId: "claude-opus-4-6",
+        modelId: settings.model ?? "claude-opus-4-6",
       },
       providerMetadata: sessionId ? { [PROVIDER_ID]: { sessionId } } : undefined,
     };
@@ -104,7 +104,7 @@ export const createClaudeModel = (settings: AgentProviderSettings = {}): Languag
                   type: "response-metadata",
                   id: eventSessionId,
                   timestamp: new Date(),
-                  modelId: "claude-opus-4-6",
+                  modelId: settings.model ?? "claude-opus-4-6",
                 });
               sessionId = eventSessionId;
             }
@@ -138,16 +138,18 @@ const buildQueryOptions = (
   abortController: AbortController,
   systemPrompt: string,
 ) => {
+  const resolvedModel = settings.model ?? "claude-opus-4-6";
+  const supportsEffort = !resolvedModel.toLowerCase().includes("sonnet");
   const explicitExecutablePath = resolveClaudeExecutablePath();
   const queryOptions = {
-    model: "claude-opus-4-6",
+    model: resolvedModel,
     maxTurns: settings.maxTurns ?? DEFAULT_CLAUDE_MAX_TURNS,
     cwd: settings.cwd ?? process.cwd(),
     allowDangerouslySkipPermissions:
       settings.permissionMode === "bypassPermissions" ? true : undefined,
     permissionMode: settings.permissionMode ?? "bypassPermissions",
     abortController,
-    ...(settings.effort ? { effort: settings.effort } : {}),
+    ...(settings.effort && supportsEffort ? { effort: settings.effort } : {}),
     ...(systemPrompt ? { appendSystemPrompt: systemPrompt } : {}),
     ...(settings.sessionId ? { resume: settings.sessionId } : {}),
     ...(settings.env ? { env: settings.env } : {}),

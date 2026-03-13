@@ -2,6 +2,7 @@ import type { LanguageModelV3 } from "@ai-sdk/provider";
 import { createClaudeModel } from "@browser-tester/agent";
 import { z } from "zod";
 import {
+  BROWSER_TEST_MODEL,
   PLANNER_CHANGED_FILE_LIMIT,
   PLANNER_MAX_STEP_COUNT,
   PLANNER_MODEL_EFFORT,
@@ -47,6 +48,7 @@ const createPlannerModel = (
     cwd: options.target.cwd,
     effort: PLANNER_MODEL_EFFORT,
     maxTurns: PLANNER_MAX_TURNS,
+    model: BROWSER_TEST_MODEL,
     permissionMode: "plan",
     tools: [],
     ...(options.providerSettings ?? {}),

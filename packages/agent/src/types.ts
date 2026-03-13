@@ -15,6 +15,7 @@ export type AgentEffort = "low" | "medium" | "high" | "max";
 
 export interface AgentProviderSettings {
   cwd?: string;
+  model?: string;
   sessionId?: string;
   env?: Record<string, string>;
   mcpServers?: Record<string, McpServerConfig>;
