@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type {
   LanguageModelV3,
@@ -18,7 +21,19 @@ import {
 } from "./provider-shared.js";
 import type { AgentProviderSettings } from "./types.js";
 
-const CLAUDE_MAX_TURNS = 200;
+const DEFAULT_CLAUDE_MAX_TURNS = 200;
+
+const resolveClaudeExecutablePath = (): string | undefined => {
+  const require = createRequire(import.meta.url);
+
+  try {
+    const sdkEntryPath = require.resolve("@anthropic-ai/claude-agent-sdk");
+    const sdkCliPath = join(dirname(sdkEntryPath), "cli.js");
+    return existsSync(sdkCliPath) ? sdkCliPath : undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 export const createClaudeModel = (settings: AgentProviderSettings = {}): LanguageModelV3 => ({
   specificationVersion: "v3",
@@ -31,6 +46,7 @@ export const createClaudeModel = (settings: AgentProviderSettings = {}): Languag
     const abortController = createLinkedAbortController(options.abortSignal);
     const content: LanguageModelV3Content[] = [];
     let sessionId: string | undefined;
+    let finalResultText = "";
 
     for await (const event of query({
       prompt: userPrompt,
@@ -41,6 +57,14 @@ export const createClaudeModel = (settings: AgentProviderSettings = {}): Languag
         content.push(...convertAssistantBlocks(event.message.content));
       if (event.type === "user" && Array.isArray(event.message.content))
         content.push(...convertToolResultBlocks(event.message.content));
+      if (event.type === "result" && "result" in event && typeof event.result === "string") {
+        finalResultText = event.result;
+      }
+    }
+
+    if (settings.permissionMode === "plan" && finalResultText) {
+      content.length = 0;
+      content.push({ type: "text", text: finalResultText });
     }
 
     return {
@@ -113,16 +137,24 @@ const buildQueryOptions = (
   settings: AgentProviderSettings,
   abortController: AbortController,
   systemPrompt: string,
-) => ({
-  model: "claude-opus-4-6",
-  effort: "max" as const,
-  maxTurns: CLAUDE_MAX_TURNS,
-  cwd: settings.cwd ?? process.cwd(),
-  allowDangerouslySkipPermissions: true,
-  permissionMode: "bypassPermissions" as const,
-  abortController,
-  ...(systemPrompt ? { appendSystemPrompt: systemPrompt } : {}),
-  ...(settings.sessionId ? { resume: settings.sessionId } : {}),
-  ...(settings.env ? { env: settings.env } : {}),
-  ...(settings.mcpServers ? { mcpServers: settings.mcpServers } : {}),
-});
+) => {
+  const explicitExecutablePath = resolveClaudeExecutablePath();
+  const queryOptions = {
+    model: "claude-opus-4-6",
+    maxTurns: settings.maxTurns ?? DEFAULT_CLAUDE_MAX_TURNS,
+    cwd: settings.cwd ?? process.cwd(),
+    allowDangerouslySkipPermissions:
+      settings.permissionMode === "bypassPermissions" ? true : undefined,
+    permissionMode: settings.permissionMode ?? "bypassPermissions",
+    abortController,
+    ...(settings.effort ? { effort: settings.effort } : {}),
+    ...(systemPrompt ? { appendSystemPrompt: systemPrompt } : {}),
+    ...(settings.sessionId ? { resume: settings.sessionId } : {}),
+    ...(settings.env ? { env: settings.env } : {}),
+    ...(settings.mcpServers ? { mcpServers: settings.mcpServers } : {}),
+    ...(explicitExecutablePath ? { pathToClaudeCodeExecutable: explicitExecutablePath } : {}),
+    ...(settings.tools !== undefined ? { tools: settings.tools } : {}),
+  };
+
+  return queryOptions;
+};

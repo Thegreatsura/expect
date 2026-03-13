@@ -1,9 +1,18 @@
 import type { LanguageModelV3 } from "@ai-sdk/provider";
 import { createClaudeModel } from "@browser-tester/agent";
 import { z } from "zod";
-import { PLANNER_MAX_STEP_COUNT, STEP_ID_PAD_LENGTH } from "./constants.js";
+import {
+  PLANNER_CHANGED_FILE_LIMIT,
+  PLANNER_MAX_STEP_COUNT,
+  PLANNER_MODEL_EFFORT,
+  PLANNER_MAX_TURNS,
+  PLANNER_RECENT_COMMIT_LIMIT,
+  STEP_ID_PAD_LENGTH,
+} from "./constants.js";
 import { extractJsonObject } from "./json.js";
 import type { BrowserFlowPlan, PlanBrowserFlowOptions, PlanStep, TestTarget } from "./types.js";
+import { buildPlanningDiffPreview } from "./utils/build-planning-diff-preview.js";
+import { prioritizePlanningFiles } from "./utils/prioritize-planning-files.js";
 
 const planStepSchema = z.object({
   id: z.string().optional(),
@@ -30,6 +39,10 @@ const createPlannerModel = (
   options.model ??
   createClaudeModel({
     cwd: options.target.cwd,
+    effort: PLANNER_MODEL_EFFORT,
+    maxTurns: PLANNER_MAX_TURNS,
+    permissionMode: "plan",
+    tools: [],
     ...(options.providerSettings ?? {}),
   });
 
@@ -38,18 +51,23 @@ const formatDiffStats = (target: TestTarget): string =>
     ? `${target.diffStats.filesChanged} files changed, +${target.diffStats.additions} / -${target.diffStats.deletions}`
     : "No diff stats available";
 
-const formatChangedFiles = (target: TestTarget): string =>
-  target.changedFiles.length > 0
-    ? target.changedFiles.map((file) => `- [${file.status}] ${file.path}`).join("\n")
+const formatChangedFiles = (changedFiles: TestTarget["changedFiles"]): string =>
+  changedFiles.length > 0
+    ? changedFiles.map((file) => `- [${file.status}] ${file.path}`).join("\n")
     : "- No changed files detected";
 
 const formatRecentCommits = (target: TestTarget): string =>
   target.recentCommits.length > 0
-    ? target.recentCommits.map((commit) => `- ${commit.shortHash} ${commit.subject}`).join("\n")
+    ? target.recentCommits
+        .slice(0, PLANNER_RECENT_COMMIT_LIMIT)
+        .map((commit) => `- ${commit.shortHash} ${commit.subject}`)
+        .join("\n")
     : "- No recent commits available";
 
 const buildPlanningPrompt = (options: PlanBrowserFlowOptions): string => {
   const { target, userInstruction, environment } = options;
+  const prioritizedFiles = prioritizePlanningFiles(target.changedFiles);
+  const displayedFiles = prioritizedFiles.slice(0, PLANNER_CHANGED_FILE_LIMIT);
 
   return [
     "You are planning a browser-based regression test flow for a developer.",
@@ -63,13 +81,13 @@ const buildPlanningPrompt = (options: PlanBrowserFlowOptions): string => {
     `- Diff stats: ${formatDiffStats(target)}`,
     "",
     "Changed files:",
-    formatChangedFiles(target),
+    formatChangedFiles(displayedFiles),
     "",
     "Recent commits:",
     formatRecentCommits(target),
     "",
     "Diff preview:",
-    target.diffPreview || "No diff preview available",
+    buildPlanningDiffPreview(target.diffPreview, displayedFiles),
     "",
     "User-requested browser journey:",
     userInstruction,
@@ -98,7 +116,9 @@ const normalizeSteps = (steps: z.infer<typeof planStepSchema>[]): PlanStep[] =>
     id: step.id || `step-${String(index + 1).padStart(STEP_ID_PAD_LENGTH, "0")}`,
   }));
 
-export const planBrowserFlow = async (options: PlanBrowserFlowOptions): Promise<BrowserFlowPlan> => {
+export const planBrowserFlow = async (
+  options: PlanBrowserFlowOptions,
+): Promise<BrowserFlowPlan> => {
   const prompt = buildPlanningPrompt(options);
   const model = createPlannerModel(options);
   const response = await model.doGenerate({

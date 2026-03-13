@@ -33,8 +33,10 @@ interface ExecuteApprovedPlanOptions {
 const parseBooleanEnvironmentValue = (value: string | undefined): boolean | undefined => {
   if (!value) return undefined;
   const normalizedValue = value.trim().toLowerCase();
-  if (normalizedValue === "true" || normalizedValue === "1" || normalizedValue === "yes") return true;
-  if (normalizedValue === "false" || normalizedValue === "0" || normalizedValue === "no") return false;
+  if (normalizedValue === "true" || normalizedValue === "1" || normalizedValue === "yes")
+    return true;
+  if (normalizedValue === "false" || normalizedValue === "0" || normalizedValue === "no")
+    return false;
   return undefined;
 };
 
