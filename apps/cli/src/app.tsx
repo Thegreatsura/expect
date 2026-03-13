@@ -291,46 +291,44 @@ export const App = () => {
 
   return (
     <Box flexDirection="column" width="100%" paddingX={2} paddingY={1}>
-      <Text color={COLORS.DIM}>browser-tester v{VERSION}</Text>
       <Box
         flexDirection="column"
-        borderStyle="round"
+        borderStyle="double"
         borderColor={COLORS.BORDER}
         paddingX={2}
         paddingY={1}
       >
-        <ColoredLogo />
+        <Box flexDirection="row" justifyContent="space-between">
+          <Text color="white" bold>browser-tester</Text>
+          <Text color={COLORS.DIM}>v{VERSION}</Text>
+        </Box>
+
+        <Text color={COLORS.DIM}>═══════════════════════════════════════</Text>
+
         <Box marginTop={1}>
-          <Text color={COLORS.TEXT}>AI-powered browser testing for your changes</Text>
+          <ColoredLogo />
+        </Box>
+        <Text color={COLORS.TEXT}>AI-powered browser testing for your changes</Text>
+
+        <Text color={COLORS.DIM}>───────────────────────────────────────</Text>
+
+        <Box flexDirection="column" marginTop={1} gap={1}>
+          {menuOptions.map((option, index) => (
+            <MenuItem
+              key={option.label}
+              label={option.label}
+              detail={option.detail}
+              isSelected={index === selectedIndex}
+              recommended={index === 0 && menuOptions.length > 1}
+            />
+          ))}
         </Box>
       </Box>
 
-      <Box flexDirection="column" marginTop={2} gap={1}>
-        {menuOptions.map((option, index) => (
-          <MenuItem
-            key={option.label}
-            label={option.label}
-            detail={option.detail}
-            isSelected={index === selectedIndex}
-            recommended={index === 0 && menuOptions.length > 1}
-          />
-        ))}
-      </Box>
-
-      <Box
-        marginTop={2}
-        borderStyle="single"
-        borderTop
-        borderBottom={false}
-        borderLeft={false}
-        borderRight={false}
-        borderColor={COLORS.DIVIDER}
-      />
-
-      <Box flexDirection="row" justifyContent="space-between" width="100%">
+      <Box flexDirection="row" justifyContent="space-between" width="100%" marginTop={1}>
         <Text color={COLORS.DIM}>
-          ↑/↓ navigate · <Text color={COLORS.TEXT}>[b]</Text> switch branch
-          <Text color={COLORS.TEXT}> {gitState.currentBranch}</Text>
+          <Text color={COLORS.CYAN}>↑↓</Text> navigate · <Text color={COLORS.CYAN}>[b]</Text> branch
+          <Text color={COLORS.AMBER}> {gitState.currentBranch}</Text>
           {menuOptions[selectedIndex]?.action === "test-unstaged" && gitState.diffStats ? (
             <>
               <Text color={COLORS.DIM}> · </Text>
@@ -341,9 +339,9 @@ export const App = () => {
             </>
           ) : null}
         </Text>
-        <Text color={autoRunAfterPlanning ? COLORS.YELLOW : COLORS.DIM}>
-          Auto run after planning: {autoRunAfterPlanning ? "On" : "Off"}
-          <Text color={COLORS.DIM}> (tab)</Text>
+        <Text color={autoRunAfterPlanning ? COLORS.AMBER : COLORS.DIM}>
+          auto-run: {autoRunAfterPlanning ? "ON" : "OFF"}
+          <Text color={COLORS.DIM}> <Text color={COLORS.CYAN}>[tab]</Text></Text>
         </Text>
       </Box>
     </Box>

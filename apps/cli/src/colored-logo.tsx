@@ -1,27 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Text } from "ink";
-import { COLORS } from "./constants.js";
 
-const RESOLVE_MS = 5;
-const SHIMMER_INTERVAL_MS = 15;
-const THINKING_CHARS = ["◇", "◆", "◇", "◆"];
+const CAROUSEL_INTERVAL_MS = 600;
+const VISIBLE_COUNT = 10;
 
 type Result = "pass" | "fail" | "skip";
-type Cell = Result | null | "empty";
-type SlotState = "idle" | "thinking" | "resolved";
-
-const GRID_COLUMNS = 4;
-const GRID: Cell[] = [
-  "empty", null,   "fail", "empty",
-  "skip",  "pass", null,   "fail",
-  "empty", "fail", "pass", "empty",
-];
-
-const THINK_DURATION_MS: Record<Result, number> = {
-  pass: 20,
-  fail: 40,
-  skip: 15,
-};
 
 const RESULT_ICON: Record<Result, string> = {
   pass: "✓",
@@ -29,108 +12,51 @@ const RESULT_ICON: Record<Result, string> = {
   skip: "–",
 };
 
-const COLOR_SHADES: Record<Result, string[]> = {
-  pass: ["#2ecc71", "#34d058", "#43e067"],
-  fail: ["#ff3b30", "#e8362c", "#ff5147"],
-  skip: ["#e5c07b", "#d4b06a", "#f0cb86"],
+const RESULT_COLOR: Record<Result, string> = {
+  pass: "greenBright",
+  fail: "redBright",
+  skip: "yellowBright",
 };
 
-const getColorForIndex = (cell: Result, index: number): string =>
-  COLOR_SHADES[cell][index % COLOR_SHADES[cell].length];
+const WEIGHTS: [Result, number][] = [
+  ["pass", 6],
+  ["fail", 2],
+  ["skip", 1],
+];
 
-const findNextResultIndex = (from: number): number => {
-  for (let index = from; index < GRID.length; index++) {
-    if (GRID[index] !== null && GRID[index] !== "empty") return index;
+const TOTAL_WEIGHT = WEIGHTS.reduce((sum, [, weight]) => sum + weight, 0);
+
+const randomResult = (): Result => {
+  let roll = Math.random() * TOTAL_WEIGHT;
+  for (const [result, weight] of WEIGHTS) {
+    roll -= weight;
+    if (roll <= 0) return result;
   }
-  return GRID.length;
+  return "pass";
 };
+
+const createInitialCells = (): Result[] =>
+  Array.from({ length: VISIBLE_COUNT }, () => randomResult());
 
 export const ColoredLogo = () => {
-  const [activeIndex, setActiveIndex] = useState(() => findNextResultIndex(0));
-  const [slotState, setSlotState] = useState<SlotState>("thinking");
-  const [shimmerFrame, setShimmerFrame] = useState(0);
+  const [cells, setCells] = useState(createInitialCells);
+  const nextCellRef = useRef<Result>(randomResult());
 
   useEffect(() => {
-    if (activeIndex >= GRID.length) return;
-    if (slotState !== "thinking") return;
-
     const timer = setInterval(() => {
-      setShimmerFrame((previous) => (previous + 1) % THINKING_CHARS.length);
-    }, SHIMMER_INTERVAL_MS);
+      setCells((previous) => [...previous.slice(1), nextCellRef.current]);
+      nextCellRef.current = randomResult();
+    }, CAROUSEL_INTERVAL_MS);
 
     return () => clearInterval(timer);
-  }, [activeIndex, slotState]);
-
-  useEffect(() => {
-    if (activeIndex >= GRID.length) return;
-    const cell = GRID[activeIndex];
-    if (cell === null || cell === "empty") return;
-
-    if (slotState === "thinking") {
-      const base = THINK_DURATION_MS[cell];
-      const jitter = base * 0.4 * (Math.random() - 0.5);
-      const timer = setTimeout(() => setSlotState("resolved"), base + jitter);
-      return () => clearTimeout(timer);
-    }
-
-    if (slotState === "resolved") {
-      const timer = setTimeout(() => {
-        setActiveIndex(findNextResultIndex(activeIndex + 1));
-        setSlotState("thinking");
-        setShimmerFrame(0);
-      }, RESOLVE_MS);
-      return () => clearTimeout(timer);
-    }
-  }, [activeIndex, slotState]);
-
-  const rows = Array.from({ length: Math.ceil(GRID.length / GRID_COLUMNS) }, (_, rowIndex) =>
-    GRID.slice(rowIndex * GRID_COLUMNS, (rowIndex + 1) * GRID_COLUMNS),
-  );
+  }, []);
 
   return (
-    <Box flexDirection="column">
-      {rows.map((row, rowIndex) => (
-        <Box key={rowIndex} flexDirection="row" gap={1}>
-          {row.map((cell, colIndex) => {
-            const index = rowIndex * GRID_COLUMNS + colIndex;
-
-            if (cell === "empty") {
-              return <Text key={index}> </Text>;
-            }
-
-            if (cell === null) {
-              return (
-                <Text key={index} color={COLORS.DIM}>
-                  ·
-                </Text>
-              );
-            }
-
-            const done = activeIndex >= GRID.length;
-
-            if (done || index < activeIndex) {
-              return (
-                <Text key={index} color={getColorForIndex(cell, index)}>
-                  {RESULT_ICON[cell]}
-                </Text>
-              );
-            }
-
-            if (index === activeIndex && slotState === "thinking") {
-              return (
-                <Text key={index} color={getColorForIndex(cell, index)}>
-                  {THINKING_CHARS[shimmerFrame]}
-                </Text>
-              );
-            }
-
-            return (
-              <Text key={index} color={COLORS.DIM}>
-                ·
-              </Text>
-            );
-          })}
-        </Box>
+    <Box flexDirection="row" gap={1}>
+      {cells.map((cell, index) => (
+        <Text key={index} color={RESULT_COLOR[cell]}>
+          {RESULT_ICON[cell]}
+        </Text>
       ))}
     </Box>
   );

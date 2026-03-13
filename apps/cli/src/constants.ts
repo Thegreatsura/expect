@@ -10,7 +10,7 @@ export const AUTOMATED_ENVIRONMENT_VARIABLES = [
   "AMI",
 ];
 
-export const SELECTED_INDICATOR = "➤";
+export const SELECTED_INDICATOR = "►";
 
 export const SEARCH_PLACEHOLDER = "Search ...";
 
@@ -29,13 +29,15 @@ export const FLOW_DIRECTORY_INDEX_FILE_NAME = "directory.md";
 export const FLOW_DESCRIPTION_CHAR_LIMIT = 120;
 
 export const COLORS = {
-  TEXT: "#cccccc",
-  DIM: "#666666",
-  GREEN: "#34d058",
-  SELECTION: "#a0aeef",
-  RED: "#ff3b30",
-  BORDER: "#555555",
-  DIVIDER: "#444444",
-  YELLOW: "#e5c07b",
-  PURPLE: "#c678dd",
+  TEXT: "white",
+  DIM: "gray",
+  GREEN: "greenBright",
+  SELECTION: "cyanBright",
+  RED: "redBright",
+  BORDER: "gray",
+  DIVIDER: "gray",
+  YELLOW: "yellowBright",
+  PURPLE: "magentaBright",
+  CYAN: "cyanBright",
+  AMBER: "yellowBright",
 } as const;
