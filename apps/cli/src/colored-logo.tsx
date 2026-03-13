@@ -2,25 +2,28 @@ import { useEffect, useState } from "react";
 import { Box, Text } from "ink";
 import { COLORS } from "./constants.js";
 
-const RESOLVE_MS = 15;
-const SHIMMER_INTERVAL_MS = 25;
+const RESOLVE_MS = 5;
+const SHIMMER_INTERVAL_MS = 15;
 const THINKING_CHARS = ["◇", "◆", "◇", "◆"];
 
 type Result = "pass" | "fail" | "skip";
 type Cell = Result | null | "empty";
 type SlotState = "idle" | "thinking" | "resolved";
 
-const GRID_COLUMNS = 8;
+const GRID_COLUMNS = 10;
 const GRID: Cell[] = [
-  "pass", "fail", null,   "empty", "empty", null,   "skip", "skip",
-  "pass", null,   "fail", "pass",  "fail",  "skip", null,   "pass",
-  null,   "pass", "empty","empty", "empty", "empty","fail", "pass",
+  "fail",  "skip",  "pass",  "empty", "empty", "empty", "empty", "empty", "empty", "empty",
+  "pass",  "pass",  "pass",  "fail",  "pass",  "skip",  "pass",  "pass",  "pass",  "pass",
+  "pass",  null,    null,    null,    null,    null,    null,    null,    null,    "skip",
+  "fail",  null,    null,    null,    null,    null,    null,    null,    null,    "pass",
+  "skip",  null,    null,    null,    null,    null,    null,    null,    null,    "fail",
+  "pass",  "pass",  "pass",  "pass",  "skip",  "fail",  "pass",  "pass",  "pass",  "pass",
 ];
 
 const THINK_DURATION_MS: Record<Result, number> = {
-  pass: 60,
-  fail: 130,
-  skip: 35,
+  pass: 20,
+  fail: 40,
+  skip: 15,
 };
 
 const RESULT_ICON: Record<Result, string> = {
