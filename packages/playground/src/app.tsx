@@ -35,6 +35,14 @@ export const App = () => {
     setTasks((previous) => previous.filter((task) => task.id !== id));
   };
 
+  const duplicateTask = (id: number) => {
+    setTasks((previous) => {
+      const task = previous.find((task) => task.id === id);
+      if (!task) return previous;
+      return [...previous, { ...task, id: Date.now() }];
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="mx-auto max-w-2xl space-y-8">
@@ -90,9 +98,14 @@ export const App = () => {
                     <span className="text-sm">{task.title}</span>
                     <Badge variant={STATUS_VARIANT[task.status]}>{task.status}</Badge>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => removeTask(task.id)}>
-                    Remove
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => duplicateTask(task.id)}>
+                      Duplicate
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => removeTask(task.id)}>
+                      Remove
+                    </Button>
+                  </div>
                 </li>
               ))}
               {tasks.length === 0 && (
