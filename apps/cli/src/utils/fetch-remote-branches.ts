@@ -8,10 +8,7 @@ export interface RemoteBranch {
   prStatus: "open" | "draft" | "merged" | null;
 }
 
-const normalizePrStatus = (
-  state: string,
-  isDraft: boolean,
-): "open" | "draft" | "merged" => {
+const normalizePrStatus = (state: string, isDraft: boolean): "open" | "draft" | "merged" => {
   if (state === "MERGED") return "merged";
   if (isDraft) return "draft";
   return "open";
@@ -56,9 +53,7 @@ export const fetchRemoteBranches = async (): Promise<RemoteBranch[]> => {
   }
 
   try {
-    const refOutput = await execAsync(
-      "git branch -r --format='%(refname:short)' | grep -v HEAD",
-    );
+    const refOutput = await execAsync("git branch -r --format='%(refname:short)' | grep -v HEAD");
 
     if (!refOutput) return [];
 

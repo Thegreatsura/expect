@@ -45,8 +45,7 @@ interface PupilTarget {
   z: number;
 }
 
-const lerp = (from: number, to: number, factor: number): number =>
-  from + (to - from) * factor;
+const lerp = (from: number, to: number, factor: number): number => from + (to - from) * factor;
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
@@ -76,7 +75,8 @@ const renderEye = (pupil: PupilTarget, offsetX: number, grid: Cell[][], zBuffer:
       const screenX = Math.round(pointX * depth * SCALE_X + eyeCenterX);
       const screenY = Math.round(pointY * depth * SCALE_Y + eyeCenterY);
 
-      if (screenY < 0 || screenY >= RENDER_HEIGHT || screenX < 0 || screenX >= RENDER_WIDTH) continue;
+      if (screenY < 0 || screenY >= RENDER_HEIGHT || screenX < 0 || screenX >= RENDER_WIDTH)
+        continue;
       if (depth <= zBuffer[screenY][screenX]) continue;
 
       const distanceToPupil = Math.sqrt(
@@ -96,7 +96,9 @@ const renderEye = (pupil: PupilTarget, offsetX: number, grid: Cell[][], zBuffer:
       const secondaryGlintX = pupil.x + SECONDARY_GLINT_OFFSET_X;
       const secondaryGlintY = pupil.y + SECONDARY_GLINT_OFFSET_Y;
       const distanceToSecondaryGlint = Math.sqrt(
-        (normalX - secondaryGlintX) ** 2 + (normalY - secondaryGlintY) ** 2 + (normalZ - pupil.z) ** 2,
+        (normalX - secondaryGlintX) ** 2 +
+          (normalY - secondaryGlintY) ** 2 +
+          (normalZ - pupil.z) ** 2,
       );
 
       if (distanceToGlint < GLINT_RADIUS) {
@@ -113,7 +115,10 @@ const renderEye = (pupil: PupilTarget, offsetX: number, grid: Cell[][], zBuffer:
         zone = "iris";
       } else {
         const luminance = normalX * 0.2 + normalY * 0.6 - normalZ * 0.5;
-        const shadingIndex = Math.max(0, Math.min(SHADING.length - 1, Math.round((luminance + 1) / 2 * (SHADING.length - 1))));
+        const shadingIndex = Math.max(
+          0,
+          Math.min(SHADING.length - 1, Math.round(((luminance + 1) / 2) * (SHADING.length - 1))),
+        );
         char = SHADING[shadingIndex];
         zone = "sclera";
       }
@@ -200,12 +205,17 @@ export const ColoredLogo = () => {
         <Text key={rowIndex}>
           {row.map((cell, colIndex) => {
             const color =
-              cell.zone === "pupil" ? "#222222"
-                : cell.zone === "iris" ? COLORS.TEXT
-                  : cell.zone === "sclera" ? COLORS.DIM
+              cell.zone === "pupil"
+                ? "#222222"
+                : cell.zone === "iris"
+                  ? COLORS.TEXT
+                  : cell.zone === "sclera"
+                    ? COLORS.DIM
                     : undefined;
             return (
-              <Text key={colIndex} color={color}>{cell.char}</Text>
+              <Text key={colIndex} color={color}>
+                {cell.char}
+              </Text>
             );
           })}
         </Text>

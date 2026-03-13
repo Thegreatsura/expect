@@ -8,13 +8,25 @@ vi.mock("@openai/codex-sdk", () => ({
   Codex: class {
     startThread = () => ({
       id: "thread-from-sdk",
-      run: async () => ({ items: pendingItems, usage: { input_tokens: 100, cached_input_tokens: 50, output_tokens: 30 }, finalResponse: "" }),
-      runStreamed: async () => ({ events: (async function* () { for (const event of pendingEvents) yield event; })() }),
+      run: async () => ({
+        items: pendingItems,
+        usage: { input_tokens: 100, cached_input_tokens: 50, output_tokens: 30 },
+        finalResponse: "",
+      }),
+      runStreamed: async () => ({
+        events: (async function* () {
+          for (const event of pendingEvents) yield event;
+        })(),
+      }),
     });
     resumeThread = (_threadId: string) => ({
       id: _threadId,
       run: async () => ({ items: pendingItems, usage: null, finalResponse: "" }),
-      runStreamed: async () => ({ events: (async function* () { for (const event of pendingEvents) yield event; })() }),
+      runStreamed: async () => ({
+        events: (async function* () {
+          for (const event of pendingEvents) yield event;
+        })(),
+      }),
     });
   },
 }));
@@ -32,7 +44,9 @@ const generateWith = (items: Record<string, unknown>[]) => {
   return createCodexModel().doGenerate(defaultOptions);
 };
 
-const streamWith = async (events: Record<string, unknown>[]): Promise<LanguageModelV3StreamPart[]> => {
+const streamWith = async (
+  events: Record<string, unknown>[],
+): Promise<LanguageModelV3StreamPart[]> => {
   pendingEvents = events;
   const { stream } = await createCodexModel().doStream(defaultOptions);
   const parts: LanguageModelV3StreamPart[] = [];
@@ -53,37 +67,69 @@ describe("createCodexModel", () => {
     });
 
     it("converts reasoning", async () => {
-      const { content } = await generateWith([{ id: "i0", type: "reasoning", text: "thinking..." }]);
+      const { content } = await generateWith([
+        { id: "i0", type: "reasoning", text: "thinking..." },
+      ]);
       expect(content).toEqual([{ type: "reasoning", text: "thinking..." }]);
     });
 
     it("converts command_execution to tool-call + tool-result", async () => {
-      const { content } = await generateWith([{
-        id: "i1", type: "command_execution", command: "ls", aggregated_output: "file.ts", exit_code: 0, status: "completed",
-      }]);
+      const { content } = await generateWith([
+        {
+          id: "i1",
+          type: "command_execution",
+          command: "ls",
+          aggregated_output: "file.ts",
+          exit_code: 0,
+          status: "completed",
+        },
+      ]);
       expect(content).toHaveLength(2);
-      expect(content[0]).toMatchObject({ type: "tool-call", toolName: "exec", providerExecuted: true });
+      expect(content[0]).toMatchObject({
+        type: "tool-call",
+        toolName: "exec",
+        providerExecuted: true,
+      });
       expect(content[1]).toMatchObject({ type: "tool-result", toolCallId: "i1", isError: false });
     });
 
     it("marks failed commands as isError", async () => {
-      const { content } = await generateWith([{
-        id: "i1", type: "command_execution", command: "false", aggregated_output: "", exit_code: 1, status: "failed",
-      }]);
+      const { content } = await generateWith([
+        {
+          id: "i1",
+          type: "command_execution",
+          command: "false",
+          aggregated_output: "",
+          exit_code: 1,
+          status: "failed",
+        },
+      ]);
       expect(content[1]).toMatchObject({ type: "tool-result", isError: true });
     });
 
     it("converts file_change to patch tool", async () => {
-      const { content } = await generateWith([{
-        id: "fc1", type: "file_change", changes: [{ path: "a.ts", kind: "update" }], status: "completed",
-      }]);
+      const { content } = await generateWith([
+        {
+          id: "fc1",
+          type: "file_change",
+          changes: [{ path: "a.ts", kind: "update" }],
+          status: "completed",
+        },
+      ]);
       expect(content[0]).toMatchObject({ type: "tool-call", toolName: "patch" });
     });
 
     it("converts mcp_tool_call with mcp__server__tool naming", async () => {
-      const { content } = await generateWith([{
-        id: "mcp1", type: "mcp_tool_call", server: "fs", tool: "read", arguments: {}, status: "completed",
-      }]);
+      const { content } = await generateWith([
+        {
+          id: "mcp1",
+          type: "mcp_tool_call",
+          server: "fs",
+          tool: "read",
+          arguments: {},
+          status: "completed",
+        },
+      ]);
       expect(content[0]).toMatchObject({ type: "tool-call", toolName: "mcp__fs__read" });
     });
 
@@ -101,13 +147,17 @@ describe("createCodexModel", () => {
 
     it("exposes sessionId in providerMetadata", async () => {
       const result = await generateWith([{ id: "i0", type: "agent_message", text: "Hi" }]);
-      expect(result.providerMetadata?.["browser-tester-agent"]).toEqual({ sessionId: "thread-from-sdk" });
+      expect(result.providerMetadata?.["browser-tester-agent"]).toEqual({
+        sessionId: "thread-from-sdk",
+      });
     });
   });
 
   describe("doStream", () => {
     it("emits text parts for agent_message", async () => {
-      const parts = await streamWith([completedItem({ id: "i0", type: "agent_message", text: "Hello" })]);
+      const parts = await streamWith([
+        completedItem({ id: "i0", type: "agent_message", text: "Hello" }),
+      ]);
       const types = parts.map((part) => part.type);
       expect(types).toContain("text-start");
       expect(types).toContain("text-delta");
@@ -123,9 +173,16 @@ describe("createCodexModel", () => {
     });
 
     it("emits tool-call + tool-result for command_execution", async () => {
-      const parts = await streamWith([completedItem({
-        id: "i1", type: "command_execution", command: "ls", aggregated_output: "out", exit_code: 0, status: "completed",
-      })]);
+      const parts = await streamWith([
+        completedItem({
+          id: "i1",
+          type: "command_execution",
+          command: "ls",
+          aggregated_output: "out",
+          exit_code: 0,
+          status: "completed",
+        }),
+      ]);
       expect(parts.some((part) => part.type === "tool-call")).toBe(true);
       expect(parts.some((part) => part.type === "tool-result")).toBe(true);
     });
@@ -143,17 +200,30 @@ describe("createCodexModel", () => {
       const parts = await streamWith([
         { type: "thread.started", thread_id: "t1" },
         { type: "turn.started" },
-        { type: "item.started", item: { id: "i1", type: "command_execution", status: "in_progress" } },
-        { type: "turn.completed", usage: { input_tokens: 100, cached_input_tokens: 0, output_tokens: 50 } },
+        {
+          type: "item.started",
+          item: { id: "i1", type: "command_execution", status: "in_progress" },
+        },
+        {
+          type: "turn.completed",
+          usage: { input_tokens: 100, cached_input_tokens: 0, output_tokens: 50 },
+        },
       ]);
-      const contentTypes = parts.map((part) => part.type).filter(
-        (partType) => partType !== "finish" && partType !== "stream-start" && partType !== "response-metadata",
-      );
+      const contentTypes = parts
+        .map((part) => part.type)
+        .filter(
+          (partType) =>
+            partType !== "finish" &&
+            partType !== "stream-start" &&
+            partType !== "response-metadata",
+        );
       expect(contentTypes).toEqual([]);
     });
 
     it("ends with finish part", async () => {
-      const parts = await streamWith([completedItem({ id: "i0", type: "agent_message", text: "Hi" })]);
+      const parts = await streamWith([
+        completedItem({ id: "i0", type: "agent_message", text: "Hi" }),
+      ]);
       const last = parts[parts.length - 1];
       expect(last.type).toBe("finish");
     });

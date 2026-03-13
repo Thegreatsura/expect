@@ -65,7 +65,10 @@ export const CommitPickerScreen = ({ onSelect }: CommitPickerScreenProps) => {
 
       <Box flexDirection="column" marginTop={1}>
         {filteredCommits.map((commit, index) => (
-          <Text key={commit.hash} color={index === highlightedIndex ? COLORS.SELECTION : COLORS.TEXT}>
+          <Text
+            key={commit.hash}
+            color={index === highlightedIndex ? COLORS.SELECTION : COLORS.TEXT}
+          >
             {index === highlightedIndex ? "➤ " : "  "}
             <Text color={COLORS.YELLOW}>{commit.shortHash.padEnd(maxHashWidth)}</Text>
             <Text color={index === highlightedIndex ? COLORS.SELECTION : COLORS.TEXT}>
@@ -86,9 +89,7 @@ export const CommitPickerScreen = ({ onSelect }: CommitPickerScreenProps) => {
         />
       </Box>
 
-      <Text color={COLORS.DIM}>
-        ↑/↓ navigate · Enter select · Esc back
-      </Text>
+      <Text color={COLORS.DIM}>↑/↓ navigate · Enter select · Esc back</Text>
     </Box>
   );
 };

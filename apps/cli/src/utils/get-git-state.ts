@@ -105,7 +105,14 @@ export const getGitState = (): GitState => {
     }
   }
 
-  return { currentBranch, isOnMain, hasUnstagedChanges, hasBranchCommits, diffStats, branchDiffStats };
+  return {
+    currentBranch,
+    isOnMain,
+    hasUnstagedChanges,
+    hasBranchCommits,
+    diffStats,
+    branchDiffStats,
+  };
 };
 
 export const getRecommendedScope = (gitState: GitState): TestScope => {

@@ -23,9 +23,7 @@ const PrBadge = ({ branch }: { branch: RemoteBranch }) => {
   } as const;
 
   return (
-    <Text color={colorMap[branch.prStatus]}>
-      {` PR #${branch.prNumber} (${branch.prStatus})`}
-    </Text>
+    <Text color={colorMap[branch.prStatus]}>{` PR #${branch.prNumber} (${branch.prStatus})`}</Text>
   );
 };
 
@@ -71,12 +69,14 @@ export const BranchSwitcherScreen = ({ onSelect }: BranchSwitcherScreenProps) =>
   }, [remoteBranches, searchQuery, activeFilter]);
 
   const maxBranchWidth = useMemo(
-    () => Math.max(...filteredRemoteBranches.map((branch) => branch.name.length), 0) + COLUMN_PADDING,
+    () =>
+      Math.max(...filteredRemoteBranches.map((branch) => branch.name.length), 0) + COLUMN_PADDING,
     [filteredRemoteBranches],
   );
 
   const maxAuthorWidth = useMemo(
-    () => Math.max(...filteredRemoteBranches.map((branch) => branch.author.length), 0) + COLUMN_PADDING,
+    () =>
+      Math.max(...filteredRemoteBranches.map((branch) => branch.author.length), 0) + COLUMN_PADDING,
     [filteredRemoteBranches],
   );
 
@@ -105,7 +105,9 @@ export const BranchSwitcherScreen = ({ onSelect }: BranchSwitcherScreenProps) =>
 
     if (key.downArrow || (key.ctrl && input === "n")) {
       const max =
-        activeTab === "local" ? filteredLocalBranches.length - 1 : filteredRemoteBranches.length - 1;
+        activeTab === "local"
+          ? filteredLocalBranches.length - 1
+          : filteredRemoteBranches.length - 1;
       setHighlightedIndex((previous) => Math.min(max, previous + 1));
     }
     if (key.upArrow || (key.ctrl && input === "p")) {
@@ -132,15 +134,19 @@ export const BranchSwitcherScreen = ({ onSelect }: BranchSwitcherScreenProps) =>
   return (
     <Box flexDirection="column" width="100%" paddingX={2} paddingY={1}>
       <Box flexDirection="row" gap={2}>
-        <Text color={activeTab === "local" ? COLORS.SELECTION : COLORS.DIM} bold={activeTab === "local"}>
+        <Text
+          color={activeTab === "local" ? COLORS.SELECTION : COLORS.DIM}
+          bold={activeTab === "local"}
+        >
           {activeTab === "local" ? "[Local]" : " Local "}
         </Text>
-        <Text color={activeTab === "remote" ? COLORS.SELECTION : COLORS.DIM} bold={activeTab === "remote"}>
+        <Text
+          color={activeTab === "remote" ? COLORS.SELECTION : COLORS.DIM}
+          bold={activeTab === "remote"}
+        >
           {activeTab === "remote" ? "[Remote]" : " Remote "}
         </Text>
-        {activeTab === "local" && (
-          <Text color={COLORS.DIM}>({filteredLocalBranches.length})</Text>
-        )}
+        {activeTab === "local" && <Text color={COLORS.DIM}>({filteredLocalBranches.length})</Text>}
       </Box>
 
       <Box
@@ -164,14 +170,20 @@ export const BranchSwitcherScreen = ({ onSelect }: BranchSwitcherScreenProps) =>
           <Box flexDirection="column" marginTop={activeTab === "remote" ? 1 : 0}>
             {activeTab === "local" &&
               filteredLocalBranches.map((branch, index) => (
-                <Text key={branch} color={index === highlightedIndex ? COLORS.SELECTION : COLORS.TEXT}>
+                <Text
+                  key={branch}
+                  color={index === highlightedIndex ? COLORS.SELECTION : COLORS.TEXT}
+                >
                   {index === highlightedIndex ? `➤ ${branch}` : `  ${branch}`}
                 </Text>
               ))}
 
             {activeTab === "remote" &&
               filteredRemoteBranches.map((branch, index) => (
-                <Text key={branch.name} color={index === highlightedIndex ? COLORS.SELECTION : COLORS.TEXT}>
+                <Text
+                  key={branch.name}
+                  color={index === highlightedIndex ? COLORS.SELECTION : COLORS.TEXT}
+                >
                   {index === highlightedIndex ? "➤ " : "  "}
                   {branch.name.padEnd(maxBranchWidth)}
                   {branch.author && (

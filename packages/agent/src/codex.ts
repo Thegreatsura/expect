@@ -25,8 +25,17 @@ export const createCodexModel = (settings: AgentProviderSettings = {}): Language
       finishReason: STOP_REASON,
       usage: result.usage
         ? {
-            inputTokens: { total: result.usage.input_tokens, noCache: undefined, cacheRead: result.usage.cached_input_tokens, cacheWrite: undefined },
-            outputTokens: { total: result.usage.output_tokens, text: undefined, reasoning: undefined },
+            inputTokens: {
+              total: result.usage.input_tokens,
+              noCache: undefined,
+              cacheRead: result.usage.cached_input_tokens,
+              cacheWrite: undefined,
+            },
+            outputTokens: {
+              total: result.usage.output_tokens,
+              text: undefined,
+              reasoning: undefined,
+            },
           }
         : EMPTY_USAGE,
       warnings: [],
@@ -49,13 +58,23 @@ export const createCodexModel = (settings: AgentProviderSettings = {}): Language
           for await (const event of events) {
             if (event.type === "thread.started") {
               sessionId = event.thread_id;
-              controller.enqueue({ type: "response-metadata", id: sessionId, timestamp: new Date(), modelId: "codex" });
+              controller.enqueue({
+                type: "response-metadata",
+                id: sessionId,
+                timestamp: new Date(),
+                modelId: "codex",
+              });
             }
             if (event.type === "item.completed") emitItemParts(event.item, controller);
           }
 
           if (!sessionId && thread.id) sessionId = thread.id;
-          controller.enqueue({ type: "finish", finishReason: STOP_REASON, usage: EMPTY_USAGE, providerMetadata: sessionId ? { [PROVIDER_ID]: { sessionId } } : undefined });
+          controller.enqueue({
+            type: "finish",
+            finishReason: STOP_REASON,
+            usage: EMPTY_USAGE,
+            providerMetadata: sessionId ? { [PROVIDER_ID]: { sessionId } } : undefined,
+          });
         } catch (error) {
           controller.enqueue({ type: "error", error });
         } finally {
@@ -71,14 +90,19 @@ export const createCodexModel = (settings: AgentProviderSettings = {}): Language
 const prepareRun = (settings: AgentProviderSettings, options: LanguageModelV3CallOptions) => {
   const { userPrompt, systemPrompt } = convertPrompt(options.prompt);
   // HACK: Codex SDK config types only accept primitives, but mcp_servers needs nested objects
-  const codex = new Codex(settings.mcpServers
-    ? { config: { mcp_servers: JSON.parse(JSON.stringify(settings.mcpServers)) } }
-    : undefined);
+  const codex = new Codex(
+    settings.mcpServers
+      ? { config: { mcp_servers: JSON.parse(JSON.stringify(settings.mcpServers)) } }
+      : undefined,
+  );
   const thread = settings.sessionId
     ? codex.resumeThread(settings.sessionId, { workingDirectory: settings.cwd })
     : codex.startThread({ workingDirectory: settings.cwd });
   const input: UserInput[] = systemPrompt
-    ? [{ type: "text", text: systemPrompt }, { type: "text", text: userPrompt }]
+    ? [
+        { type: "text", text: systemPrompt },
+        { type: "text", text: userPrompt },
+      ]
     : [{ type: "text", text: userPrompt }];
 
   return { thread, input, userPrompt };
@@ -89,21 +113,49 @@ const convertItem = (item: ThreadItem): LanguageModelV3Content[] => {
   if (item.type === "reasoning") return [{ type: "reasoning", text: item.text }];
 
   if (item.type === "command_execution") {
-    const isError = item.status === "failed" || (item.exit_code !== undefined && item.exit_code !== 0);
-    return toolPair(item.id, "exec", { command: item.command }, { command: item.command, aggregatedOutput: item.aggregated_output, exitCode: item.exit_code, status: item.status }, isError);
+    const isError =
+      item.status === "failed" || (item.exit_code !== undefined && item.exit_code !== 0);
+    return toolPair(
+      item.id,
+      "exec",
+      { command: item.command },
+      {
+        command: item.command,
+        aggregatedOutput: item.aggregated_output,
+        exitCode: item.exit_code,
+        status: item.status,
+      },
+      isError,
+    );
   }
 
-  if (item.type === "file_change") return toolPair(item.id, "patch", { changes: item.changes }, { changes: item.changes, status: item.status }, item.status === "failed");
+  if (item.type === "file_change")
+    return toolPair(
+      item.id,
+      "patch",
+      { changes: item.changes },
+      { changes: item.changes, status: item.status },
+      item.status === "failed",
+    );
 
   if (item.type === "mcp_tool_call") {
-    return toolPair(item.id, `mcp__${item.server}__${item.tool}`, { server: item.server, tool: item.tool, arguments: item.arguments }, {
-      server: item.server, tool: item.tool, status: item.status,
-      ...(item.result ? { result: item.result } : {}),
-      ...(item.error ? { error: item.error } : {}),
-    }, item.status === "failed");
+    return toolPair(
+      item.id,
+      `mcp__${item.server}__${item.tool}`,
+      { server: item.server, tool: item.tool, arguments: item.arguments },
+      {
+        server: item.server,
+        tool: item.tool,
+        status: item.status,
+        ...(item.result ? { result: item.result } : {}),
+        ...(item.error ? { error: item.error } : {}),
+      },
+      item.status === "failed",
+    );
   }
 
-  if (item.type === "web_search") return toolPair(item.id, "web_search", { query: item.query }, { query: item.query }, false);
+  if (item.type === "web_search")
+    return toolPair(item.id, "web_search", { query: item.query }, { query: item.query }, false);
 
   return [];
 };
@@ -144,7 +196,12 @@ const emitItemParts = (
   const toolCall = converted[0];
   if (toolCall.type !== "tool-call") return;
 
-  controller.enqueue({ type: "tool-input-start", id: toolCallId, toolName: toolCall.toolName, providerExecuted: true });
+  controller.enqueue({
+    type: "tool-input-start",
+    id: toolCallId,
+    toolName: toolCall.toolName,
+    providerExecuted: true,
+  });
   controller.enqueue({ type: "tool-input-delta", id: toolCallId, delta: toolCall.input });
   controller.enqueue({ type: "tool-input-end", id: toolCallId });
   controller.enqueue(toolCall);

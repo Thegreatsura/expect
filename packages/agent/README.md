@@ -45,9 +45,9 @@ Both `createClaudeModel` and `createCodexModel` accept the same settings:
 
 ```ts
 interface AgentProviderSettings {
-  cwd?: string;                    // working directory (default: process.cwd())
-  sessionId?: string;              // resume a previous session
-  env?: Record<string, string>;    // environment variables for the agent
+  cwd?: string; // working directory (default: process.cwd())
+  sessionId?: string; // resume a previous session
+  env?: Record<string, string>; // environment variables for the agent
 }
 ```
 
@@ -67,12 +67,12 @@ await generateText({ model: resumed, prompt: "Now fix the bug you found" });
 
 Both providers implement `LanguageModelV3` with `doGenerate` (non-streaming) and `doStream` (streaming). The agent SDKs execute tools autonomously — tool calls and results are emitted as `tool-call` and `tool-result` content with `providerExecuted: true`.
 
-| SDK event | AI SDK content |
-|-----------|---------------|
-| Text | `text` |
-| Thinking | `reasoning` |
-| Tool use (Bash, Read, etc.) | `tool-call` + `tool-result` |
-| Command execution | `tool-call("exec")` + `tool-result` |
-| File change | `tool-call("patch")` + `tool-result` |
-| MCP tool call | `tool-call("mcp__server__tool")` + `tool-result` |
-| Web search | `tool-call("web_search")` + `tool-result` |
+| SDK event                   | AI SDK content                                   |
+| --------------------------- | ------------------------------------------------ |
+| Text                        | `text`                                           |
+| Thinking                    | `reasoning`                                      |
+| Tool use (Bash, Read, etc.) | `tool-call` + `tool-result`                      |
+| Command execution           | `tool-call("exec")` + `tool-result`              |
+| File change                 | `tool-call("patch")` + `tool-result`             |
+| MCP tool call               | `tool-call("mcp__server__tool")` + `tool-result` |
+| Web search                  | `tool-call("web_search")` + `tool-result`        |
