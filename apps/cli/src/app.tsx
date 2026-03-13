@@ -26,6 +26,7 @@ import { switchBranch } from "./utils/switch-branch.js";
 import type { Commit } from "./utils/fetch-commits.js";
 import { generateBrowserPlan, type TestAction } from "./utils/browser-agent.js";
 import { saveFlow } from "./utils/save-flow.js";
+import { BROWSER_FRAME_WIDTH } from "./constants.js";
 
 type Screen =
   | "main"
@@ -313,47 +314,45 @@ export const App = () => {
   return (
     <Box flexDirection="column" width="100%" paddingX={1} paddingY={1}>
       {(() => {
-        const width = stdout.columns - 2;
-        const stops = [theme.primary, theme.secondary];
-        const gradientColors: string[] = [];
-        for (let index = 0; index < width; index++) {
-          const progress = index / Math.max(width - 1, 1);
-          const scaledPosition = progress * (stops.length - 1);
-          const segmentIndex = Math.min(Math.floor(scaledPosition), stops.length - 2);
-          const segmentProgress = scaledPosition - segmentIndex;
-          const fromHex = stops[segmentIndex];
-          const toHex = stops[segmentIndex + 1];
-          const fromRgb = [
-            parseInt(fromHex.slice(1, 3), 16),
-            parseInt(fromHex.slice(3, 5), 16),
-            parseInt(fromHex.slice(5, 7), 16),
-          ];
-          const toRgb = [
-            parseInt(toHex.slice(1, 3), 16),
-            parseInt(toHex.slice(3, 5), 16),
-            parseInt(toHex.slice(5, 7), 16),
-          ];
-          const red = Math.round(fromRgb[0] + (toRgb[0] - fromRgb[0]) * segmentProgress);
-          const green = Math.round(fromRgb[1] + (toRgb[1] - fromRgb[1]) * segmentProgress);
-          const blue = Math.round(fromRgb[2] + (toRgb[2] - fromRgb[2]) * segmentProgress);
-          gradientColors.push(
-            `#${red.toString(16).padStart(2, "0")}${green.toString(16).padStart(2, "0")}${blue.toString(16).padStart(2, "0")}`,
-          );
-        }
+        const inner = BROWSER_FRAME_WIDTH - 2;
+        const dots = "● ● ●";
+        const title = " browser-tester";
         return (
-          <Text>
-            {gradientColors.map((color, index) => (
-              <Text key={index} color={color}>
-                ─
+          <>
+            <Text color={COLORS.DIM}>
+              {"╭"}
+              {"─".repeat(inner)}
+              {"╮"}
+            </Text>
+            <Text color={COLORS.DIM}>
+              {"│ "}
+              <Text color={COLORS.ORANGE}>{"● "}</Text>
+              <Text color={COLORS.PURPLE}>{"● "}</Text>
+              <Text color={COLORS.DIM}>{"●"}</Text>
+              {" ".repeat(inner - dots.length - 1)}
+              {"│"}
+            </Text>
+            <Text color={COLORS.DIM}>
+              {"│"}
+              {" ".repeat(inner)}
+              {"│"}
+            </Text>
+            <Text color={COLORS.DIM}>
+              {"│"}
+              <Text bold color={COLORS.TEXT || undefined}>
+                {title}
               </Text>
-            ))}
-          </Text>
+              {" ".repeat(inner - title.length)}
+              {"│"}
+            </Text>
+            <Text color={COLORS.DIM}>
+              {"╰"}
+              {"─".repeat(inner)}
+              {"╯"}
+            </Text>
+          </>
         );
       })()}
-      <Text bold color={COLORS.TEXT || undefined}>
-        browser-tester
-      </Text>
-      <Text color={COLORS.DIM}>AI-powered browser testing</Text>
 
       <Box marginTop={2} flexDirection="column">
         <Text bold color={COLORS.TEXT || undefined}>

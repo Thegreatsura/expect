@@ -28,3 +28,4 @@ export const FLOW_DIRECTORY_NAME = "flows";
 export const FLOW_DIRECTORY_INDEX_FILE_NAME = "directory.md";
 export const FLOW_DESCRIPTION_CHAR_LIMIT = 120;
 export const THEME_PICKER_VISIBLE_COUNT = 20;
+export const BROWSER_FRAME_WIDTH = 32;
