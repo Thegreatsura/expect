@@ -123,25 +123,13 @@ export const Modeline = () => {
     .map((action) => ` ${action.key} ${action.label} `)
     .join(" ");
   const actionWidth = actions.length > 0 ? stringWidth(actionPills) : 0;
-  const leftWidth = stringWidth(branchLabel) + stringWidth(keybindText);
-  const ctaCenter = Math.floor(columns / 2);
-  const ctaStart = ctaCenter - Math.floor(actionWidth / 2);
-  const leftGap = Math.max(0, ctaStart - leftWidth - 1);
-  const rightGap = Math.max(0, columns - leftWidth - leftGap - actionWidth - 2);
+  const rightWidth = stringWidth(branchLabel) + stringWidth(keybindText);
+  const gap = Math.max(0, columns - actionWidth - rightWidth - 2);
 
   return (
     <Box flexDirection="column">
       <Text color={theme.border}>{"─".repeat(columns)}</Text>
       <Box paddingX={1}>
-        <Text color={theme.textMuted}>{branchLabel}</Text>
-        {keybinds.length > 0 ? (
-          <HintBar
-            segments={keybinds}
-            color={theme.primary}
-            mutedColor={theme.textMuted}
-          />
-        ) : null}
-        <Text>{" ".repeat(leftGap)}</Text>
         {actions.map((action, index) => (
           <Text key={action.key + action.label}>
             {index > 0 ? " " : ""}
@@ -155,7 +143,15 @@ export const Modeline = () => {
             </Text>
           </Text>
         ))}
-        <Text>{" ".repeat(rightGap)}</Text>
+        <Text>{" ".repeat(gap)}</Text>
+        {keybinds.length > 0 ? (
+          <HintBar
+            segments={keybinds}
+            color={theme.primary}
+            mutedColor={theme.textMuted}
+          />
+        ) : null}
+        <Text color={theme.textMuted}>{branchLabel}</Text>
       </Box>
     </Box>
   );
