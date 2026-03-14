@@ -17,6 +17,7 @@ const ACTION_LABELS: Record<TestAction, string> = {
 export const FlowInputScreen = () => {
   const COLORS = useColors();
   const testAction = useAppStore((state) => state.testAction);
+  const selectedCommit = useAppStore((state) => state.selectedCommit);
   const flowInstruction = useAppStore((state) => state.flowInstruction);
   const submitFlowInstruction = useAppStore(
     (state) => state.submitFlowInstruction
@@ -41,6 +42,19 @@ export const FlowInputScreen = () => {
   return (
     <Box flexDirection="column" width="100%" paddingX={1} paddingY={1}>
       <ScreenHeading title={ACTION_LABELS[testAction]} />
+
+      {selectedCommit ? (
+        <Box
+          marginTop={1}
+          borderStyle="round"
+          borderColor={COLORS.BORDER}
+          paddingX={2}
+        >
+          <Text color={COLORS.PURPLE}>{selectedCommit.shortHash}</Text>
+          <Text color={COLORS.DIM}> </Text>
+          <Text color={COLORS.TEXT}>{selectedCommit.subject}</Text>
+        </Box>
+      ) : null}
 
       <Box
         marginTop={1}
