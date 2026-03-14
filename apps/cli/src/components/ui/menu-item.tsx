@@ -27,16 +27,16 @@ export const MenuItem = ({
       <Text>
         <Text color={COLORS.ORANGE}>{figures.pointer} </Text>
         <Text backgroundColor={COLORS.ORANGE} color="#000000" bold>
-        {" "}{label}
-        {diffStats ? (
-          <Text backgroundColor={COLORS.ORANGE} color="#000000">
-            {" "}
-            +{diffStats.additions} -{diffStats.deletions}
-          </Text>
-        ) : null}
-        {recommended ? " (recommended)" : ""}
-        {hint ? ` (${hint})` : ""}
-        {" "}
+          {" "}
+          {label}
+          {diffStats ? (
+            <Text backgroundColor={COLORS.ORANGE} color="#000000">
+              {" "}
+              +{diffStats.additions} -{diffStats.deletions}
+            </Text>
+          ) : null}
+          {recommended ? " (recommended)" : ""}
+          {hint ? ` (${hint})` : ""}{" "}
         </Text>
       </Text>
     );

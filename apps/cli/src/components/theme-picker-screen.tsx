@@ -133,7 +133,6 @@ export const ThemePickerScreen = () => {
           );
         })}
       </Box>
-
     </Box>
   );
 };

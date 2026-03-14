@@ -16,12 +16,19 @@ import type { BrowserFlowPlan, PlanBrowserFlowOptions, PlanStep, TestTarget } fr
 import { buildPlanningDiffPreview } from "./utils/build-planning-diff-preview.js";
 import { prioritizePlanningFiles } from "./utils/prioritize-planning-files.js";
 
+const nullableOptionalString = z
+  .string()
+  .min(1)
+  .nullable()
+  .optional()
+  .transform((value) => value ?? undefined);
+
 const planStepSchema = z.object({
-  id: z.string().optional(),
+  id: nullableOptionalString,
   title: z.string().min(1),
   instruction: z.string().min(1),
   expectedOutcome: z.string().min(1),
-  routeHint: z.string().min(1).optional(),
+  routeHint: nullableOptionalString,
   changedFileEvidence: z.array(z.string().min(1)).default([]),
 });
 

@@ -19,19 +19,8 @@ const MouseContext = createContext<MouseContextValue | null>(null);
 
 const MOUSE_ENABLE = "\u001b[?1000h\u001b[?1006h";
 const MOUSE_DISABLE = "\u001b[?1000l\u001b[?1006l";
-const CLICK_PATTERN = /\[<0;(\d+);(\d+)([Mm])$/;
-
-const parseClickEvent = (
-  input: string,
-): { x: number; y: number; action: MouseClickAction } | null => {
-  const match = CLICK_PATTERN.exec(input);
-  if (!match) return null;
-  return {
-    x: Number(match[1]),
-    y: Number(match[2]),
-    action: match[3] === "M" ? "press" : "release",
-  };
-};
+// oxlint-disable-next-line no-control-regex
+const SGR_MOUSE_SEQUENCE = /\x1b\[<(\d+);(\d+);(\d+)([Mm])/g;
 
 export const MouseProvider = ({ children }: { children: React.ReactNode }) => {
   const handlersRef = useRef(new Set<ClickHandler>());
@@ -39,20 +28,32 @@ export const MouseProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     process.stdout.write(MOUSE_ENABLE);
 
-    const onData = (data: Buffer | string) => {
-      const text = typeof data === "string" ? data : data.toString();
-      const result = parseClickEvent(text);
-      if (!result) return;
+    // HACK: override emit so SGR mouse sequences are stripped before ink's useInput sees them
+    const originalEmit = process.stdin.emit.bind(process.stdin);
+    process.stdin.emit = function (event: string | symbol, ...eventArgs: unknown[]) {
+      if (event === "data") {
+        const text = typeof eventArgs[0] === "string" ? eventArgs[0] : String(eventArgs[0]);
 
-      for (const handler of handlersRef.current) {
-        handler({ x: result.x, y: result.y }, result.action);
+        for (const match of text.matchAll(SGR_MOUSE_SEQUENCE)) {
+          if (match[1] === "0") {
+            for (const handler of handlersRef.current) {
+              handler(
+                { x: Number(match[2]), y: Number(match[3]) },
+                match[4] === "M" ? "press" : "release",
+              );
+            }
+          }
+        }
+
+        const cleaned = text.replace(SGR_MOUSE_SEQUENCE, "");
+        if (cleaned.length === 0) return true;
+        return originalEmit(event, cleaned);
       }
+      return originalEmit(event, ...eventArgs);
     };
 
-    process.stdin.on("data", onData);
-
     return () => {
-      process.stdin.off("data", onData);
+      process.stdin.emit = originalEmit;
       process.stdout.write(MOUSE_DISABLE);
     };
   }, []);

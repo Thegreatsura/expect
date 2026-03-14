@@ -6,11 +6,7 @@ import { useColors } from "./theme-context.js";
 import { Clickable } from "./ui/clickable.js";
 import { MenuItem } from "./ui/menu-item.js";
 import type { DiffStats } from "@browser-tester/supervisor";
-import {
-  getRecommendedScope,
-  type GitState,
-  type TestScope,
-} from "../utils/get-git-state.js";
+import { getRecommendedScope, type GitState, type TestScope } from "../utils/get-git-state.js";
 import {
   BROWSER_FRAME_BODY_HEIGHT,
   FRAME_CONTENT_PADDING,
@@ -27,10 +23,7 @@ interface ScopeMenuOption {
   diffStats?: DiffStats | null;
 }
 
-const buildMenuOptions = (
-  scope: TestScope,
-  gitState: GitState
-): ScopeMenuOption[] => {
+const buildMenuOptions = (scope: TestScope, gitState: GitState): ScopeMenuOption[] => {
   const options: ScopeMenuOption[] = [];
 
   if (scope === "unstaged-changes") {
@@ -44,9 +37,7 @@ const buildMenuOptions = (
 
   if (
     scope === "entire-branch" ||
-    (scope === "unstaged-changes" &&
-      !gitState.isOnMain &&
-      gitState.hasBranchCommits)
+    (scope === "unstaged-changes" && !gitState.isOnMain && gitState.hasBranchCommits)
   ) {
     options.push({
       label: "Test entire branch",
@@ -67,9 +58,7 @@ const buildMenuOptions = (
 export const MainMenu = () => {
   const COLORS = useColors();
   const gitState = useAppStore((state) => state.gitState);
-  const autoRunAfterPlanning = useAppStore(
-    (state) => state.autoRunAfterPlanning
-  );
+  const autoRunAfterPlanning = useAppStore((state) => state.autoRunAfterPlanning);
   const savedFlowSummaries = useAppStore((state) => state.savedFlowSummaries);
   const selectAction = useAppStore((state) => state.selectAction);
   const beginSavedFlowReuse = useAppStore((state) => state.beginSavedFlowReuse);
@@ -82,8 +71,7 @@ export const MainMenu = () => {
   const recommendedScope = getRecommendedScope(gitState);
   const menuOptions = buildMenuOptions(recommendedScope, gitState);
   const selectedOption = menuOptions[selectedIndex] ?? null;
-  const canReuseSavedFlow =
-    savedFlowSummaries.length > 0 && Boolean(selectedOption);
+  const canReuseSavedFlow = savedFlowSummaries.length > 0 && Boolean(selectedOption);
 
   const activateOption = useCallback(
     (option: ScopeMenuOption) => {
@@ -93,7 +81,7 @@ export const MainMenu = () => {
         selectAction(option.action);
       }
     },
-    [navigateTo, selectAction]
+    [navigateTo, selectAction],
   );
 
   const totalItems = menuOptions.length + 1;
@@ -116,10 +104,7 @@ export const MainMenu = () => {
     }
 
     if (input === "r" && canReuseSavedFlow && selectedOption) {
-      if (
-        selectedOption.action === "test-unstaged" ||
-        selectedOption.action === "test-branch"
-      ) {
+      if (selectedOption.action === "test-unstaged" || selectedOption.action === "test-branch") {
         beginSavedFlowReuse(selectedOption.action);
       }
 
@@ -141,10 +126,8 @@ export const MainMenu = () => {
   const titleLabel = "browser-tester";
 
   const inner =
-    Math.max(
-      titleLabel.length + 4,
-      stringWidth(dots) + FRAME_DOTS_TRAILING_GAP
-    ) + FRAME_CONTENT_PADDING;
+    Math.max(titleLabel.length + 4, stringWidth(dots) + FRAME_DOTS_TRAILING_GAP) +
+    FRAME_CONTENT_PADDING;
 
   const emptyRow = " ".repeat(inner);
   const topRows = Math.floor((BROWSER_FRAME_BODY_HEIGHT - 1) / 2);

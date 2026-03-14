@@ -34,11 +34,14 @@ const renderApp = () => {
   const initialTheme = loadThemeName() ?? undefined;
   process.stdout.write(ALT_SCREEN_ON);
   process.on("exit", () => process.stdout.write(ALT_SCREEN_OFF));
-  render(
+  const instance = render(
     <ThemeProvider initialTheme={initialTheme}>
       <App />
     </ThemeProvider>,
   );
+  process.stdout.on("resize", () => {
+    instance.clear();
+  });
 };
 
 const resolveInitialScreen = (
