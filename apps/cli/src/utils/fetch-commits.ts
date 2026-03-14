@@ -1,10 +1,9 @@
 import { execSync } from "child_process";
-import { COMMIT_LIMIT, GIT_TIMEOUT_MS } from "../constants.js";
+import type { CommitSummary } from "@browser-tester/supervisor";
+import { GIT_TIMEOUT_MS } from "@browser-tester/supervisor";
+import { COMMIT_LIMIT } from "../constants.js";
 
-export interface Commit {
-  hash: string;
-  shortHash: string;
-  subject: string;
+export interface Commit extends CommitSummary {
   author: string;
   relativeDate: string;
 }

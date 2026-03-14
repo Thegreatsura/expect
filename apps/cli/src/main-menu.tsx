@@ -2,12 +2,8 @@ import { useState } from "react";
 import { Box, Text, useInput, useStdout } from "ink";
 import { useColors, useThemeContext } from "./theme-context.js";
 import { MenuItem } from "./menu-item.js";
-import {
-  getRecommendedScope,
-  type DiffStats,
-  type GitState,
-  type TestScope,
-} from "./utils/get-git-state.js";
+import type { DiffStats } from "@browser-tester/supervisor";
+import { getRecommendedScope, type GitState, type TestScope } from "./utils/get-git-state.js";
 import {
   FRAME_CONTENT_PADDING,
   FRAME_TITLE_DECORATION_WIDTH,

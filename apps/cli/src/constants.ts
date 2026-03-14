@@ -12,7 +12,6 @@ export const AUTOMATED_ENVIRONMENT_VARIABLES = [
 
 export const SEARCH_PLACEHOLDER = "Search ...";
 
-export const GIT_TIMEOUT_MS = 5000;
 export const GH_TIMEOUT_MS = 15000;
 export const SWITCH_BRANCH_TIMEOUT_MS = 10000;
 export const COMMIT_LIMIT = 50;

@@ -1,6 +1,6 @@
 import { Text } from "ink";
 import { useColors } from "./theme-context.js";
-import type { DiffStats } from "./utils/get-git-state.js";
+import type { DiffStats } from "@browser-tester/supervisor";
 
 interface MenuItemProps {
   label: string;
