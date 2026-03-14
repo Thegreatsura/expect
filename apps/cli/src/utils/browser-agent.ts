@@ -6,9 +6,9 @@ import {
   type BrowserFlowPlan,
   type BrowserRunEvent,
   type TestTarget,
-} from "@browser-tester/orchestrator";
+} from "@browser-tester/supervisor";
 import type { Commit } from "./fetch-commits.js";
-import type { TestTargetSelection } from "@browser-tester/orchestrator";
+import type { TestTargetSelection } from "@browser-tester/supervisor";
 
 export type TestAction = "test-unstaged" | "test-branch" | "select-commit";
 

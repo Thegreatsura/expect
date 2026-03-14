@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Text, useInput } from "ink";
-import type { BrowserRunEvent } from "@browser-tester/orchestrator";
+import type { BrowserRunEvent } from "@browser-tester/supervisor";
 import { TESTING_TOOL_TEXT_CHAR_LIMIT, TESTING_VISIBLE_LOG_COUNT } from "./constants.js";
 import { useColors, type Colors } from "./theme-context.js";
 import { Spinner } from "./spinner.js";

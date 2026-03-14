@@ -1,5 +1,5 @@
 {
-  "name": "@browser-tester/orchestrator",
+  "name": "@browser-tester/supervisor",
   "version": "0.0.1",
   "private": true,
   "files": [

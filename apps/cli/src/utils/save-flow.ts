@@ -4,7 +4,7 @@ import type {
   BrowserEnvironmentHints,
   BrowserFlowPlan,
   TestTarget,
-} from "@browser-tester/orchestrator";
+} from "@browser-tester/supervisor";
 import {
   FLOW_DESCRIPTION_CHAR_LIMIT,
   FLOW_DIRECTORY_INDEX_FILE_NAME,

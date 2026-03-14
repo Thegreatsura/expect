@@ -1,4 +1,4 @@
-import type { BrowserRunEvent } from "@browser-tester/orchestrator";
+import type { BrowserRunEvent } from "@browser-tester/supervisor";
 import { TESTING_SELECT_TRUNCATION_LIMIT } from "../constants.js";
 import { truncateText } from "./truncate-text.js";
 

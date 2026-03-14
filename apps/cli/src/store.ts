@@ -3,7 +3,7 @@ import type {
   BrowserEnvironmentHints,
   BrowserFlowPlan,
   TestTarget,
-} from "@browser-tester/orchestrator";
+} from "@browser-tester/supervisor";
 import type { Commit } from "./utils/fetch-commits.js";
 import type { TestAction } from "./utils/browser-agent.js";
 import { getGitState, type GitState } from "./utils/get-git-state.js";

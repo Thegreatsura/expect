@@ -1,4 +1,4 @@
-import type { BrowserRunEvent } from "@browser-tester/orchestrator";
+import type { BrowserRunEvent } from "@browser-tester/supervisor";
 import { VERSION } from "../constants.js";
 import { fetchCommits } from "./fetch-commits.js";
 import { getGitState, getRecommendedScope } from "./get-git-state.js";
