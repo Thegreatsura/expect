@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { render } from "ink";
-import { App } from "./components/app.js";
+import { App } from "./app.js";
 import { ALT_SCREEN_OFF, ALT_SCREEN_ON, VERSION } from "./constants.js";
 import { ThemeProvider } from "./components/theme-context.js";
 import { loadThemeName } from "./utils/load-theme.js";
