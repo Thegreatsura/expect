@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Box, Text, useInput } from "ink";
-import { THEMES, type ThemeDefinition } from "./themes.js";
+import { THEMES, type ThemeDefinition } from "../themes.js";
 import { useColors, useThemeContext } from "./theme-context.js";
-import { THEME_PICKER_VISIBLE_COUNT } from "./constants.js";
-import { saveThemeName } from "./utils/load-theme.js";
-import { useAppStore } from "./store.js";
+import { THEME_PICKER_VISIBLE_COUNT } from "../constants.js";
+import { saveThemeName } from "../utils/load-theme.js";
+import { useAppStore } from "../store.js";
 
 type VariantFilter = "light" | "dark";
 

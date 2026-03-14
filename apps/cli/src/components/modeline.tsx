@@ -1,7 +1,7 @@
 import { Box, Text, useStdout } from "ink";
 import { useThemeContext } from "./theme-context.js";
-import { STATUSBAR_BRANCH_PADDING, STATUSBAR_TRAILING_PADDING } from "./constants.js";
-import { useAppStore, type Screen } from "./store.js";
+import { STATUSBAR_BRANCH_PADDING, STATUSBAR_TRAILING_PADDING } from "../constants.js";
+import { useAppStore, type Screen } from "../store.js";
 
 const SCREEN_HINTS: Record<Screen, string> = {
   main: "t theme · b branch · ↑↓ nav",

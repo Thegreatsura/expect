@@ -1,0 +1,1 @@
+export const COPIED_FLASH_DURATION_MS = 1500;

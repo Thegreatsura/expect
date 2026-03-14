@@ -1,7 +1,7 @@
 import { Box, Text } from "ink";
 import { useColors } from "./theme-context.js";
-import { Spinner } from "./spinner.js";
-import { useAppStore } from "./store.js";
+import { Spinner } from "./ui/spinner.js";
+import { useAppStore } from "../store.js";
 
 export const PlanningScreen = () => {
   const COLORS = useColors();

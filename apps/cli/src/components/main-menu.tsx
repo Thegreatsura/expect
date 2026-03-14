@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { useColors } from "./theme-context.js";
-import { MenuItem } from "./menu-item.js";
+import { MenuItem } from "./ui/menu-item.js";
 import type { DiffStats } from "@browser-tester/supervisor";
-import { getRecommendedScope, type GitState, type TestScope } from "./utils/get-git-state.js";
+import { getRecommendedScope, type GitState, type TestScope } from "../utils/get-git-state.js";
 import {
   FRAME_CONTENT_PADDING,
   FRAME_TITLE_DECORATION_WIDTH,
   MENU_ITEM_PREFIX_WIDTH,
-} from "./constants.js";
-import { useAppStore } from "./store.js";
+} from "../constants.js";
+import { useAppStore } from "../store.js";
 
 type MenuAction = "test-unstaged" | "test-branch" | "select-commit" | "select-branch";
 

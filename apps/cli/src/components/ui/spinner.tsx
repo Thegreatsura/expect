@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Text } from "ink";
-import { SPINNER_INTERVAL_MS } from "./constants.js";
-import { useColors } from "./theme-context.js";
+import { SPINNER_INTERVAL_MS } from "../../constants.js";
+import { useColors } from "../theme-context.js";
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 

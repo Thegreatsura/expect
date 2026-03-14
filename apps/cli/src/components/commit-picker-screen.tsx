@@ -10,10 +10,10 @@ import {
   COMMIT_LIMIT,
   COMMIT_SELECTOR_WIDTH,
   VISIBLE_COMMIT_COUNT,
-} from "./constants.js";
+} from "../constants.js";
 import { useColors } from "./theme-context.js";
-import { truncateText } from "./utils/truncate-text.js";
-import { useAppStore } from "./store.js";
+import { truncateText } from "../utils/truncate-text.js";
+import { useAppStore } from "../store.js";
 
 interface CommitWithMeta extends CommitSummary {
   author: string;

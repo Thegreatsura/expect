@@ -1,6 +1,6 @@
 import type { DOMElement } from "ink";
 
-interface CollectedNode {
+export interface CollectedNode {
   node: DOMElement;
   depth: number;
   tagName: string;

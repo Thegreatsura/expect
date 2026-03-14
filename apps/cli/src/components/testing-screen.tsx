@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { executeBrowserFlow, type BrowserRunEvent } from "@browser-tester/supervisor";
-import { TESTING_TOOL_TEXT_CHAR_LIMIT, TESTING_VISIBLE_LOG_COUNT } from "./constants.js";
+import { TESTING_TOOL_TEXT_CHAR_LIMIT, TESTING_VISIBLE_LOG_COUNT } from "../constants.js";
 import { useColors, type Colors } from "./theme-context.js";
-import { Spinner } from "./spinner.js";
-import { useAppStore } from "./store.js";
-import { truncateText } from "./utils/truncate-text.js";
-import { formatBrowserToolCall, shouldShowToolResult } from "./utils/format-browser-tool-call.js";
+import { Spinner } from "./ui/spinner.js";
+import { useAppStore } from "../store.js";
+import { truncateText } from "../utils/truncate-text.js";
+import { formatBrowserToolCall, shouldShowToolResult } from "../utils/format-browser-tool-call.js";
 
 interface TestingLine {
   text: string;

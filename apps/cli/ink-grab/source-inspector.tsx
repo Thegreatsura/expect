@@ -3,10 +3,9 @@ import { Box, Text, useInput } from "ink";
 import type { DOMElement } from "ink";
 import type { ElementInfo } from "element-source";
 import { resolveElementInfo, getTagName } from "element-source";
-import { collectNodes } from "./utils/collect-nodes.js";
-import { copyToClipboard } from "./utils/copy-to-clipboard.js";
+import { collectNodes } from "./collect-nodes.js";
+import { copyToClipboard } from "./copy-to-clipboard.js";
 import { SourcePanel } from "./source-panel.js";
-import { useColors } from "./theme-context.js";
 import { COPIED_FLASH_DURATION_MS } from "./constants.js";
 import type { ReactNode } from "react";
 
@@ -16,8 +15,11 @@ interface SourceInspectorProps {
   children: ReactNode;
 }
 
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
 export const SourceInspector = ({ children }: SourceInspectorProps) => {
-  const COLORS = useColors();
+  if (IS_PRODUCTION) return <>{children}</>;
+
   const rootRef = useRef<DOMElement>(null);
   const [mode, setMode] = useState<InspectorMode>("idle");
   const [cursorIndex, setCursorIndex] = useState(0);
@@ -112,7 +114,7 @@ export const SourceInspector = ({ children }: SourceInspectorProps) => {
 
       {mode === "idle" ? (
         <Box justifyContent="flex-end" paddingX={1}>
-          <Text color={COLORS.DIM}>⌥C inspect</Text>
+          <Text dimColor>⌥C inspect</Text>
         </Box>
       ) : null}
 
@@ -124,17 +126,17 @@ export const SourceInspector = ({ children }: SourceInspectorProps) => {
             const componentName = entry.tagName !== "ink-text" ? getTagName(entry.node) : null;
 
             return (
-              <Text key={index} color={isSelected ? undefined : COLORS.DIM}>
+              <Text key={index} dimColor={!isSelected}>
                 {isSelected ? "> " : "  "}
                 {indent}
                 <Text bold={isSelected}>{entry.tagName}</Text>
                 {componentName && componentName !== entry.tagName ? (
-                  <Text color={COLORS.DIM}> {componentName}</Text>
+                  <Text dimColor> {componentName}</Text>
                 ) : null}
               </Text>
             );
           })}
-          <Text color={COLORS.DIM}>↑↓ nav · ↵ select · esc exit</Text>
+          <Text dimColor>↑↓ nav · ↵ select · esc exit</Text>
         </Box>
       ) : null}
 

@@ -6,14 +6,14 @@ import { CommitPickerScreen } from "./commit-picker-screen.js";
 import { FlowInputScreen } from "./flow-input-screen.js";
 import { PlanningScreen } from "./planning-screen.js";
 import { PlanReviewScreen } from "./plan-review-screen.js";
-import { Spinner } from "./spinner.js";
+import { Spinner } from "./ui/spinner.js";
 import { TestingScreen } from "./testing-screen.js";
 import { ThemePickerScreen } from "./theme-picker-screen.js";
 import { MainMenu } from "./main-menu.js";
 import { Modeline } from "./modeline.js";
-import { SourceInspector } from "./source-inspector.js";
-import { generateBrowserPlan } from "./utils/browser-agent.js";
-import { useAppStore } from "./store.js";
+import { SourceInspector } from "../../ink-grab/index.js";
+import { generateBrowserPlan } from "../utils/browser-agent.js";
+import { useAppStore } from "../store.js";
 
 const usePlanningEffect = () => {
   const screen = useAppStore((state) => state.screen);

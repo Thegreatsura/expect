@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import TextInput from "ink-text-input";
 import { useColors } from "./theme-context.js";
-import type { TestAction } from "./utils/browser-agent.js";
-import { useAppStore } from "./store.js";
+import type { TestAction } from "../utils/browser-agent.js";
+import { useAppStore } from "../store.js";
 
 const ACTION_LABELS: Record<TestAction, string> = {
   "test-unstaged": "unstaged changes",

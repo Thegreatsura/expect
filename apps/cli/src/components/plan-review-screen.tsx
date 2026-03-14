@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { Box, Text, useInput } from "ink";
 import TextInput from "ink-text-input";
 import { useColors } from "./theme-context.js";
-import { saveFlow } from "./utils/save-flow.js";
-import { useAppStore } from "./store.js";
+import { saveFlow } from "../utils/save-flow.js";
+import { useAppStore } from "../store.js";
 
 export const PlanReviewScreen = () => {
   const COLORS = useColors();

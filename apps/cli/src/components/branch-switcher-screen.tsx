@@ -6,13 +6,13 @@ import {
   BRANCH_AUTHOR_COLUMN_WIDTH,
   BRANCH_VISIBLE_COUNT,
   COMMIT_SELECTOR_WIDTH,
-} from "./constants.js";
+} from "../constants.js";
 import { useColors } from "./theme-context.js";
 import { getLocalBranches } from "@browser-tester/supervisor";
-import { fetchRemoteBranches, type RemoteBranch } from "./utils/fetch-remote-branches.js";
-import { Spinner } from "./spinner.js";
-import { truncateText } from "./utils/truncate-text.js";
-import { useAppStore } from "./store.js";
+import { fetchRemoteBranches, type RemoteBranch } from "../utils/fetch-remote-branches.js";
+import { Spinner } from "./ui/spinner.js";
+import { truncateText } from "../utils/truncate-text.js";
+import { useAppStore } from "../store.js";
 
 type PrFilter = "all" | "open" | "draft" | "merged" | "no-pr";
 
