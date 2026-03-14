@@ -15,7 +15,7 @@ export interface ThemeDefinition {
   borderSubtle: string;
 }
 
-export const DEFAULT_DARK_THEME_NAME = "flexoki-dark";
+export const DEFAULT_DARK_THEME_NAME = "modus-vivendi-tinted";
 
 export const THEMES: Record<string, ThemeDefinition> = {
   "doric-almond": {

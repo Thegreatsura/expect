@@ -6,7 +6,7 @@ import type { Screen } from "./store.js";
 
 const SCREEN_HINTS: Record<Screen, string> = {
   main: "t theme · b branch · ↑↓ nav",
-  "switch-branch": "↑↓ nav · tab local/remote · enter select · esc back",
+  "switch-branch": "↑↓ nav · tab local/remote · / search · enter select · esc back",
   "select-commit": "↑↓ nav · enter select · / search · esc back",
   "flow-input": "enter submit · esc back",
   planning: "esc cancel",
