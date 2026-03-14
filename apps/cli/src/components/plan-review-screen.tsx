@@ -12,6 +12,7 @@ import { useStdoutDimensions } from "../hooks/use-stdout-dimensions.js";
 import { ScreenHeading } from "./ui/screen-heading.js";
 import {
   COMMIT_SELECTOR_WIDTH,
+  SECTION_INDENT,
   STEP_ID_COLUMN_WIDTH,
   STEP_ROUTE_COLUMN_WIDTH,
 } from "../constants.js";
@@ -54,7 +55,7 @@ export const PlanReviewScreen = () => {
   const cookiesEnabled = (environment ?? {}).cookies === true;
 
   const titleColumnWidth =
-    columns - COMMIT_SELECTOR_WIDTH - STEP_ID_COLUMN_WIDTH - STEP_ROUTE_COLUMN_WIDTH - 4;
+    columns - COMMIT_SELECTOR_WIDTH - STEP_ID_COLUMN_WIDTH - STEP_ROUTE_COLUMN_WIDTH - SECTION_INDENT;
 
   const items: NavigableItem[] = useMemo(() => {
     const result: NavigableItem[] = [];
@@ -182,7 +183,7 @@ export const PlanReviewScreen = () => {
       <Box flexDirection="column" marginTop={1}>
         {sectionLabel("details", "Details")}
         {!collapsed["details"] ? (
-          <Box flexDirection="column" marginLeft={4}>
+          <Box flexDirection="column" marginLeft={SECTION_INDENT}>
             <Text color={COLORS.DIM}>
               {"rationale  "}
               <Text color={COLORS.TEXT}>{plan.rationale}</Text>
@@ -213,7 +214,7 @@ export const PlanReviewScreen = () => {
         <Box flexDirection="column" marginTop={1}>
           {sectionLabel("cookies", "Cookie sync")}
           {!collapsed["cookies"] ? (
-            <Box flexDirection="column" marginLeft={4}>
+            <Box flexDirection="column" marginLeft={SECTION_INDENT}>
               <Text color={COLORS.DIM}>
                 {"reason  "}
                 <Text color={COLORS.TEXT}>{plan.cookieSync.reason}</Text>
@@ -288,12 +289,12 @@ export const PlanReviewScreen = () => {
                     {selected ? (
                       <>
                         <Text color={COLORS.DIM}>
-                          {"".padEnd(COMMIT_SELECTOR_WIDTH + STEP_ID_COLUMN_WIDTH + 2)}
+                          {"".padEnd(SECTION_INDENT + STEP_ID_COLUMN_WIDTH)}
                           {"instruction  "}
                           <Text color={COLORS.TEXT}>{step.instruction}</Text>
                         </Text>
                         <Text color={COLORS.DIM}>
-                          {"".padEnd(COMMIT_SELECTOR_WIDTH + STEP_ID_COLUMN_WIDTH + 2)}
+                          {"".padEnd(SECTION_INDENT + STEP_ID_COLUMN_WIDTH)}
                           {"expected     "}
                           <Text color={COLORS.TEXT}>{step.expectedOutcome}</Text>
                         </Text>

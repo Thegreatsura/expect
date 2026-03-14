@@ -32,6 +32,7 @@ export const BRANCH_VISIBLE_COUNT = 15;
 export const STEP_ID_COLUMN_WIDTH = 5;
 export const STEP_ROUTE_COLUMN_WIDTH = 24;
 export const TABLE_COLUMN_GAP = 2;
+export const SECTION_INDENT = 4;
 export const LAYOUT_ORIGIN_OFFSET = 1;
 export const FRAME_DOTS_TRAILING_GAP = 1;
 export const ALT_SCREEN_ON = "\u001b[?1049h\u001b[2J\u001b[H";
