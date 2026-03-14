@@ -8,9 +8,9 @@ import { loadSavedFlow } from "../utils/load-saved-flow.js";
 import { ScreenHeading } from "./ui/screen-heading.js";
 
 const ACTION_LABELS = {
-  "test-unstaged": "unstaged changes",
-  "test-branch": "branch changes",
-  "select-commit": "a selected commit",
+  "test-unstaged": "Test unstaged changes",
+  "test-branch": "Test entire branch",
+  "select-commit": "Select a commit to test",
 };
 
 export const SavedFlowPickerScreen = () => {

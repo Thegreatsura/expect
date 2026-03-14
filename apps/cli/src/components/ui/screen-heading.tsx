@@ -18,15 +18,21 @@ export const ScreenHeading = ({ title, subtitle }: ScreenHeadingProps) => {
   const rightWidth = stringWidth(rightContent);
   const gapWidth = Math.max(0, columns - leftWidth - rightWidth);
 
+  const emptyRow = " ".repeat(columns);
+
   return (
-    <Box>
-      <Text backgroundColor={theme.border} color={theme.text} bold>
-        {leftContent}
-      </Text>
-      <Text backgroundColor={theme.border}>{" ".repeat(gapWidth)}</Text>
-      <Text backgroundColor={theme.border} color={theme.text}>
-        {rightContent}
-      </Text>
+    <Box flexDirection="column">
+      <Text backgroundColor={theme.border}>{emptyRow}</Text>
+      <Box>
+        <Text backgroundColor={theme.border} color={theme.text} bold>
+          {leftContent}
+        </Text>
+        <Text backgroundColor={theme.border}>{" ".repeat(gapWidth)}</Text>
+        <Text backgroundColor={theme.border} color={theme.text}>
+          {rightContent}
+        </Text>
+      </Box>
+      <Text backgroundColor={theme.border}>{emptyRow}</Text>
     </Box>
   );
 };

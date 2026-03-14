@@ -8,9 +8,9 @@ import { useAppStore } from "../store.js";
 import { ScreenHeading } from "./ui/screen-heading.js";
 
 const ACTION_LABELS: Record<TestAction, string> = {
-  "test-unstaged": "unstaged changes",
-  "test-branch": "branch changes",
-  "select-commit": "selected commit",
+  "test-unstaged": "Test unstaged changes",
+  "test-branch": "Test entire branch",
+  "select-commit": "Select a commit to test",
 };
 
 export const FlowInputScreen = () => {
