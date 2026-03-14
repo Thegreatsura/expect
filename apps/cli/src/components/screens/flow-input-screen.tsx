@@ -44,14 +44,10 @@ export const FlowInputScreen = () => {
       <ScreenHeading title={ACTION_LABELS[testAction]} />
 
       {selectedCommit ? (
-        <Box
-          marginTop={1}
-          borderStyle="round"
-          borderColor={COLORS.BORDER}
-          paddingX={2}
-        >
+        <Box marginTop={1}>
+          <Text color={COLORS.DIM}>{"commit "}</Text>
           <Text color={COLORS.PURPLE}>{selectedCommit.shortHash}</Text>
-          <Text color={COLORS.DIM}> </Text>
+          <Text color={COLORS.DIM}>{" · "}</Text>
           <Text color={COLORS.TEXT}>{selectedCommit.subject}</Text>
         </Box>
       ) : null}
