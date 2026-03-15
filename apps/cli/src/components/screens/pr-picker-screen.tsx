@@ -40,7 +40,12 @@ export const PrPickerScreen = () => {
   const storeSwitchBranch = useAppStore((state) => state.switchBranch);
   const checkoutError = useAppStore((state) => state.checkoutError);
   const clearCheckoutError = useAppStore((state) => state.clearCheckoutError);
+  const generatedPlan = useAppStore((state) => state.generatedPlan);
   const COLORS = useColors();
+  const [confirmBranch, setConfirmBranch] = useState<{
+    name: string;
+    prNumber: number | null;
+  } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<PrFilter>("recent");
   const [isSearching, setIsSearching] = useState(false);
@@ -144,8 +149,15 @@ export const PrPickerScreen = () => {
     if (key.return) {
       const selected = filteredBranches[highlightedIndex];
       if (selected) {
-        clearCheckoutError();
-        storeSwitchBranch(selected.name, selected.prNumber);
+        if (generatedPlan) {
+          setConfirmBranch({
+            name: selected.name,
+            prNumber: selected.prNumber,
+          });
+        } else {
+          clearCheckoutError();
+          storeSwitchBranch(selected.name, selected.prNumber);
+        }
       }
     }
 
@@ -153,6 +165,21 @@ export const PrPickerScreen = () => {
       setIsSearching(true);
     }
   });
+
+  useInput(
+    (input, key) => {
+      if (!confirmBranch) return;
+      if (input.toLowerCase() === "y") {
+        clearCheckoutError();
+        storeSwitchBranch(confirmBranch.name, confirmBranch.prNumber);
+        setConfirmBranch(null);
+      }
+      if (input.toLowerCase() === "n" || key.escape) {
+        setConfirmBranch(null);
+      }
+    },
+    { isActive: confirmBranch !== null }
+  );
 
   return (
     <Box flexDirection="column" width="100%" paddingX={1} paddingY={1}>
@@ -266,6 +293,24 @@ export const PrPickerScreen = () => {
       {checkoutError ? (
         <Box marginTop={1}>
           <Text color={COLORS.RED}>{checkoutError}</Text>
+        </Box>
+      ) : null}
+
+      {confirmBranch ? (
+        <Box
+          marginTop={1}
+          flexDirection="column"
+          borderStyle="round"
+          borderColor={COLORS.YELLOW}
+          paddingX={1}
+        >
+          <Text color={COLORS.YELLOW} bold>
+            Switching to {confirmBranch.name} will regenerate the test plan.
+          </Text>
+          <Text color={COLORS.DIM}>
+            Press <Text color={COLORS.PRIMARY}>y</Text> to continue or{" "}
+            <Text color={COLORS.PRIMARY}>n</Text> to cancel.
+          </Text>
         </Box>
       ) : null}
 

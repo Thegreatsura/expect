@@ -315,6 +315,7 @@ export const useAppStore = create<AppStore>((set) => ({
     const success = checkoutBranch(process.cwd(), branch);
     if (success) {
       set({
+        ...RESET_PLAN_STATE,
         gitState: getGitState(),
         testAction: "test-branch",
         checkedOutBranch: branch,

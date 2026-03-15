@@ -20,7 +20,7 @@ const useHintSegments = (screen: Screen): HintSegment[] => {
   switch (screen) {
     case "main": {
       const hints: HintSegment[] = [
-        { key: "ctrl+p", label: "switch PR/branch" },
+        { key: "↑↓/tab", label: "navigate" },
         { key: "shift+enter", label: "newline" },
       ];
       if (savedFlowSummaries.length > 0) {
