@@ -99,6 +99,9 @@ export const PlanReviewScreen = () => {
   const requestPlanApproval = useAppStore((state) => state.requestPlanApproval);
   const loadSavedFlows = useAppStore((state) => state.loadSavedFlows);
   const flowInstruction = useAppStore((state) => state.flowInstruction);
+  const gitState = useAppStore((state) => state.gitState);
+  const checkedOutBranch = useAppStore((state) => state.checkedOutBranch);
+  const navigateTo = useAppStore((state) => state.navigateTo);
   const selectAction = useAppStore((state) => state.selectAction);
   const submitFlowInstruction = useAppStore(
     (state) => state.submitFlowInstruction
@@ -318,36 +321,50 @@ export const PlanReviewScreen = () => {
   const isSectionSelected = (section: Section) =>
     currentItem?.kind === "section" && currentItem.section === section;
 
+  const branchLabel = checkedOutBranch ?? gitState?.currentBranch ?? "unknown";
+
   return (
     <Box flexDirection="column" width="100%" paddingX={1} paddingY={1}>
       <ScreenHeading title="Review browser plan" subtitle={plan.title} />
 
-      <Clickable onClick={() => setInputFocused(true)}>
-        <Box
-          marginTop={1}
-          borderStyle="round"
-          borderColor={inputFocused ? COLORS.PRIMARY : COLORS.BORDER}
-          paddingX={2}
-        >
-          {inputFocused ? (
-            <>
-              <Text color={COLORS.PRIMARY}>{"❯ "}</Text>
-              <Input
-                focus
-                multiline
-                value={inputValue}
-                onSubmit={handleInputSubmit}
-                onDownArrowAtBottom={() => setInputFocused(false)}
-                onChange={(nextValue) =>
-                  setInputValue(stripMouseSequences(nextValue))
-                }
-              />
-            </>
-          ) : (
-            <Text color={COLORS.DIM}>{flowInstruction}</Text>
-          )}
+      <Text color={COLORS.DIM} dimColor={inputFocused}>
+        {"Branch / PR"}
+      </Text>
+      <Clickable onClick={() => navigateTo("select-pr")}>
+        <Box borderStyle="round" borderColor={COLORS.BORDER} paddingX={2}>
+          <Text color={COLORS.TEXT}>{branchLabel}</Text>
+          <Text color={COLORS.DIM}>{" · press enter to change"}</Text>
         </Box>
       </Clickable>
+
+      <Box marginTop={1} flexDirection="column">
+        <Text color={COLORS.DIM}>Describe what to test</Text>
+        <Clickable onClick={() => setInputFocused(true)}>
+          <Box
+            borderStyle="round"
+            borderColor={inputFocused ? COLORS.PRIMARY : COLORS.BORDER}
+            paddingX={2}
+          >
+            {inputFocused ? (
+              <>
+                <Text color={COLORS.PRIMARY}>{"❯ "}</Text>
+                <Input
+                  focus
+                  multiline
+                  value={inputValue}
+                  onSubmit={handleInputSubmit}
+                  onDownArrowAtBottom={() => setInputFocused(false)}
+                  onChange={(nextValue) =>
+                    setInputValue(stripMouseSequences(nextValue))
+                  }
+                />
+              </>
+            ) : (
+              <Text color={COLORS.DIM}>{flowInstruction}</Text>
+            )}
+          </Box>
+        </Clickable>
+      </Box>
 
       {resubmitConfirmVisible ? (
         <Box
