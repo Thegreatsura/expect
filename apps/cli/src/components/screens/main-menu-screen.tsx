@@ -5,14 +5,10 @@ import { useColors } from "../theme-context.js";
 import { Clickable } from "../ui/clickable.js";
 import { MenuItem } from "../ui/menu-item.js";
 import type { DiffStats } from "@browser-tester/supervisor";
-import {
-  getRecommendedScope,
-  type GitState,
-  type TestScope,
-} from "../../utils/get-git-state.js";
+import { type GitState } from "../../utils/get-git-state.js";
 import { useAppStore } from "../../store.js";
 
-type MenuAction = "test-unstaged" | "test-branch" | "select-commit";
+type MenuAction = "test-branch" | "select-pr";
 
 interface ScopeMenuOption {
   label: string;
@@ -21,41 +17,25 @@ interface ScopeMenuOption {
   diffStats?: DiffStats | null;
 }
 
-const buildMenuOptions = (
-  scope: TestScope,
-  gitState: GitState
-): ScopeMenuOption[] => {
-  const options: ScopeMenuOption[] = [];
+const buildMenuOptions = (gitState: GitState): ScopeMenuOption[] => {
+  if (!gitState.isOnMain && gitState.hasBranchCommits) {
+    return [
+      {
+        label: "Test current branch",
+        detail: `(${gitState.branchCommitCount} commits)`,
+        action: "test-branch",
+        diffStats: gitState.branchDiffStats,
+      },
+    ];
+  }
 
-  if (scope === "unstaged-changes") {
-    options.push({
-      label: "Test unstaged changes",
+  return [
+    {
+      label: "Select a PR to test",
       detail: "",
-      action: "test-unstaged",
-      diffStats: gitState.diffStats,
-    });
-  }
-
-  if (
-    scope === "entire-branch" ||
-    (scope === "unstaged-changes" &&
-      !gitState.isOnMain &&
-      gitState.hasBranchCommits)
-  ) {
-    options.push({
-      label: "Test entire branch",
-      detail: `(${gitState.currentBranch})`,
-      action: "test-branch",
-    });
-  }
-
-  options.push({
-    label: "Select a commit to test",
-    detail: "",
-    action: "select-commit",
-  });
-
-  return options;
+      action: "select-pr",
+    },
+  ];
 };
 
 export const MainMenu = () => {
@@ -74,16 +54,15 @@ export const MainMenu = () => {
 
   if (!gitState) return null;
 
-  const recommendedScope = getRecommendedScope(gitState);
-  const menuOptions = buildMenuOptions(recommendedScope, gitState);
+  const menuOptions = buildMenuOptions(gitState);
   const selectedOption = menuOptions[selectedIndex] ?? null;
   const canReuseSavedFlow =
     savedFlowSummaries.length > 0 && Boolean(selectedOption);
 
   const activateOption = useCallback(
     (option: ScopeMenuOption) => {
-      if (option.action === "select-commit") {
-        navigateTo("select-commit");
+      if (option.action === "select-pr") {
+        navigateTo("switch-branch");
       } else {
         selectAction(option.action);
       }
@@ -115,15 +94,8 @@ export const MainMenu = () => {
     }
 
     if (input === "r" && canReuseSavedFlow && selectedOption) {
-      if (
-        selectedOption.action === "test-unstaged" ||
-        selectedOption.action === "test-branch"
-      ) {
+      if (selectedOption.action === "test-branch") {
         beginSavedFlowReuse(selectedOption.action);
-      }
-
-      if (selectedOption.action === "select-commit") {
-        beginSavedFlowReuse("select-commit");
       }
     }
 

@@ -12,6 +12,7 @@ export interface GitState {
   isOnMain: boolean;
   hasUnstagedChanges: boolean;
   hasBranchCommits: boolean;
+  branchCommitCount: number;
   diffStats: DiffStats | null;
   branchDiffStats: DiffStats | null;
 }
@@ -27,9 +28,9 @@ export const getGitState = (): GitState => {
   const hasUnstagedChanges = diffStats !== null;
 
   let branchDiffStats: DiffStats | null = null;
-  let hasBranchCommits = false;
+  let branchCommitCount = 0;
   if (!isOnMain && mainBranch) {
-    hasBranchCommits = getBranchCommits(cwd, mainBranch).length > 0;
+    branchCommitCount = getBranchCommits(cwd, mainBranch).length;
     branchDiffStats = getBranchDiffStats(cwd, mainBranch);
   }
 
@@ -37,7 +38,8 @@ export const getGitState = (): GitState => {
     currentBranch,
     isOnMain,
     hasUnstagedChanges,
-    hasBranchCommits,
+    hasBranchCommits: branchCommitCount > 0,
+    branchCommitCount,
     diffStats,
     branchDiffStats,
   };
