@@ -76,6 +76,54 @@ export interface BrowserFlowPlan {
   steps: PlanStep[];
 }
 
+export interface BrowserRunFinding {
+  id: string;
+  severity: "error" | "warning" | "info";
+  title: string;
+  detail: string;
+  stepId?: string;
+  stepTitle?: string;
+}
+
+export interface BrowserRunStepResult {
+  stepId: string;
+  title: string;
+  status: "passed" | "failed" | "not-run";
+  summary: string;
+}
+
+export interface BrowserRunPullRequest {
+  number: number;
+  url: string;
+  title: string;
+  headRefName: string;
+}
+
+export interface BrowserRunArtifacts {
+  rawVideoPath?: string;
+  highlightVideoPath?: string;
+  redactedVideoPath?: string;
+  screenshotPaths: string[];
+  redactedScreenshotPaths: string[];
+  shareBundlePath?: string;
+  shareSummaryPath?: string;
+  shareUrl?: string;
+}
+
+export interface BrowserRunReport {
+  title: string;
+  status: "passed" | "failed";
+  summary: string;
+  findings: BrowserRunFinding[];
+  stepResults: BrowserRunStepResult[];
+  confirmedRiskAreas: string[];
+  clearedRiskAreas: string[];
+  unresolvedRiskAreas: string[];
+  warnings: string[];
+  pullRequest: BrowserRunPullRequest | null;
+  artifacts: BrowserRunArtifacts;
+}
+
 export interface BrowserEnvironmentHints {
   baseUrl?: string;
   headed?: boolean;

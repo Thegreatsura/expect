@@ -12,6 +12,7 @@ import {
   VIDEO_FILE_NAME,
 } from "./constants.js";
 import { buildBrowserMcpSettings } from "./browser-mcp-config.js";
+import { createBrowserRunReport } from "./create-browser-run-report.js";
 import { createAgentModel } from "./create-agent-model.js";
 import type { BrowserRunEvent } from "./events.js";
 import {
@@ -188,11 +189,14 @@ export const executeBrowserFlow = async function* (
     videoOutputPath,
   });
 
-  yield {
+  const emittedEvents: BrowserRunEvent[] = [];
+  const runStartedEvent: BrowserRunEvent = {
     type: "run-started",
     timestamp: Date.now(),
     planTitle: options.plan.title,
   };
+  emittedEvents.push(runStartedEvent);
+  yield runStartedEvent;
 
   const streamResult = await model.doStream({
     abortSignal: options.signal,
@@ -201,8 +205,9 @@ export const executeBrowserFlow = async function* (
 
   const reader = streamResult.stream.getReader();
   let streamState: ExecutionStreamState = { bufferedText: "" };
-  let completedEventEmitted = false;
+  let completionEvent: Extract<BrowserRunEvent, { type: "run-completed" }> | null = null;
   let screenshotOutputDirectoryPath: string | undefined;
+  const screenshotPaths: string[] = [];
   const streamContext: ExecutionStreamContext = {
     browserMcpServerName,
     stepsById: buildStepMap(options.plan.steps),
@@ -219,13 +224,13 @@ export const executeBrowserFlow = async function* (
       streamState = parsedText.nextState;
       for (const event of parsedText.events) {
         if (event.type === "run-completed") {
-          completedEventEmitted = true;
-          yield {
+          completionEvent = {
             ...event,
             sessionId: streamState.sessionId,
             videoPath: videoOutputPath,
           };
         } else {
+          emittedEvents.push(event);
           yield event;
         }
       }
@@ -233,30 +238,36 @@ export const executeBrowserFlow = async function* (
     }
 
     if (part.type === "reasoning-delta") {
-      yield {
+      const event: BrowserRunEvent = {
         type: "thinking",
         timestamp: Date.now(),
         text: part.delta,
       };
+      emittedEvents.push(event);
+      yield event;
       continue;
     }
 
     if (part.type === "tool-call") {
-      yield {
+      const toolCallEvent: BrowserRunEvent = {
         type: "tool-call",
         timestamp: Date.now(),
         toolName: part.toolName,
         input: part.input,
       };
+      emittedEvents.push(toolCallEvent);
+      yield toolCallEvent;
 
       const browserAction = parseBrowserToolName(part.toolName, browserMcpServerName);
       if (browserAction) {
-        yield {
+        const browserLogEvent: BrowserRunEvent = {
           type: "browser-log",
           timestamp: Date.now(),
           action: browserAction,
           message: `Called ${browserAction}`,
         };
+        emittedEvents.push(browserLogEvent);
+        yield browserLogEvent;
       }
       continue;
     }
@@ -277,25 +288,30 @@ export const executeBrowserFlow = async function* (
 
         if (savedBrowserImageResult) {
           screenshotOutputDirectoryPath = savedBrowserImageResult.outputDirectoryPath;
+          screenshotPaths.push(savedBrowserImageResult.outputPath);
           result = savedBrowserImageResult.resultText;
         }
       }
 
-      yield {
+      const toolResultEvent: BrowserRunEvent = {
         type: "tool-result",
         timestamp: Date.now(),
         toolName: part.toolName,
         result,
         isError: Boolean(part.isError),
       };
+      emittedEvents.push(toolResultEvent);
+      yield toolResultEvent;
 
       if (browserAction) {
-        yield {
+        const browserLogEvent: BrowserRunEvent = {
           type: "browser-log",
           timestamp: Date.now(),
           action: browserAction,
           message: result,
         };
+        emittedEvents.push(browserLogEvent);
+        yield browserLogEvent;
       }
       continue;
     }
@@ -313,30 +329,60 @@ export const executeBrowserFlow = async function* (
     const trailingEvent = parseMarkerLine(streamState.bufferedText.trim(), streamContext);
     if (trailingEvent) {
       if (Array.isArray(trailingEvent)) {
-        for (const event of trailingEvent) yield event;
+        for (const event of trailingEvent) {
+          if (event.type === "run-completed") {
+            completionEvent = {
+              ...event,
+              sessionId: streamState.sessionId,
+              videoPath: videoOutputPath,
+            };
+          } else {
+            emittedEvents.push(event);
+            yield event;
+          }
+        }
       } else {
         if (trailingEvent.type === "run-completed") {
-          completedEventEmitted = true;
-          yield {
+          completionEvent = {
             ...trailingEvent,
             sessionId: streamState.sessionId,
             videoPath: videoOutputPath,
           };
-          return;
+        } else {
+          emittedEvents.push(trailingEvent);
+          yield trailingEvent;
         }
-        yield trailingEvent;
       }
     }
   }
 
-  if (completedEventEmitted) return;
+  const resolvedCompletionEvent =
+    completionEvent ??
+    ({
+      type: "run-completed",
+      timestamp: Date.now(),
+      status: "passed",
+      summary: "Run completed.",
+      sessionId: streamState.sessionId,
+      videoPath: videoOutputPath,
+    } satisfies Extract<BrowserRunEvent, { type: "run-completed" }>);
+
+  const preparingResultsEvent: BrowserRunEvent = {
+    type: "text",
+    timestamp: Date.now(),
+    text: "Preparing results report...",
+  };
+  yield preparingResultsEvent;
 
   yield {
-    type: "run-completed",
-    timestamp: Date.now(),
-    status: "passed",
-    summary: "Run completed.",
-    sessionId: streamState.sessionId,
-    videoPath: videoOutputPath,
+    ...resolvedCompletionEvent,
+    report: createBrowserRunReport({
+      target: options.target,
+      plan: options.plan,
+      events: emittedEvents,
+      completionEvent: resolvedCompletionEvent,
+      rawVideoPath: videoOutputPath,
+      screenshotPaths,
+    }),
   };
 };

@@ -10,6 +10,7 @@ import {
 } from "../../utils/get-git-state.js";
 import { useColors } from "../theme-context.js";
 import { Clickable } from "../ui/clickable.js";
+import { ChangesWarningPanel } from "../ui/changes-warning-panel.js";
 import { MenuItem } from "../ui/menu-item.js";
 
 interface ScopeMenuOption {
@@ -99,6 +100,8 @@ export const MainMenu = () => {
 
   const recommendedScope = getRecommendedScope(gitState);
   const recommendedAction = getDefaultActionForScope(recommendedScope);
+  const warningDiffStats =
+    recommendedScope === "unstaged-changes" ? gitState.diffStats : gitState.branchDiffStats;
   const menuOptions = buildMenuOptions(recommendedScope, gitState);
   const selectedOption = menuOptions[selectedIndex] ?? null;
   const canReuseSavedFlow =
@@ -176,6 +179,15 @@ export const MainMenu = () => {
           <Text color={COLORS.TEXT}>{gitState.currentBranch}</Text>
         </Text>
       </Box>
+
+      {warningDiffStats ? (
+        <ChangesWarningPanel
+          title="Code changes detected - not yet tested"
+          detail="Run a browser check before you push or ask for review."
+          diffStats={warningDiffStats}
+          tone="danger"
+        />
+      ) : null}
 
       <Box flexDirection="column">
         {menuOptions.map((option, index) => {

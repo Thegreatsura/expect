@@ -60,6 +60,7 @@ export interface BrowserRunCompletedEvent extends BrowserRunBaseEvent {
   summary: string;
   sessionId?: string;
   videoPath?: string;
+  report?: import("./types.js").BrowserRunReport;
 }
 
 export interface BrowserRunErrorEvent extends BrowserRunBaseEvent {

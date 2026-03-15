@@ -16,6 +16,7 @@ const useHintSegments = (screen: Screen): HintSegment[] => {
   const approvePlan = useAppStore((state) => state.approvePlan);
   const generatedPlan = useAppStore((state) => state.generatedPlan);
   const savedFlowSummaries = useAppStore((state) => state.savedFlowSummaries);
+  const latestRunReport = useAppStore((state) => state.latestRunReport);
   switch (screen) {
     case "main": {
       const hints: HintSegment[] = [
@@ -78,7 +79,7 @@ const useHintSegments = (screen: Screen): HintSegment[] => {
               },
             ]
           : []),
-        { key: "esc", label: "cancel", onClick: goBack },
+        { key: "esc", label: "leave" },
         { key: "e", label: "edit", cta: true },
         {
           key: "a",
@@ -114,6 +115,15 @@ const useHintSegments = (screen: Screen): HintSegment[] => {
       ];
     case "testing":
       return [];
+    case "results": {
+      return [
+        { key: "y", label: "copy", color: COLORS.PRIMARY, cta: true },
+        ...(latestRunReport?.pullRequest
+          ? [{ key: "p", label: "post to PR", cta: true }]
+          : []),
+        { key: "esc", label: "main menu", cta: true, onClick: goBack },
+      ];
+    }
     case "theme":
       return [
         { key: "↑↓", label: "nav" },

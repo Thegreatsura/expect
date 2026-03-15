@@ -2,6 +2,7 @@ import {
   executeBrowserFlow,
   getCommitSummary,
   type BrowserRunEvent,
+  type BrowserRunReport,
   type CommitSummary,
 } from "@browser-tester/supervisor";
 import figures from "figures";
@@ -107,12 +108,28 @@ export const runTest = async (config: TestRunConfig): Promise<void> => {
 
   try {
     const { target, plan, environment } = await resolvePlan(config, resolvedCommit);
+    let latestRunReport: BrowserRunReport | null = null;
 
     for await (const event of executeBrowserFlow({ target, plan, environment })) {
+      if (event.type === "run-completed" && event.report) {
+        latestRunReport = event.report;
+      }
       const line = formatRunEvent(event);
       if (line) {
         process.stdout.write(line + "\n");
       }
+    }
+
+    if (latestRunReport?.artifacts.highlightVideoPath) {
+      process.stdout.write(`Highlight reel: ${latestRunReport.artifacts.highlightVideoPath}\n`);
+    }
+    if (latestRunReport?.artifacts.shareUrl) {
+      process.stdout.write(`Report: ${latestRunReport.artifacts.shareUrl}\n`);
+    }
+    if (latestRunReport?.pullRequest) {
+      process.stdout.write(
+        `Open PR: #${latestRunReport.pullRequest.number} ${latestRunReport.pullRequest.url}\n`,
+      );
     }
   } catch (error) {
     console.error(`Error: ${formatErrorMessage(error)}`);

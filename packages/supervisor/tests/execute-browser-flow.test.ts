@@ -206,10 +206,23 @@ describe("executeBrowserFlow", () => {
     expect(events.some((event) => event.type === "step-started")).toBe(true);
     expect(events.some((event) => event.type === "browser-log")).toBe(true);
     expect(events.some((event) => event.type === "tool-result")).toBe(true);
+    expect(
+      events.find((event) => event.type === "text" && event.text === "Preparing results report..."),
+    ).toBeDefined();
     expect(events.find((event) => event.type === "run-completed")).toMatchObject({
       type: "run-completed",
       status: "passed",
       videoPath: videoOutputPath,
+      report: {
+        status: "passed",
+        summary: "Verified onboarding import path",
+        stepResults: [
+          {
+            stepId: "step-01",
+            status: "passed",
+          },
+        ],
+      },
     });
   });
 
@@ -300,6 +313,14 @@ describe("executeBrowserFlow", () => {
     const screenshotPath = screenshotToolResultEvent.result.replace("Screenshot saved to ", "");
 
     expect(existsSync(screenshotPath)).toBe(true);
+    expect(events.find((event) => event.type === "run-completed")).toMatchObject({
+      type: "run-completed",
+      report: {
+        artifacts: {
+          screenshotPaths: [screenshotPath],
+        },
+      },
+    });
 
     rmSync(dirname(screenshotPath), { recursive: true, force: true });
   });
@@ -369,9 +390,7 @@ describe("executeBrowserFlow", () => {
     expect(
       events.find(
         (event) =>
-          event.type === "tool-result" &&
-          event.toolName === "mcp__browser__open" &&
-          !event.isError,
+          event.type === "tool-result" && event.toolName === "mcp__browser__open" && !event.isError,
       ),
     ).toMatchObject({
       type: "tool-result",

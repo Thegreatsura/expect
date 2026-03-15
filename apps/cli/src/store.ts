@@ -3,6 +3,7 @@ import {
   checkoutBranch,
   type BrowserEnvironmentHints,
   type BrowserFlowPlan,
+  type BrowserRunReport,
   type CommitSummary,
   type TestTarget,
 } from "@browser-tester/supervisor";
@@ -29,6 +30,7 @@ export type Screen =
   | "review-plan"
   | "cookie-sync-confirm"
   | "testing"
+  | "results"
   | "theme";
 
 interface AppStore {
@@ -53,6 +55,7 @@ interface AppStore {
   checkedOutBranch: string | null;
   checkedOutPrNumber: number | null;
   checkoutError: string | null;
+  latestRunReport: BrowserRunReport | null;
 
   setMainMenuOnAction: (value: boolean) => void;
   loadGitState: () => void;
@@ -75,6 +78,7 @@ interface AppStore {
   updateEnvironment: (environment: BrowserEnvironmentHints | null) => void;
   requestPlanApproval: () => void;
   approvePlan: () => void;
+  completeTestingRun: (report: BrowserRunReport) => void;
   exitTesting: () => void;
   switchBranch: (branch: string, prNumber?: number | null) => void;
   clearCheckoutError: () => void;
@@ -85,6 +89,7 @@ const RESET_PLAN_STATE = {
   resolvedTarget: null,
   browserEnvironment: null,
   pendingSavedFlow: null,
+  latestRunReport: null,
 };
 
 const RESET_FLOW_STATE = {
@@ -131,6 +136,7 @@ export const useAppStore = create<AppStore>((set) => ({
   checkedOutBranch: null,
   checkedOutPrNumber: null,
   checkoutError: null,
+  latestRunReport: null,
 
   setMainMenuOnAction: (value) => set({ mainMenuOnAction: value }),
   loadGitState: () => set({ gitState: getGitState() }),
@@ -153,6 +159,12 @@ export const useAppStore = create<AppStore>((set) => ({
       }
       if (state.screen === "cookie-sync-confirm") {
         return { screen: "review-plan" };
+      }
+      if (state.screen === "results") {
+        return {
+          ...RESET_FLOW_STATE,
+          screen: "main",
+        };
       }
       if (state.screen === "saved-flow-picker") {
         return {
@@ -282,6 +294,12 @@ export const useAppStore = create<AppStore>((set) => ({
     })),
 
   approvePlan: () => set({ screen: "testing" }),
+
+  completeTestingRun: (report) =>
+    set({
+      latestRunReport: report,
+      screen: "results",
+    }),
 
   exitTesting: () =>
     set({

@@ -1,7 +1,13 @@
 export { buildBrowserMcpSettings, getBrowserMcpEntrypoint } from "./browser-mcp-config.js";
 export { GIT_TIMEOUT_MS } from "./constants.js";
+export { createBrowserRunReport } from "./create-browser-run-report.js";
 export type { BrowserRunEvent } from "./events.js";
 export { executeBrowserFlow } from "./execute-browser-flow.js";
+export {
+  buildPullRequestCommentBody,
+  getPullRequestForBranch,
+  postPullRequestComment,
+} from "./github-comment.js";
 export {
   checkoutBranch,
   getBranchCommits,
@@ -18,6 +24,11 @@ export type {
   AgentProvider,
   BrowserEnvironmentHints,
   BrowserFlowPlan,
+  BrowserRunArtifacts,
+  BrowserRunFinding,
+  BrowserRunPullRequest,
+  BrowserRunReport,
+  BrowserRunStepResult,
   ChangedFile,
   CommitSummary,
   DiffStats,

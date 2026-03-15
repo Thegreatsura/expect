@@ -10,6 +10,7 @@ import { CookieSyncConfirmScreen } from "./screens/cookie-sync-confirm-screen.js
 import { SavedFlowPickerScreen } from "./screens/saved-flow-picker-screen.js";
 import { Spinner } from "./ui/spinner.js";
 import { TestingScreen } from "./screens/testing-screen.js";
+import { ResultsScreen } from "./screens/results-screen.js";
 import { ThemePickerScreen } from "./screens/theme-picker-screen.js";
 import { MainMenu } from "./screens/main-menu-screen.js";
 import { Modeline } from "./ui/modeline.js";
@@ -27,20 +28,12 @@ const usePlanningEffect = () => {
   const testAction = useAppStore((state) => state.testAction);
   const flowInstruction = useAppStore((state) => state.flowInstruction);
   const selectedCommit = useAppStore((state) => state.selectedCommit);
-  const environmentOverrides = useAppStore(
-    (state) => state.environmentOverrides
-  );
+  const environmentOverrides = useAppStore((state) => state.environmentOverrides);
   const completePlanning = useAppStore((state) => state.completePlanning);
   const failPlanning = useAppStore((state) => state.failPlanning);
 
   useEffect(() => {
-    if (
-      screen !== "planning" ||
-      !gitState ||
-      !testAction ||
-      !flowInstruction.trim()
-    )
-      return;
+    if (screen !== "planning" || !gitState || !testAction || !flowInstruction.trim()) return;
 
     let isCancelled = false;
     const setStatus = (status: string) => {
@@ -118,15 +111,10 @@ export const App = () => {
   const navigateTo = useAppStore((state) => state.navigateTo);
 
   useInput((input, key) => {
-    if (key.escape && screen !== "main") {
+    if (key.escape && screen !== "main" && screen !== "review-plan") {
       goBack();
     }
-    if (
-      input === "t" &&
-      screen !== "theme" &&
-      screen !== "flow-input" &&
-      screen !== "select-pr"
-    ) {
+    if (input === "t" && screen !== "theme" && screen !== "flow-input" && screen !== "select-pr") {
       navigateTo("theme");
     }
   });
@@ -143,6 +131,8 @@ export const App = () => {
     switch (screen) {
       case "testing":
         return <TestingScreen />;
+      case "results":
+        return <ResultsScreen />;
       case "theme":
         return <ThemePickerScreen />;
       case "select-pr":

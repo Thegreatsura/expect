@@ -140,6 +140,7 @@ export const TestingScreen = () => {
   const target = useAppStore((state) => state.resolvedTarget);
   const plan = useAppStore((state) => state.generatedPlan);
   const environment = useAppStore((state) => state.browserEnvironment);
+  const completeTestingRun = useAppStore((state) => state.completeTestingRun);
   const exitTesting = useAppStore((state) => state.exitTesting);
   const COLORS = useColors();
   const colorsRef = useRef(COLORS);
@@ -215,8 +216,11 @@ export const TestingScreen = () => {
           signal: abortController.signal,
         })) {
           if (event.type === "run-completed") {
-            setVideoPath(event.videoPath ?? null);
+            setVideoPath(event.report?.artifacts.rawVideoPath ?? event.videoPath ?? null);
             setCurrentStep(null);
+            if (event.report) {
+              completeTestingRun(event.report);
+            }
           }
           if (event.type === "step-started") {
             setCurrentStep(`${event.stepId} ${event.title}`);
@@ -253,7 +257,7 @@ export const TestingScreen = () => {
     return () => {
       abortController.abort();
     };
-  }, [environment, plan, target]);
+  }, [completeTestingRun, environment, plan, target]);
 
   useInput((input, key) => {
     const normalizedInput = input.toLowerCase();
@@ -306,9 +310,7 @@ export const TestingScreen = () => {
           {currentStep ? `Current step: ${currentStep}` : "Waiting for first step..."}
         </Text>
         <Clickable
-          onClick={() =>
-            setToolCallDisplayMode((previous) => getNextToolCallDisplayMode(previous))
-          }
+          onClick={() => setToolCallDisplayMode((previous) => getNextToolCallDisplayMode(previous))}
         >
           <Text color={COLORS.DIM}>
             Trace: {toolCallDisplayMode}. Press {TRACE_DISPLAY_SHORTCUT_KEY} to cycle compact,
@@ -328,14 +330,11 @@ export const TestingScreen = () => {
           <Text color={COLORS.YELLOW} bold>
             Stop this browser run?
           </Text>
+          <Text color={COLORS.DIM}>This will terminate the agent and close the browser.</Text>
           <Text color={COLORS.DIM}>
-            This will terminate the agent and close the browser.
-          </Text>
-          <Text color={COLORS.DIM}>
-            Press <Text color={COLORS.PRIMARY}>Enter</Text> or{" "}
-            <Text color={COLORS.PRIMARY}>y</Text> to stop, or{" "}
-            <Text color={COLORS.PRIMARY}>Esc</Text> or <Text color={COLORS.PRIMARY}>n</Text> to
-            keep it running.
+            Press <Text color={COLORS.PRIMARY}>Enter</Text> or <Text color={COLORS.PRIMARY}>y</Text>{" "}
+            to stop, or <Text color={COLORS.PRIMARY}>Esc</Text> or{" "}
+            <Text color={COLORS.PRIMARY}>n</Text> to keep it running.
           </Text>
         </Box>
       ) : null}

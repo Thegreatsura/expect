@@ -52,9 +52,7 @@ const PlanStepRow = ({ step, stepNumber, selected, onClick }: PlanStepRowProps) 
     <Clickable onClick={onClick}>
       <Box flexDirection="column">
         <Text>
-          <Text color={selected ? COLORS.PRIMARY : COLORS.DIM}>
-            {selected ? "  ▸ " : "    "}
-          </Text>
+          <Text color={selected ? COLORS.PRIMARY : COLORS.DIM}>{selected ? "  ▸ " : "    "}</Text>
           <Text color={COLORS.DIM}>[{stepLabel}] </Text>
           <Text color={selected ? COLORS.PRIMARY : COLORS.DIM} bold={selected}>
             {step.title}
@@ -88,6 +86,7 @@ export const PlanReviewScreen = () => {
   const plan = useAppStore((state) => state.generatedPlan);
   const environment = useAppStore((state) => state.browserEnvironment);
   const resolvedTarget = useAppStore((state) => state.resolvedTarget);
+  const goBack = useAppStore((state) => state.goBack);
   const updatePlan = useAppStore((state) => state.updatePlan);
   const updateEnvironment = useAppStore((state) => state.updateEnvironment);
   const requestPlanApproval = useAppStore((state) => state.requestPlanApproval);
@@ -101,6 +100,7 @@ export const PlanReviewScreen = () => {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [exitConfirmationVisible, setExitConfirmationVisible] = useState(false);
 
   if (!plan || !resolvedTarget) return null;
 
@@ -169,6 +169,23 @@ export const PlanReviewScreen = () => {
         setEditingValue("");
       }
 
+      return;
+    }
+
+    if (exitConfirmationVisible) {
+      if (input.toLowerCase() === "y") {
+        goBack();
+      }
+
+      if (input.toLowerCase() === "n" || key.escape) {
+        setExitConfirmationVisible(false);
+      }
+
+      return;
+    }
+
+    if (key.escape) {
+      setExitConfirmationVisible(true);
       return;
     }
 
@@ -364,6 +381,24 @@ export const PlanReviewScreen = () => {
       ) : null}
 
       <ErrorMessage message={saveError} />
+
+      {exitConfirmationVisible ? (
+        <Box
+          flexDirection="column"
+          marginTop={1}
+          borderStyle="round"
+          borderColor={COLORS.YELLOW}
+          paddingX={1}
+        >
+          <Text color={COLORS.YELLOW} bold>
+            Leave plan review?
+          </Text>
+          <Text color={COLORS.DIM}>
+            You have not started this run yet. Press <Text color={COLORS.PRIMARY}>y</Text> to
+            leave or <Text color={COLORS.PRIMARY}>n</Text> to stay here.
+          </Text>
+        </Box>
+      ) : null}
 
       <Box flexDirection="column" marginTop={1}>
         <Collapsible
