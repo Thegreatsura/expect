@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { useAppStore } from "../../store.js";
-import {
-  getRecommendedScope,
-  type GitState,
-} from "../../utils/get-git-state.js";
+import { type GitState } from "../../utils/get-git-state.js";
 import type { TestAction } from "../../utils/browser-agent.js";
 import { useColors } from "../theme-context.js";
 import { Clickable } from "../ui/clickable.js";
@@ -13,11 +10,28 @@ import { ErrorMessage } from "../ui/error-message.js";
 import { stripMouseSequences } from "../../hooks/mouse-context.js";
 import { FLOW_PRESETS } from "../../constants.js";
 
-const getTestAction = (gitState: GitState): TestAction => {
-  const scope = getRecommendedScope(gitState);
-  if (scope === "unstaged-changes") return "test-unstaged";
-  if (scope === "entire-branch") return "test-branch";
-  return "test-unstaged";
+interface ScopeOption {
+  label: string;
+  action: TestAction | "select-pr";
+}
+
+const buildScopeOptions = (gitState: GitState): ScopeOption[] => {
+  const options: ScopeOption[] = [];
+
+  if (gitState.hasUnstagedChanges) {
+    options.push({ label: "Unstaged changes", action: "test-unstaged" });
+  }
+
+  if (!gitState.isOnMain && gitState.hasBranchCommits) {
+    options.push({
+      label: `${gitState.currentBranch} (${gitState.branchCommitCount} commits)`,
+      action: "test-branch",
+    });
+  }
+
+  options.push({ label: "Select a PR or branch…", action: "select-pr" });
+
+  return options;
 };
 
 type FocusArea = "branch" | "input" | "auto-run";
@@ -40,10 +54,9 @@ export const MainMenu = () => {
   const [value, setValue] = useState(flowInstruction);
   const [inputKey, setInputKey] = useState(0);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [scopeIndex, setScopeIndex] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [focus, setFocus] = useState<FocusArea>(
-    hasExistingInput || checkedOutBranch ? "input" : "branch"
-  );
+  const [focus, setFocus] = useState<FocusArea>("input");
 
   useEffect(() => {
     if (checkedOutBranch) setFocus("input");
@@ -51,8 +64,12 @@ export const MainMenu = () => {
 
   if (!gitState) return null;
 
-  const testAction = getTestAction(gitState);
-  const branchLabel = checkedOutBranch ?? gitState.currentBranch;
+  const scopeOptions = buildScopeOptions(gitState);
+  const currentScope = scopeOptions[scopeIndex % scopeOptions.length];
+  const testAction =
+    currentScope?.action === "select-pr"
+      ? "test-unstaged"
+      : currentScope?.action ?? "test-unstaged";
   const submit = (submittedValue?: string) => {
     const trimmed = (submittedValue ?? value).trim();
     if (!trimmed) {
@@ -99,8 +116,23 @@ export const MainMenu = () => {
       }
 
       if (focus === "branch") {
+        if (key.rightArrow) {
+          setScopeIndex((previous) => (previous + 1) % scopeOptions.length);
+          return;
+        }
+        if (key.leftArrow) {
+          setScopeIndex(
+            (previous) =>
+              (previous - 1 + scopeOptions.length) % scopeOptions.length
+          );
+          return;
+        }
         if (key.return) {
-          navigateTo("select-pr");
+          if (currentScope?.action === "select-pr") {
+            navigateTo("select-pr");
+          } else {
+            setFocus("input");
+          }
           return;
         }
       }
@@ -154,22 +186,25 @@ export const MainMenu = () => {
         <Text color={COLORS.DIM}>arrow keys or tab to navigate sections</Text>
       </Box>
 
-      <Text color={COLORS.DIM}>Branch / PR</Text>
-      <Clickable onClick={() => navigateTo("select-pr")}>
-        <Box
-          borderStyle="round"
-          borderColor={focus === "branch" ? COLORS.PRIMARY : COLORS.BORDER}
-          paddingX={2}
+      <Text color={COLORS.DIM}>Test scope</Text>
+      <Box
+        borderStyle="round"
+        borderColor={focus === "branch" ? COLORS.PRIMARY : COLORS.BORDER}
+        paddingX={2}
+      >
+        <Text
+          color={focus === "branch" ? COLORS.PRIMARY : COLORS.TEXT}
+          bold={focus === "branch"}
         >
-          <Text
-            color={focus === "branch" ? COLORS.PRIMARY : COLORS.TEXT}
-            bold={focus === "branch"}
-          >
-            {branchLabel}
+          {currentScope?.label ?? "Select..."}
+        </Text>
+        {focus === "branch" ? (
+          <Text color={COLORS.DIM}>
+            {" ←→ "}[{(scopeIndex % scopeOptions.length) + 1}/
+            {scopeOptions.length}]
           </Text>
-          <Text color={COLORS.DIM}>{" · press enter to change"}</Text>
-        </Box>
-      </Clickable>
+        ) : null}
+      </Box>
 
       <Box marginTop={1} flexDirection="column">
         <Text color={COLORS.DIM}>Describe what to test</Text>
