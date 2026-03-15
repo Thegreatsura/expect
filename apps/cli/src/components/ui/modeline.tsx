@@ -45,13 +45,6 @@ const useHintSegments = (screen: Screen): HintSegment[] => {
         { key: "esc", label: "back", cta: true, onClick: goBack },
         { key: "enter", label: "select", color: COLORS.PRIMARY, cta: true },
       ];
-    case "select-commit":
-      return [
-        { key: "↑↓", label: "nav" },
-        { key: "/", label: "search" },
-        { key: "esc", label: "back", cta: true, onClick: goBack },
-        { key: "enter", label: "select", color: COLORS.PRIMARY, cta: true },
-      ];
     case "saved-flow-picker":
       return [
         { key: "↑↓", label: "nav" },

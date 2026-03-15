@@ -8,7 +8,10 @@ import { isRunningInAgent } from "./utils/is-running-in-agent.js";
 import { getCommitSummary } from "@browser-tester/supervisor";
 import { autoDetectAndTest, runTest } from "./utils/run-test.js";
 import { useAppStore, type Screen } from "./store.js";
-import { resolveTestRunConfig, type TestRunConfig } from "./utils/test-run-config.js";
+import {
+  resolveTestRunConfig,
+  type TestRunConfig,
+} from "./utils/test-run-config.js";
 import {
   getBrowserEnvironment,
   resolveBrowserTarget,
@@ -20,10 +23,16 @@ const program = new Command()
   .name("testie")
   .description("AI-powered browser testing for your changes")
   .version(VERSION, "-v, --version")
-  .option("-m, --message <instruction>", "flow instruction for the browser agent")
+  .option(
+    "-m, --message <instruction>",
+    "flow instruction for the browser agent"
+  )
   .option("-f, --flow <slug>", "reuse a saved flow by slug")
   .option("-y, --yes", "auto-run after planning (skip plan review)")
-  .option("--base-url <url>", "browser base URL (overrides BROWSER_TESTER_BASE_URL)")
+  .option(
+    "--base-url <url>",
+    "browser base URL (overrides BROWSER_TESTER_BASE_URL)"
+  )
   .option("--headed", "run browser in headed mode")
   .option("--cookies", "enable cookie sync")
   .option("--no-cookies", "disable cookie sync");
@@ -37,7 +46,7 @@ const renderApp = () => {
   const instance = render(
     <ThemeProvider initialTheme={initialTheme}>
       <App />
-    </ThemeProvider>,
+    </ThemeProvider>
   );
   process.stdout.on("resize", () => {
     instance.clear();
@@ -46,24 +55,24 @@ const renderApp = () => {
 
 const resolveInitialScreen = (
   config: TestRunConfig,
-  hasCommit: boolean,
-  hasSavedFlow: boolean,
+  hasSavedFlow: boolean
 ): Screen => {
   if (hasSavedFlow) return config.autoRun ? "testing" : "review-plan";
   if (config.message) return "planning";
-  if (config.action === "select-commit" && !hasCommit) return "select-commit";
   return "flow-input";
 };
 
 const seedStoreFromConfig = async (config: TestRunConfig): Promise<void> => {
   const resolvedCommit =
     config.action === "select-commit" && config.commitHash
-      ? (getCommitSummary(process.cwd(), config.commitHash) ?? null)
+      ? getCommitSummary(process.cwd(), config.commitHash) ?? null
       : null;
 
-  const savedFlow = config.flowSlug ? await loadSavedFlowBySlug(config.flowSlug) : null;
+  const savedFlow = config.flowSlug
+    ? await loadSavedFlowBySlug(config.flowSlug)
+    : null;
 
-  const screen = resolveInitialScreen(config, Boolean(resolvedCommit), Boolean(savedFlow));
+  const screen = resolveInitialScreen(config, Boolean(savedFlow));
 
   useAppStore.setState({
     screen,
@@ -107,16 +116,15 @@ program
   .description("Test entire branch diff against main")
   .action(createCommandAction("test-branch"));
 
-program
-  .command("commit")
-  .description("Test a specific commit")
-  .argument("[hash]", "commit hash")
-  .action(createCommandAction("select-commit"));
-
 program.action(async () => {
   const config = resolveTestRunConfig("test-unstaged", program.opts());
   if (isHeadless()) return autoDetectAndTest(config);
-  if (config.message || config.flowSlug || config.autoRun || config.environmentOverrides) {
+  if (
+    config.message ||
+    config.flowSlug ||
+    config.autoRun ||
+    config.environmentOverrides
+  ) {
     await seedStoreFromConfig(config);
   }
   renderApp();

@@ -3,7 +3,6 @@ import { Box, Text, useInput } from "ink";
 import { MouseProvider } from "../hooks/mouse-context.js";
 import { useColors } from "./theme-context.js";
 import { PrPickerScreen } from "./screens/pr-picker-screen.js";
-import { CommitPickerScreen } from "./screens/commit-picker-screen.js";
 import { FlowInputScreen } from "./screens/flow-input-screen.js";
 import { PlanningScreen } from "./screens/planning-screen.js";
 import { PlanReviewScreen } from "./screens/plan-review-screen.js";
@@ -120,8 +119,6 @@ export const App = () => {
     switch (screen) {
       case "testing":
         return <TestingScreen />;
-      case "select-commit":
-        return <CommitPickerScreen />;
       case "theme":
         return <ThemePickerScreen />;
       case "select-pr":

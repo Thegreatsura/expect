@@ -8,7 +8,7 @@ import type { TestAction } from "../../utils/browser-agent.js";
 const ACTION_LABELS: Record<TestAction, string> = {
   "test-unstaged": "Test current changes",
   "test-branch": "Test entire branch",
-  "select-commit": "Select a commit to test",
+  "select-commit": "Test commit",
 };
 
 export const PlanningScreen = () => {

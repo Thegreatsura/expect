@@ -11,7 +11,7 @@ import { ErrorMessage } from "../ui/error-message.js";
 const ACTION_LABELS: Record<TestAction, string> = {
   "test-unstaged": "Test current changes",
   "test-branch": "Test entire branch",
-  "select-commit": "Select a commit to test",
+  "select-commit": "Test commit",
 };
 
 export const FlowInputScreen = () => {

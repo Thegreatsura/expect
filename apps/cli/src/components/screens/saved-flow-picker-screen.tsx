@@ -9,10 +9,10 @@ import { ScreenHeading } from "../ui/screen-heading.js";
 import { ErrorMessage } from "../ui/error-message.js";
 import { Clickable } from "../ui/clickable.js";
 
-const ACTION_LABELS = {
+const ACTION_LABELS: Record<string, string> = {
   "test-unstaged": "Test current changes",
   "test-branch": "Test entire branch",
-  "select-commit": "Select a commit to test",
+  "select-commit": "Test commit",
 };
 
 export const SavedFlowPickerScreen = () => {

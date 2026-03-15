@@ -20,7 +20,6 @@ import type { EnvironmentOverrides } from "./utils/test-run-config.js";
 export type Screen =
   | "main"
   | "select-pr"
-  | "select-commit"
   | "saved-flow-picker"
   | "flow-input"
   | "planning"
@@ -148,12 +147,6 @@ export const useAppStore = create<AppStore>((set) => ({
           planOrigin: null,
         };
       }
-      if (state.screen === "select-commit" && state.pendingSavedFlow) {
-        return {
-          screen: "saved-flow-picker",
-          selectedCommit: null,
-        };
-      }
       if (state.screen !== "testing") {
         return { screen: "main" };
       }
@@ -214,15 +207,6 @@ export const useAppStore = create<AppStore>((set) => ({
     set((state) => {
       if (!state.testAction) {
         return {};
-      }
-
-      if (state.testAction === "select-commit") {
-        return {
-          ...RESET_PLAN_STATE,
-          pendingSavedFlow: savedFlow,
-          selectedCommit: null,
-          screen: "select-commit",
-        };
       }
 
       return {

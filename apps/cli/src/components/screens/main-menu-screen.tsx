@@ -3,7 +3,11 @@ import type { DiffStats } from "@browser-tester/supervisor";
 import { Box, Text, useInput } from "ink";
 import { useAppStore } from "../../store.js";
 import type { TestAction } from "../../utils/browser-agent.js";
-import { getRecommendedScope, type GitState, type TestScope } from "../../utils/get-git-state.js";
+import {
+  getRecommendedScope,
+  type GitState,
+  type TestScope,
+} from "../../utils/get-git-state.js";
 import { useColors } from "../theme-context.js";
 import { Clickable } from "../ui/clickable.js";
 import { MenuItem } from "../ui/menu-item.js";
@@ -26,14 +30,17 @@ const getCustomTestAction = (defaultAction: TestAction | null): TestAction =>
 
 const getSavedFlowAction = (
   action: ScopeMenuOption["action"],
-  defaultAction: TestAction | null,
+  defaultAction: TestAction | null
 ): TestAction | null => {
   if (action === "select-pr") return null;
   if (action === "custom-test") return getCustomTestAction(defaultAction);
   return action;
 };
 
-const buildMenuOptions = (scope: TestScope, gitState: GitState): ScopeMenuOption[] => {
+const buildMenuOptions = (
+  scope: TestScope,
+  gitState: GitState
+): ScopeMenuOption[] => {
   const options: ScopeMenuOption[] = [];
 
   if (scope === "unstaged-changes") {
@@ -47,7 +54,9 @@ const buildMenuOptions = (scope: TestScope, gitState: GitState): ScopeMenuOption
 
   if (
     scope === "entire-branch" ||
-    (scope === "unstaged-changes" && !gitState.isOnMain && gitState.hasBranchCommits)
+    (scope === "unstaged-changes" &&
+      !gitState.isOnMain &&
+      gitState.hasBranchCommits)
   ) {
     options.push({
       label: "Test entire branch",
@@ -64,12 +73,6 @@ const buildMenuOptions = (scope: TestScope, gitState: GitState): ScopeMenuOption
   });
 
   options.push({
-    label: "Select a commit to test",
-    detail: "",
-    action: "select-commit",
-  });
-
-  options.push({
     label: "Describe a custom test",
     detail: "",
     action: "custom-test",
@@ -81,7 +84,9 @@ const buildMenuOptions = (scope: TestScope, gitState: GitState): ScopeMenuOption
 export const MainMenu = () => {
   const COLORS = useColors();
   const gitState = useAppStore((state) => state.gitState);
-  const autoRunAfterPlanning = useAppStore((state) => state.autoRunAfterPlanning);
+  const autoRunAfterPlanning = useAppStore(
+    (state) => state.autoRunAfterPlanning
+  );
   const savedFlowSummaries = useAppStore((state) => state.savedFlowSummaries);
   const selectAction = useAppStore((state) => state.selectAction);
   const beginSavedFlowReuse = useAppStore((state) => state.beginSavedFlowReuse);
@@ -99,17 +104,16 @@ export const MainMenu = () => {
   const canReuseSavedFlow =
     savedFlowSummaries.length > 0 &&
     Boolean(selectedOption) &&
-    Boolean(selectedOption ? getSavedFlowAction(selectedOption.action, recommendedAction) : null);
+    Boolean(
+      selectedOption
+        ? getSavedFlowAction(selectedOption.action, recommendedAction)
+        : null
+    );
 
   const activateOption = useCallback(
     (option: ScopeMenuOption) => {
       if (option.action === "select-pr") {
         navigateTo("select-pr");
-        return;
-      }
-
-      if (option.action === "select-commit") {
-        navigateTo("select-commit");
         return;
       }
 
@@ -120,7 +124,7 @@ export const MainMenu = () => {
 
       selectAction(option.action);
     },
-    [navigateTo, recommendedAction, selectAction],
+    [navigateTo, recommendedAction, selectAction]
   );
 
   const totalItems = menuOptions.length + 1;
@@ -143,7 +147,10 @@ export const MainMenu = () => {
     }
 
     if (input === "r" && canReuseSavedFlow && selectedOption) {
-      const savedFlowAction = getSavedFlowAction(selectedOption.action, recommendedAction);
+      const savedFlowAction = getSavedFlowAction(
+        selectedOption.action,
+        recommendedAction
+      );
       if (savedFlowAction) beginSavedFlowReuse(savedFlowAction);
     }
 
@@ -173,14 +180,19 @@ export const MainMenu = () => {
       <Box flexDirection="column">
         {menuOptions.map((option, index) => {
           return (
-            <Clickable key={option.label} onClick={() => activateOption(option)}>
+            <Clickable
+              key={option.label}
+              onClick={() => activateOption(option)}
+            >
               <MenuItem
                 label={option.label}
                 detail={option.detail}
                 isSelected={index === selectedIndex}
                 recommended={index === 0 && menuOptions.length > 1}
                 hint={
-                  menuOptions.length === 1 && index === selectedIndex ? "press return" : undefined
+                  menuOptions.length === 1 && index === selectedIndex
+                    ? "press return"
+                    : undefined
                 }
                 diffStats={option.diffStats}
               />
