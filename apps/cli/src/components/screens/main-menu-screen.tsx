@@ -50,13 +50,14 @@ export const MainMenu = () => {
   const navigateTo = useAppStore((state) => state.navigateTo);
   const checkedOutBranch = useAppStore((state) => state.checkedOutBranch);
   const flowInstruction = useAppStore((state) => state.flowInstruction);
-  const hasExistingInput = flowInstruction.length > 0;
   const [value, setValue] = useState(flowInstruction);
   const [inputKey, setInputKey] = useState(0);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [scopeIndex, setScopeIndex] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [focus, setFocus] = useState<FocusArea>("input");
+  const defaultFocus =
+    gitState?.isOnMain && !checkedOutBranch ? "branch" : "input";
+  const [focus, setFocus] = useState<FocusArea>(defaultFocus);
 
   useEffect(() => {
     if (checkedOutBranch) setFocus("input");
