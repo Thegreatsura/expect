@@ -62,31 +62,30 @@ export const PlanningScreen = () => {
         <Text color={COLORS.DIM}>{flowInstruction}</Text>
       </Box>
 
-      <Box
-        marginTop={1}
-        flexDirection="column"
-        height={PLANNING_PHASES.length + 1}
-      >
-        {PLANNING_PHASES.map((phase, index) => {
-          if (index > phaseIndex) return null;
-          if (index === phaseIndex) {
-            return (
-              <Text key={phase} color={COLORS.DIM}>
+      <Box marginTop={1} flexDirection="column">
+        {PLANNING_PHASES.map((phase, index) => (
+          <Text key={phase}>
+            {index < phaseIndex ? (
+              <Text color={COLORS.DIM}>
+                <Text color={COLORS.GREEN}>{"  ✓ "}</Text>
+                {phase}
+              </Text>
+            ) : index === phaseIndex ? (
+              <Text color={COLORS.DIM}>
                 <Text color={COLORS.SELECTION}>
                   {"  "}
                   <InkSpinner type="dots" />{" "}
                 </Text>
                 {phase}
               </Text>
-            );
-          }
-          return (
-            <Text key={phase} color={COLORS.DIM}>
-              <Text color={COLORS.GREEN}>{"  ✓ "}</Text>
-              {phase}
-            </Text>
-          );
-        })}
+            ) : (
+              <Text color={COLORS.DIM}>
+                {"    "}
+                {phase}
+              </Text>
+            )}
+          </Text>
+        ))}
       </Box>
     </Box>
   );
