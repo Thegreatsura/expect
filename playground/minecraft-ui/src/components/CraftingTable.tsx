@@ -23,20 +23,12 @@ const BLOCK_TEXTURE_PATHS: Record<
     side: "/textures/oak_log_side.png",
     front: "/textures/oak_log_side.png",
   },
-  oak_planks: {
-    top: "/textures/oak_planks_flat.png",
-    side: "/textures/oak_planks_flat.png",
-    front: "/textures/oak_planks_flat.png",
-  },
-  crafting_table: {
-    top: "/textures/crafting_table_top.png",
-    side: "/textures/crafting_table_side.png",
-    front: "/textures/crafting_table_front.png",
-  },
 };
 
-// Items that use flat 2D textures (tools, items)
+// Items that use pre-rendered images directly
 const FLAT_ITEM_PATHS: Record<string, string> = {
+  oak_planks: "/textures/oak_planks.png",
+  crafting_table: "/textures/crafting_table_block.png",
   stick: "/textures/stick.png",
   wooden_pickaxe: "/textures/wooden_pickaxe.png",
   wooden_sword: "/textures/wooden_sword.png",
@@ -47,6 +39,8 @@ const FLAT_ITEM_PATHS: Record<string, string> = {
   chest: "/textures/chest.png",
   fence: "/textures/fence.png",
   bowl: "/textures/bowl.png",
+  wooden_door: "/textures/wooden_door.png",
+  boat: "/textures/boat.png",
 };
 
 // ─── Crafting Recipes ───
@@ -61,9 +55,13 @@ const RECIPES: Recipe[] = [
   // Shapeless: oak log → 4 planks (any slot)
   { pattern: ["oak_log", _, _, _, _, _, _, _, _], result: { id: "oak_planks", count: 4 } },
 
-  // 2 planks vertical → 4 sticks
-  { pattern: [_, _, _, "oak_planks", _, _, "oak_planks", _, _], result: { id: "stick", count: 4 } },
+  // 2 planks vertical → 4 sticks (all column positions)
   { pattern: ["oak_planks", _, _, "oak_planks", _, _, _, _, _], result: { id: "stick", count: 4 } },
+  { pattern: [_, "oak_planks", _, _, "oak_planks", _, _, _, _], result: { id: "stick", count: 4 } },
+  { pattern: [_, _, "oak_planks", _, _, "oak_planks", _, _, _], result: { id: "stick", count: 4 } },
+  { pattern: [_, _, _, "oak_planks", _, _, "oak_planks", _, _], result: { id: "stick", count: 4 } },
+  { pattern: [_, _, _, _, "oak_planks", _, _, "oak_planks", _], result: { id: "stick", count: 4 } },
+  { pattern: [_, _, _, _, _, "oak_planks", _, _, "oak_planks"], result: { id: "stick", count: 4 } },
 
   // 2x2 planks → crafting table
   { pattern: [_, _, _, "oak_planks", "oak_planks", _, "oak_planks", "oak_planks", _], result: { id: "crafting_table", count: 1 } },
@@ -97,6 +95,13 @@ const RECIPES: Recipe[] = [
 
   // Fence (planks-stick-planks x2)
   { pattern: [_, _, _, "oak_planks", "stick", "oak_planks", "oak_planks", "stick", "oak_planks"], result: { id: "fence", count: 2 } },
+
+  // Wooden door (2x3 planks)
+  { pattern: ["oak_planks", "oak_planks", _, "oak_planks", "oak_planks", _, "oak_planks", "oak_planks", _], result: { id: "wooden_door", count: 1 } },
+  { pattern: [_, "oak_planks", "oak_planks", _, "oak_planks", "oak_planks", _, "oak_planks", "oak_planks"], result: { id: "wooden_door", count: 1 } },
+
+  // Boat (5 planks U shape)
+  { pattern: [_, _, _, "oak_planks", _, "oak_planks", "oak_planks", "oak_planks", "oak_planks"], result: { id: "boat", count: 1 } },
 ];
 
 const matchRecipe = (grid: ItemStack[]): { id: string; count: number } | null => {
