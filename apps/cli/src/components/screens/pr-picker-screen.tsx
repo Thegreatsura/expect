@@ -305,7 +305,7 @@ export const PrPickerScreen = () => {
           paddingX={1}
         >
           <Text color={COLORS.YELLOW} bold>
-            Switching to {confirmBranch.name} will regenerate the test plan.
+            Switching to {confirmBranch.name} will discard the current plan. A new plan will need to be generated.
           </Text>
           <Text color={COLORS.DIM}>
             Press <Text color={COLORS.PRIMARY}>y</Text> to continue or{" "}
