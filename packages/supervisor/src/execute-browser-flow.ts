@@ -29,36 +29,7 @@ import { saveBrowserImageResult } from "./utils/save-browser-image-result.js";
 import { serializeToolResult } from "./utils/serialize-tool-result.js";
 import { resolveLiveViewUrl } from "./utils/resolve-live-view-url.js";
 
-const BROWSER_EXECUTION_TOOL_NAMES = [
-  "open",
-  "snapshot",
-  "click",
-  "fill",
-  "type",
-  "select",
-  "hover",
-  "screenshot",
-  "annotated_screenshot",
-  "diff",
-  "save_video",
-  "navigate",
-  "get_page_text",
-  "javascript",
-  "read_console_messages",
-  "read_network_requests",
-  "scroll",
-  "drag",
-  "upload",
-  "resize_window",
-  "tab_list",
-  "tab_create",
-  "tab_switch",
-  "tab_close",
-  "find",
-  "wait",
-  "press_key",
-  "close",
-];
+const BROWSER_EXECUTION_TOOL_NAMES = ["open", "playwright", "screenshot", "close"];
 
 const buildExecutionToolAllowlist = (browserMcpServerName: string): string[] =>
   BROWSER_EXECUTION_TOOL_NAMES.map((toolName) => `mcp__${browserMcpServerName}__${toolName}`);
@@ -133,10 +104,47 @@ const buildExecutionPrompt = (
   memoryContext?: string,
 ): string => {
   const { plan, target, environment, browserMcpServerName, videoOutputPath } = options;
+  const mcpName = browserMcpServerName ?? DEFAULT_BROWSER_MCP_SERVER_NAME;
 
   return [
     "You are executing an approved browser test plan.",
-    `You have access to browser tools through the MCP server named "${browserMcpServerName ?? DEFAULT_BROWSER_MCP_SERVER_NAME}".`,
+    `You have 4 browser tools via the MCP server named "${mcpName}":`,
+    "",
+    "1. open — Launch a browser and navigate to a URL.",
+    "2. playwright — Execute Playwright code in Node.js. Globals: page (Page), context (BrowserContext), browser (Browser), ref(id) (resolves a snapshot ref like 'e4' to a Playwright Locator). Supports await. Return a value to get it back as JSON.",
+    "3. screenshot — Capture page state. Set mode: 'snapshot' (ARIA accessibility tree, default and preferred), 'screenshot' (PNG image), or 'annotated' (PNG with numbered labels on interactive elements).",
+    "4. close — Close the browser and flush the video recording.",
+    "",
+    "Strongly prefer screenshot with mode 'snapshot' for observing page state — the ARIA tree is fast, cheap, and sufficient for almost all assertions.",
+    "Only use mode 'screenshot' or 'annotated' when you need to verify something purely visual (layout, colors, images) that the accessibility tree cannot capture.",
+    "",
+    "Snapshot-driven workflow:",
+    "1. Call screenshot with mode 'snapshot' to get the ARIA tree with refs.",
+    "2. Read the tree to find your target elements. Every interactive element has a ref like [ref=e4].",
+    "3. Use ref() in one playwright call to perform multiple actions using the refs from the snapshot — fill forms, click buttons, wait, and return results all in one block.",
+    "4. Only take a new snapshot when the page structure has changed significantly (navigation, modal open, new content loaded) and you need fresh refs.",
+    "",
+    "Example snapshot tree:",
+    "  - navigation",
+    '    - link "Home" [ref=e1]',
+    '    - link "About" [ref=e2]',
+    "  - main",
+    '    - heading "Welcome"',
+    '    - textbox "Email" [ref=e3]',
+    '    - button "Submit" [ref=e4]',
+    "",
+    "Acting on refs — use ref() to get a Locator directly from the snapshot ref ID:",
+    "  await ref('e3').fill('test@example.com');",
+    "  await ref('e4').click();",
+    "  await ref('e1').click();",
+    "",
+    "Always snapshot first, then use ref() to act. Never guess CSS selectors.",
+    "",
+    "Batch as many actions as possible into a single playwright call to minimize round trips:",
+    "  playwright: await ref('e3').fill('test@example.com'); await ref('e5').fill('secret'); await ref('e6').click(); await page.waitForLoadState('networkidle'); return await page.innerText('.result');",
+    "  playwright: await ref('e1').click(); await page.waitForURL('**/about');",
+    "  playwright: return { url: page.url(), title: await page.title() };",
+    "",
     "Follow the approved steps in order. You may adapt to UI details, but do not invent a different goal.",
     "Execution style: assertion-first. For each step, think in loops: navigate, act, validate, recover, then fail if still blocked.",
     "A browser video recording is enabled for this run.",
@@ -150,29 +158,23 @@ const buildExecutionPrompt = (
     "",
     "Allowed failure categories: app-bug, env-issue, auth-blocked, missing-test-data, selector-drift, agent-misread.",
     "When a step fails, gather structured evidence before emitting ASSERTION_FAILED:",
-    "- Call screenshot.",
-    "- Call tab_list to capture the active tab and current URL.",
-    "- Call read_console_messages.",
-    "- Call read_network_requests.",
-    "- Call get_page_text for a visible text excerpt.",
+    "- Call screenshot with mode 'snapshot' to capture the ARIA tree.",
+    "- Use playwright to gather diagnostics: return { url: page.url(), title: await page.title(), text: await page.innerText('body').then(t => t.slice(0, 500)) };",
+    "- Only take a visual screenshot if the failure might be layout/rendering related.",
     "- Summarize the failure category and the most important evidence inside <why-it-failed>.",
     "",
-    "Stability heuristics are first-class requirements:",
-    "- After navigation or major UI changes, wait for the page to settle before acting again.",
-    "- Inspect the latest snapshot before every interaction that depends on the current UI state.",
-    "- Avoid clicking or typing while the UI is visibly loading or transitioning.",
-    "- Confirm you reached the expected page, route, or visible surface before continuing.",
+    "Stability heuristics:",
+    "- After navigation or major UI changes, use playwright to wait for the page to settle (e.g. await page.waitForLoadState('networkidle')).",
+    "- Use screenshot with mode 'snapshot' to inspect the accessibility tree before interactions that depend on current UI state.",
+    "- Avoid interacting while the UI is visibly loading or transitioning.",
+    "- Confirm you reached the expected page or route before continuing.",
     "",
     "Recovery policy for each blocked step:",
-    "- Re-snapshot the page.",
-    "- Scroll the target into view when needed.",
-    "- Retry the intended interaction at most once.",
-    "- Re-check the URL, network, and console state.",
-    "- If the step is still blocked, classify the blocker with one allowed failure category and include that classification in ASSERTION_FAILED.",
+    "- Take a new snapshot to re-inspect the page and get fresh refs.",
+    "- Use playwright with ref() to scroll the target into view or retry the interaction once.",
+    "- If still blocked, classify the blocker with one allowed failure category and include that classification in ASSERTION_FAILED.",
     "",
     "Before emitting RUN_COMPLETED, call the close tool exactly once so the browser session flushes the video to disk.",
-    "Use the browser tools to open pages, inspect the accessibility tree, interact with the UI, wait when needed, and check browser logs or network requests when helpful.",
-    "When this run launches its own browser, the close tool should shut that browser down cleanly.",
     "",
     "Environment:",
     `- Base URL: ${environment?.baseUrl ?? "not provided"}`,
@@ -326,11 +328,7 @@ export const executeBrowserFlow = async function* (
     if (part.type === "tool-result") {
       const browserAction = parseBrowserToolName(part.toolName, browserMcpServerName);
       let result = serializeToolResult(part.result);
-      if (
-        browserAction === "screenshot" ||
-        browserAction === "take_screenshot" ||
-        browserAction === "annotated_screenshot"
-      ) {
+      if (browserAction === "screenshot") {
         const savedBrowserImageResult = saveBrowserImageResult({
           browserAction,
           outputDirectoryPath: screenshotOutputDirectoryPath,

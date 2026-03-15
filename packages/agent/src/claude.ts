@@ -1,5 +1,6 @@
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type {
@@ -23,6 +24,13 @@ import type { AgentProviderSettings } from "./types.js";
 import { buildClaudeProcessEnv } from "./utils/build-claude-process-env.js";
 
 const DEFAULT_CLAUDE_MAX_TURNS = 200;
+const AGENT_LOG_DIRECTORY = join(tmpdir(), "browser-tester-agent-logs");
+
+const createAgentDebugLogPath = (): string => {
+  mkdirSync(AGENT_LOG_DIRECTORY, { recursive: true });
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return join(AGENT_LOG_DIRECTORY, `${timestamp}.log`);
+};
 
 const resolveClaudeExecutablePath = (): string | undefined => {
   const require = createRequire(typeof __filename !== "undefined" ? __filename : import.meta.url);
@@ -143,7 +151,9 @@ const buildQueryOptions = (
   const supportsEffort = !resolvedModel.toLowerCase().includes("sonnet");
   const explicitExecutablePath = resolveClaudeExecutablePath();
   const env = buildClaudeProcessEnv(settings.env);
-  const queryOptions = {
+  const debugLogPath = settings.debugLogPath ?? createAgentDebugLogPath();
+
+  return {
     model: resolvedModel,
     maxTurns: settings.maxTurns ?? DEFAULT_CLAUDE_MAX_TURNS,
     cwd: settings.cwd ?? process.cwd(),
@@ -151,6 +161,7 @@ const buildQueryOptions = (
       settings.permissionMode === "bypassPermissions" ? true : undefined,
     permissionMode: settings.permissionMode ?? "bypassPermissions",
     abortController,
+    debugFile: debugLogPath,
     ...(settings.effort && supportsEffort ? { effort: settings.effort } : {}),
     ...(systemPrompt ? { appendSystemPrompt: systemPrompt } : {}),
     ...(settings.sessionId ? { resume: settings.sessionId } : {}),
@@ -159,6 +170,4 @@ const buildQueryOptions = (
     ...(explicitExecutablePath ? { pathToClaudeCodeExecutable: explicitExecutablePath } : {}),
     ...(settings.tools !== undefined ? { tools: settings.tools } : {}),
   };
-
-  return queryOptions;
 };

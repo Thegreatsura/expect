@@ -144,11 +144,7 @@ describe("getHighlightWindows", () => {
   it("excludes tool calls with ignored suffixes", () => {
     const events: BrowserRunEvent[] = [
       runStarted(),
-      toolCall(5000, "browser__wait"),
-      toolCall(6000, "browser__snapshot"),
-      toolCall(7000, "browser__get_page_text"),
-      toolCall(8000, "browser__read_console_messages"),
-      toolCall(9000, "browser__read_network_requests"),
+      toolCall(5000, "browser__close"),
       { type: "text", timestamp: BASE_TIMESTAMP + 15000, text: "end" },
     ];
 

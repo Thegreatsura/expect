@@ -161,8 +161,11 @@ describe("executeBrowserFlow", () => {
 
     expect(settings.effort).toBe("medium");
     expect(settings.tools).toContain("mcp__browser__open");
-    expect(settings.tools).toContain("mcp__browser__click");
+    expect(settings.tools).toContain("mcp__browser__playwright");
+    expect(settings.tools).toContain("mcp__browser__screenshot");
+    expect(settings.tools).toContain("mcp__browser__close");
     expect(settings.tools).not.toContain("Bash");
+    expect(settings.tools).toHaveLength(4);
     expect(settings.tools?.every((toolName) => toolName.startsWith("mcp__browser__"))).toBe(true);
     expect(settings.mcpServers).toEqual({
       browser: {

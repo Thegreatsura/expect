@@ -1,0 +1,158 @@
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { createBrowserMcpServer } from "../src/server.js";
+
+const TEST_HTML = `<!DOCTYPE html>
+<html>
+<body>
+  <h1>Test Page</h1>
+  <input type="text" aria-label="Email" />
+  <button>Submit</button>
+  <p id="result">Waiting</p>
+  <script>
+    document.querySelector('button').addEventListener('click', () => {
+      document.getElementById('result').textContent = 'Clicked: ' + document.querySelector('input').value;
+    });
+  </script>
+</body>
+</html>`;
+
+let testServerUrl: string;
+let httpServer: ReturnType<typeof createServer>;
+
+let mcpClient: Client;
+let mcpCleanup: () => Promise<void>;
+
+const callTool = async (name: string, args: Record<string, unknown> = {}) => {
+  const result = await mcpClient.callTool({ name, arguments: args });
+  return result;
+};
+
+const textContent = (result: Awaited<ReturnType<typeof callTool>>): string => {
+  const textItem = (result.content as Array<{ type: string; text?: string }>).find(
+    (item) => item.type === "text",
+  );
+  return textItem?.text ?? "";
+};
+
+beforeAll(async () => {
+  httpServer = createServer((_req, res) => {
+    res.writeHead(200, { "Content-Type": "text/html" });
+    res.end(TEST_HTML);
+  });
+  await new Promise<void>((resolve) => httpServer.listen(0, resolve));
+  const port = (httpServer.address() as AddressInfo).port;
+  testServerUrl = `http://127.0.0.1:${port}`;
+
+  const server = createBrowserMcpServer();
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  mcpClient = new Client({ name: "test-client", version: "0.0.1" });
+  await server.connect(serverTransport);
+  await mcpClient.connect(clientTransport);
+
+  mcpCleanup = async () => {
+    await mcpClient.close();
+    await server.close();
+  };
+});
+
+afterAll(async () => {
+  await callTool("close").catch(() => {});
+  await mcpCleanup();
+  httpServer.close();
+});
+
+describe("MCP server tools", () => {
+  it("lists exactly 4 tools", async () => {
+    const tools = await mcpClient.listTools();
+    const toolNames = tools.tools.map((tool) => tool.name).sort();
+    expect(toolNames).toEqual(["close", "open", "playwright", "screenshot"]);
+  });
+
+  it("open → snapshot → playwright ref click → verify", async () => {
+    const openResult = await callTool("open", { url: testServerUrl });
+    expect(textContent(openResult)).toContain("Opened");
+
+    const snapshotResult = await callTool("screenshot", { mode: "snapshot" });
+    const snapshotText = textContent(snapshotResult);
+    const snapshotData = JSON.parse(snapshotText);
+    expect(snapshotData.tree).toContain("Submit");
+    expect(snapshotData.tree).toContain("Email");
+
+    const emailRef = Object.entries(snapshotData.refs).find(
+      ([, entry]: [string, { name: string }]) => entry.name === "Email",
+    );
+    const submitRef = Object.entries(snapshotData.refs).find(
+      ([, entry]: [string, { name: string }]) => entry.name === "Submit",
+    );
+    expect(emailRef).toBeDefined();
+    expect(submitRef).toBeDefined();
+
+    const fillResult = await callTool("playwright", {
+      code: `await ref('${emailRef![0]}').fill('hello@test.com');`,
+    });
+    expect(textContent(fillResult)).toBe("OK");
+
+    const clickResult = await callTool("playwright", {
+      code: `await ref('${submitRef![0]}').click();`,
+    });
+    expect(textContent(clickResult)).toBe("OK");
+
+    const verifyResult = await callTool("playwright", {
+      code: `return await page.locator('#result').innerText();`,
+    });
+    expect(textContent(verifyResult)).toContain("Clicked: hello@test.com");
+  });
+
+  it("screenshot modes return correct content types", async () => {
+    const screenshotResult = await callTool("screenshot", { mode: "screenshot" });
+    const imageItem = (screenshotResult.content as Array<{ type: string }>).find(
+      (item) => item.type === "image",
+    );
+    expect(imageItem).toBeDefined();
+
+    const snapshotResult = await callTool("screenshot", { mode: "snapshot" });
+    const snapshotText = textContent(snapshotResult);
+    const snapshotData = JSON.parse(snapshotText);
+    expect(snapshotData).toHaveProperty("tree");
+    expect(snapshotData).toHaveProperty("refs");
+    expect(snapshotData).toHaveProperty("stats");
+
+    const annotatedResult = await callTool("screenshot", { mode: "annotated" });
+    const annotatedImage = (annotatedResult.content as Array<{ type: string }>).find(
+      (item) => item.type === "image",
+    );
+    const annotatedText = (annotatedResult.content as Array<{ type: string }>).find(
+      (item) => item.type === "text",
+    );
+    expect(annotatedImage).toBeDefined();
+    expect(annotatedText).toBeDefined();
+  });
+
+  it("playwright returns error text on failure instead of throwing", async () => {
+    const result = await callTool("playwright", {
+      code: `throw new Error('intentional test error');`,
+    });
+    expect(textContent(result)).toContain("Error: intentional test error");
+  });
+
+  it("close flushes the session", async () => {
+    const closeResult = await callTool("close");
+    expect(textContent(closeResult)).toContain("Browser closed");
+
+    const doubleClose = await callTool("close");
+    expect(textContent(doubleClose)).toContain("No browser open");
+  });
+
+  it("ref() throws when no snapshot has been taken", async () => {
+    await callTool("open", { url: testServerUrl });
+    const result = await callTool("playwright", {
+      code: `await ref('e1').click();`,
+    });
+    expect(textContent(result)).toContain("No snapshot taken yet");
+    await callTool("close");
+  });
+});

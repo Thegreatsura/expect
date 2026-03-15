@@ -3,6 +3,7 @@ import { Box, Text, useInput } from "ink";
 import figures from "figures";
 import { executeBrowserFlow, type BrowserRunEvent } from "@browser-tester/supervisor";
 import {
+  LIVE_VIEW_READY_POLL_INTERVAL_MS,
   PROGRESS_BAR_WIDTH,
   TESTING_TIMER_UPDATE_INTERVAL_MS,
   TESTING_TOOL_TEXT_CHAR_LIMIT,
@@ -57,6 +58,7 @@ export const TestingScreen = () => {
   const [toolCallDisplayMode, setToolCallDisplayMode] = useState(TOOL_CALL_DISPLAY_MODE_COMPACT);
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const [exitRequested, setExitRequested] = useState(false);
+  const [pendingLiveViewUrl, setPendingLiveViewUrl] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const derivedState = useMemo(
@@ -86,6 +88,28 @@ export const TestingScreen = () => {
   }, [runStartedAt, running]);
 
   useEffect(() => {
+    if (!pendingLiveViewUrl) return;
+
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(pendingLiveViewUrl);
+        if (response.ok && !cancelled) {
+          setLiveViewUrl(pendingLiveViewUrl);
+          clearInterval(interval);
+        }
+      } catch {
+        // HACK: server not ready yet, keep polling
+      }
+    }, LIVE_VIEW_READY_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [pendingLiveViewUrl, setLiveViewUrl]);
+
+  useEffect(() => {
     if (!target || !plan || !environment) return;
 
     const abortController = new AbortController();
@@ -110,7 +134,7 @@ export const TestingScreen = () => {
           signal: abortController.signal,
         })) {
           if (event.type === "run-started" && event.liveViewUrl) {
-            setLiveViewUrl(event.liveViewUrl);
+            setPendingLiveViewUrl(event.liveViewUrl);
           }
           if (event.type === "run-completed") {
             setVideoPath(event.report?.artifacts.rawVideoPath ?? event.videoPath ?? null);

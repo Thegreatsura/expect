@@ -207,15 +207,7 @@ const getRiskAreaSummary = (
 };
 
 const isInterestingToolName = (toolName: string): boolean => {
-  const ignoredSuffixes = [
-    "__wait",
-    "__snapshot",
-    "__get_page_text",
-    "__read_console_messages",
-    "__read_network_requests",
-    "__close",
-    "__save_video",
-  ];
+  const ignoredSuffixes = ["__close"];
   return !ignoredSuffixes.some((suffix) => toolName.endsWith(suffix));
 };
 

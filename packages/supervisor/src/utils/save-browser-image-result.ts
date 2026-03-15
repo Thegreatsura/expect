@@ -70,15 +70,6 @@ const getImageFileExtension = (mimeType: string): string | null => {
   }
 };
 
-const getBrowserImageLabel = (browserAction: string): string => {
-  switch (browserAction) {
-    case "annotated_screenshot":
-      return "Annotated screenshot";
-    default:
-      return "Screenshot";
-  }
-};
-
 export const saveBrowserImageResult = (options: {
   browserAction: string;
   outputDirectoryPath?: string;
@@ -103,6 +94,6 @@ export const saveBrowserImageResult = (options: {
   return {
     outputDirectoryPath,
     outputPath,
-    resultText: `${getBrowserImageLabel(options.browserAction)} saved to ${outputPath}`,
+    resultText: `Screenshot saved to ${outputPath}`,
   };
 };

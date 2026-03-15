@@ -23,4 +23,5 @@ export interface AgentProviderSettings {
   effort?: AgentEffort;
   tools?: string[];
   maxTurns?: number;
+  debugLogPath?: string;
 }
