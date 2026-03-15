@@ -1,8 +1,11 @@
+import { useEffect, useState } from "react";
 import { Box, Text } from "ink";
 import { Spinner } from "../ui/spinner.js";
 import { ScreenHeading } from "../ui/screen-heading.js";
 import { useColors } from "../theme-context.js";
 import { useAppStore } from "../../store.js";
+import { formatElapsedTime } from "../../utils/format-elapsed-time.js";
+import { TESTING_TIMER_UPDATE_INTERVAL_MS } from "../../constants.js";
 import type { TestAction } from "../../utils/browser-agent.js";
 
 const ACTION_LABELS: Record<TestAction, string> = {
@@ -11,10 +14,37 @@ const ACTION_LABELS: Record<TestAction, string> = {
   "select-commit": "Test commit",
 };
 
+const PLANNING_PHASES = [
+  "Analyzing git diff and changed files...",
+  "Reading modified source files...",
+  "Building scope-aware context...",
+  "Identifying affected routes and components...",
+  "Generating browser test steps...",
+  "Validating test plan against codebase...",
+];
+
+const PHASE_DURATION_MS = 4000;
+
 export const PlanningScreen = () => {
   const COLORS = useColors();
   const flowInstruction = useAppStore((state) => state.flowInstruction);
   const testAction = useAppStore((state) => state.testAction);
+  const [startTime] = useState(() => Date.now());
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Date.now() - startTime);
+    }, TESTING_TIMER_UPDATE_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [startTime]);
+
+  const phaseIndex = Math.min(
+    Math.floor(elapsed / PHASE_DURATION_MS),
+    PLANNING_PHASES.length - 1
+  );
+  const currentPhase = PLANNING_PHASES[phaseIndex];
+  const completedPhases = PLANNING_PHASES.slice(0, phaseIndex);
 
   return (
     <Box flexDirection="column" width="100%" paddingX={1} paddingY={1}>
@@ -22,6 +52,7 @@ export const PlanningScreen = () => {
         title={
           testAction ? ACTION_LABELS[testAction] : "Generating browser plan"
         }
+        subtitle={formatElapsedTime(elapsed)}
       />
 
       <Box
@@ -33,8 +64,14 @@ export const PlanningScreen = () => {
         <Text color={COLORS.DIM}>{flowInstruction}</Text>
       </Box>
 
-      <Box marginTop={1}>
-        <Spinner message="Planning with scope-aware git context..." />
+      <Box marginTop={1} flexDirection="column">
+        {completedPhases.map((phase) => (
+          <Text key={phase} color={COLORS.DIM}>
+            <Text color={COLORS.GREEN}>{"  ✓ "}</Text>
+            {phase}
+          </Text>
+        ))}
+        <Spinner message={currentPhase ?? "Planning..."} />
       </Box>
     </Box>
   );
