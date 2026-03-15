@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Box, Text } from "ink";
+import figures from "figures";
 import { Spinner } from "../ui/spinner.js";
+import { TextShimmer } from "../ui/text-shimmer.js";
 import { useColors } from "../theme-context.js";
 import { useAppStore } from "../../store.js";
 import { formatElapsedTime } from "../../utils/format-elapsed-time.js";
@@ -38,8 +40,13 @@ export const PlanningScreen = () => {
       </Box>
 
       <Box marginTop={1}>
-        <Spinner message="Waiting for Claude to generate plan..." />
-        <Text color={COLORS.DIM}> {formatElapsedTime(elapsed)}</Text>
+        <Spinner />
+        <Text> </Text>
+        <TextShimmer
+          text={`Generating plan${figures.ellipsis} ${formatElapsedTime(elapsed)}`}
+          baseColor={COLORS.DIM}
+          highlightColor={COLORS.PRIMARY}
+        />
       </Box>
     </Box>
   );
