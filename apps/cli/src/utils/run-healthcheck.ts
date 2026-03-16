@@ -1,6 +1,6 @@
+import readline from "node:readline";
 import figures from "figures";
 import pc from "picocolors";
-import prompts from "prompts";
 import { formatFileCategories } from "./categorize-changed-files.js";
 import { getGitState, type TestScope } from "./get-git-state.js";
 import { getHealthcheckReport } from "./get-healthcheck-report.js";
@@ -76,12 +76,12 @@ export const runHealthcheckInteractive = async (): Promise<HealthcheckResult> =>
 
   process.stdout.write("\n");
 
-  const { shouldTest } = await prompts({
-    type: "confirm",
-    name: "shouldTest",
-    message: "Run tests?",
-    initial: true,
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await new Promise<string>((resolve) => {
+    rl.question(`${pc.cyan("?")} Run tests? ${pc.dim("(Y/n)")} `, resolve);
   });
+  rl.close();
 
-  return { shouldTest: shouldTest ?? false, scope: report.scope };
+  const shouldTest = answer.trim().toLowerCase() !== "n";
+  return { shouldTest, scope: report.scope };
 };

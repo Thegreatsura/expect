@@ -17,6 +17,7 @@ import {
 } from "./browser-agent.js";
 import type { TestRunConfig } from "./test-run-config.js";
 import { loadSavedFlowBySlug } from "./load-saved-flow.js";
+import { saveTestedFingerprint } from "./tested-state.js";
 
 const ACTION_LABELS: Record<TestAction, string> = {
   "test-unstaged": "unstaged changes",
@@ -122,6 +123,10 @@ export const runTest = async (config: TestRunConfig): Promise<void> => {
       if (line) {
         process.stdout.write(line + "\n");
       }
+    }
+
+    if (latestRunReport?.status === "passed") {
+      saveTestedFingerprint();
     }
 
     if (latestRunReport?.artifacts.highlightVideoPath) {

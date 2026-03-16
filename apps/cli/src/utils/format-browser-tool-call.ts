@@ -1,18 +1,12 @@
-import type { BrowserRunEvent } from "@browser-tester/supervisor";
 import {
   BROWSER_TOOL_PREFIX,
   TESTING_SELECT_TRUNCATION_LIMIT,
   TESTING_TOOL_INPUT_CHAR_LIMIT,
-  TESTING_TOOL_TEXT_CHAR_LIMIT,
 } from "../constants.js";
 import cliTruncate from "cli-truncate";
 
 interface BrowserToolCallFormatOptions {
   includeRelevantInputs?: boolean;
-}
-
-interface BrowserToolResultFormatOptions {
-  includeAllResults?: boolean;
 }
 
 const parseToolInput = (input: string): Record<string, unknown> | null => {
@@ -273,26 +267,4 @@ export const formatBrowserToolCall = (
   }
 
   return formatCompactBrowserToolCall(action, parsedInput);
-};
-
-export const formatBrowserToolResult = (
-  event: Extract<BrowserRunEvent, { type: "tool-result" }>,
-  options: BrowserToolResultFormatOptions = {},
-): string | null => {
-  if (event.isError) {
-    return options.includeAllResults === true
-      ? event.result
-      : cliTruncate(event.result, TESTING_TOOL_TEXT_CHAR_LIMIT);
-  }
-
-  switch (event.toolName) {
-    case `${BROWSER_TOOL_PREFIX}screenshot`:
-    case `${BROWSER_TOOL_PREFIX}take_screenshot`:
-    case `${BROWSER_TOOL_PREFIX}annotated_screenshot`:
-    case `${BROWSER_TOOL_PREFIX}save_video`:
-    case `${BROWSER_TOOL_PREFIX}close`:
-      return event.result;
-    default:
-      return options.includeAllResults === true ? event.result : null;
-  }
 };

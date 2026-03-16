@@ -41,8 +41,10 @@ export const ALT_SCREEN_OFF = "\u001b[?1049l";
 export const FALLBACK_TERMINAL_COLUMNS = 80;
 export const FALLBACK_TERMINAL_ROWS = 24;
 export const BROWSER_TOOL_PREFIX = "mcp__browser__";
+export const TESTIE_STATE_DIR = ".testie";
+export const TESTED_FINGERPRINT_FILE = "last-tested";
+export const GIT_FINGERPRINT_TIMEOUT_MS = 5000;
 export const LIVE_VIEW_READY_POLL_INTERVAL_MS = 1000;
-export { detectMouseSupport } from "./utils/detect-mouse-support.js";
 export const CLICK_SUPPORT_ENABLED =
   process.env.SUPPORT_CLICK === "true" || process.env.SUPPORT_CLICK === "1";
 

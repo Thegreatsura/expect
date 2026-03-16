@@ -4,6 +4,7 @@ import {
   type FileCategory,
 } from "./categorize-changed-files.js";
 import { type GitState, getRecommendedScope, type TestScope } from "./get-git-state.js";
+import { isCurrentStateTested } from "./tested-state.js";
 
 interface HealthcheckReport {
   hasUntestedChanges: boolean;
@@ -18,7 +19,8 @@ interface HealthcheckReport {
 
 export const getHealthcheckReport = (gitState: GitState): HealthcheckReport => {
   const scope = getRecommendedScope(gitState);
-  const hasUntestedChanges = gitState.hasUnstagedChanges || gitState.hasBranchCommits;
+  const hasGitChanges = gitState.hasUnstagedChanges || gitState.hasBranchCommits;
+  const hasUntestedChanges = hasGitChanges && !isCurrentStateTested();
   const diffStats = gitState.hasUnstagedChanges ? gitState.diffStats : gitState.branchDiffStats;
   const changedLines = (diffStats?.additions ?? 0) + (diffStats?.deletions ?? 0);
   const fileCount = diffStats?.filesChanged ?? 0;

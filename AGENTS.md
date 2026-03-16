@@ -1,22 +1,20 @@
 # Browser Tester
 
-## Coding Standards
+pnpm monorepo. Turbo for builds, oxlint + oxfmt for linting/formatting.
 
-- MUST: Use TypeScript interfaces over types.
-- MUST: Use arrow functions over function declarations.
-- MUST: Never comment unless absolutely necessary.
-  - If the code is a hack, prefix with `// HACK: reason`
-- MUST: Use kebab-case for files.
-- MUST: Use descriptive names for variables (avoid shorthands or 1-2 character names).
-- MUST: Do not type cast (`as`) unless absolutely necessary.
-- MUST: Remove unused code and don't repeat yourself.
-- MUST: Put all magic numbers in `constants.ts` using `SCREAMING_SNAKE_CASE` with unit suffixes (`_MS`, `_PX`).
-- MUST: Put small, focused utility functions in `utils/` with one utility per file.
-- MUST: Use `Boolean` over `!!`.
-
-## Testing
+## Verify changes
 
 ```bash
-pnpm lint
-pnpm format:check
+pnpm lint && pnpm format:check
 ```
+
+## Code style
+
+- `interface` over `type`. `Boolean` over `!!`. Arrow functions only.
+- No comments unless it's a hack (`// HACK: reason`).
+- No type casts (`as`) unless unavoidable.
+- No unused code, no duplication.
+- Descriptive variable names (no shorthands or 1-2 char names).
+- kebab-case filenames.
+- Magic numbers go in `constants.ts` as `SCREAMING_SNAKE_CASE` with unit suffixes (`_MS`, `_PX`).
+- One focused utility per file in `utils/`.

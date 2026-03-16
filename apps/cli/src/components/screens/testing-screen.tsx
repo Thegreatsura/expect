@@ -21,6 +21,7 @@ import { FileLink } from "../ui/file-link.js";
 import { ErrorMessage } from "../ui/error-message.js";
 import { deriveTestingState } from "../../utils/derive-testing-state.js";
 import { openUrl } from "../../utils/open-url.js";
+import { saveTestedFingerprint } from "../../utils/tested-state.js";
 
 const TOOL_CALL_DISPLAY_MODE_COMPACT = "compact";
 const TOOL_CALL_DISPLAY_MODE_DETAILED = "detailed";
@@ -139,6 +140,9 @@ export const TestingScreen = () => {
           if (event.type === "run-completed") {
             setVideoPath(event.report?.artifacts.rawVideoPath ?? event.videoPath ?? null);
             if (event.report) {
+              if (event.report.status === "passed") {
+                saveTestedFingerprint();
+              }
               completeTestingRun(event.report);
             }
           }
