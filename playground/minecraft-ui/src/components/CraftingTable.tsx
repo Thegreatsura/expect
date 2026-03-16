@@ -14,10 +14,7 @@ const GUI_H = 166 * S;
 
 // ─── Texture paths ───
 // Items that use isometric 3D rendering from face textures
-const BLOCK_TEXTURE_PATHS: Record<
-  string,
-  { top: string; side: string; front: string }
-> = {
+const BLOCK_TEXTURE_PATHS: Record<string, { top: string; side: string; front: string }> = {
   oak_log: {
     top: "/textures/oak_log_top.png",
     side: "/textures/oak_log_side.png",
@@ -64,44 +61,122 @@ const RECIPES: Recipe[] = [
   { pattern: [_, _, _, _, _, "oak_planks", _, _, "oak_planks"], result: { id: "stick", count: 4 } },
 
   // 2x2 planks → crafting table
-  { pattern: [_, _, _, "oak_planks", "oak_planks", _, "oak_planks", "oak_planks", _], result: { id: "crafting_table", count: 1 } },
-  { pattern: ["oak_planks", "oak_planks", _, "oak_planks", "oak_planks", _, _, _, _], result: { id: "crafting_table", count: 1 } },
+  {
+    pattern: [_, _, _, "oak_planks", "oak_planks", _, "oak_planks", "oak_planks", _],
+    result: { id: "crafting_table", count: 1 },
+  },
+  {
+    pattern: ["oak_planks", "oak_planks", _, "oak_planks", "oak_planks", _, _, _, _],
+    result: { id: "crafting_table", count: 1 },
+  },
 
   // Wooden pickaxe
-  { pattern: ["oak_planks", "oak_planks", "oak_planks", _, "stick", _, _, "stick", _], result: { id: "wooden_pickaxe", count: 1 } },
+  {
+    pattern: ["oak_planks", "oak_planks", "oak_planks", _, "stick", _, _, "stick", _],
+    result: { id: "wooden_pickaxe", count: 1 },
+  },
 
   // Wooden sword
-  { pattern: [_, "oak_planks", _, _, "oak_planks", _, _, "stick", _], result: { id: "wooden_sword", count: 1 } },
+  {
+    pattern: [_, "oak_planks", _, _, "oak_planks", _, _, "stick", _],
+    result: { id: "wooden_sword", count: 1 },
+  },
 
   // Wooden axe
-  { pattern: ["oak_planks", "oak_planks", _, "oak_planks", "stick", _, _, "stick", _], result: { id: "wooden_axe", count: 1 } },
-  { pattern: [_, "oak_planks", "oak_planks", _, "stick", "oak_planks", _, "stick", _], result: { id: "wooden_axe", count: 1 } },
+  {
+    pattern: ["oak_planks", "oak_planks", _, "oak_planks", "stick", _, _, "stick", _],
+    result: { id: "wooden_axe", count: 1 },
+  },
+  {
+    pattern: [_, "oak_planks", "oak_planks", _, "stick", "oak_planks", _, "stick", _],
+    result: { id: "wooden_axe", count: 1 },
+  },
 
   // Wooden shovel
-  { pattern: [_, "oak_planks", _, _, "stick", _, _, "stick", _], result: { id: "wooden_shovel", count: 1 } },
+  {
+    pattern: [_, "oak_planks", _, _, "stick", _, _, "stick", _],
+    result: { id: "wooden_shovel", count: 1 },
+  },
 
   // Wooden hoe
-  { pattern: ["oak_planks", "oak_planks", _, _, "stick", _, _, "stick", _], result: { id: "wooden_hoe", count: 1 } },
-  { pattern: [_, "oak_planks", "oak_planks", _, "stick", _, _, "stick", _], result: { id: "wooden_hoe", count: 1 } },
+  {
+    pattern: ["oak_planks", "oak_planks", _, _, "stick", _, _, "stick", _],
+    result: { id: "wooden_hoe", count: 1 },
+  },
+  {
+    pattern: [_, "oak_planks", "oak_planks", _, "stick", _, _, "stick", _],
+    result: { id: "wooden_hoe", count: 1 },
+  },
 
   // 3 planks bottom → 3 wooden slabs
-  { pattern: [_, _, _, _, _, _, "oak_planks", "oak_planks", "oak_planks"], result: { id: "wooden_slab", count: 3 } },
+  {
+    pattern: [_, _, _, _, _, _, "oak_planks", "oak_planks", "oak_planks"],
+    result: { id: "wooden_slab", count: 3 },
+  },
 
   // Bowl (3 planks in V shape)
-  { pattern: [_, _, _, "oak_planks", _, "oak_planks", _, "oak_planks", _], result: { id: "bowl", count: 4 } },
+  {
+    pattern: [_, _, _, "oak_planks", _, "oak_planks", _, "oak_planks", _],
+    result: { id: "bowl", count: 4 },
+  },
 
   // Chest (8 planks ring)
-  { pattern: ["oak_planks", "oak_planks", "oak_planks", "oak_planks", _, "oak_planks", "oak_planks", "oak_planks", "oak_planks"], result: { id: "chest", count: 1 } },
+  {
+    pattern: [
+      "oak_planks",
+      "oak_planks",
+      "oak_planks",
+      "oak_planks",
+      _,
+      "oak_planks",
+      "oak_planks",
+      "oak_planks",
+      "oak_planks",
+    ],
+    result: { id: "chest", count: 1 },
+  },
 
   // Fence (planks-stick-planks x2)
-  { pattern: [_, _, _, "oak_planks", "stick", "oak_planks", "oak_planks", "stick", "oak_planks"], result: { id: "fence", count: 2 } },
+  {
+    pattern: [_, _, _, "oak_planks", "stick", "oak_planks", "oak_planks", "stick", "oak_planks"],
+    result: { id: "fence", count: 2 },
+  },
 
   // Wooden door (2x3 planks)
-  { pattern: ["oak_planks", "oak_planks", _, "oak_planks", "oak_planks", _, "oak_planks", "oak_planks", _], result: { id: "wooden_door", count: 1 } },
-  { pattern: [_, "oak_planks", "oak_planks", _, "oak_planks", "oak_planks", _, "oak_planks", "oak_planks"], result: { id: "wooden_door", count: 1 } },
+  {
+    pattern: [
+      "oak_planks",
+      "oak_planks",
+      _,
+      "oak_planks",
+      "oak_planks",
+      _,
+      "oak_planks",
+      "oak_planks",
+      _,
+    ],
+    result: { id: "wooden_door", count: 1 },
+  },
+  {
+    pattern: [
+      _,
+      "oak_planks",
+      "oak_planks",
+      _,
+      "oak_planks",
+      "oak_planks",
+      _,
+      "oak_planks",
+      "oak_planks",
+    ],
+    result: { id: "wooden_door", count: 1 },
+  },
 
   // Boat (5 planks U shape)
-  { pattern: [_, _, _, "oak_planks", _, "oak_planks", "oak_planks", "oak_planks", "oak_planks"], result: { id: "boat", count: 1 } },
+  {
+    pattern: [_, _, _, "oak_planks", _, "oak_planks", "oak_planks", "oak_planks", "oak_planks"],
+    result: { id: "boat", count: 1 },
+  },
 ];
 
 const matchRecipe = (grid: ItemStack[]): { id: string; count: number } | null => {
@@ -114,9 +189,7 @@ const matchRecipe = (grid: ItemStack[]): { id: string; count: number } | null =>
   // Shaped recipes
   const gridIds = grid.map((item) => item?.id ?? null);
   for (const recipe of RECIPES) {
-    const match = recipe.pattern.every(
-      (expected, index) => expected === gridIds[index]
-    );
+    const match = recipe.pattern.every((expected, index) => expected === gridIds[index]);
     if (match) return recipe.result;
   }
   return null;
@@ -180,12 +253,7 @@ function ArrowIcon({ active }: { active: boolean }) {
 
   // Pixel-art arrow: 22x15 grid, each unit = 1px in viewBox
   return (
-    <svg
-      width={22 * S}
-      height={15 * S}
-      viewBox="0 0 22 15"
-      style={{ imageRendering: "pixelated" }}
-    >
+    <svg width={22 * S} height={15 * S} viewBox="0 0 22 15" style={{ imageRendering: "pixelated" }}>
       {/* Shaft shadow (bottom edge) */}
       <rect x="0" y="10" width="16" height="1" fill={shadow} />
       {/* Shaft body */}
@@ -354,9 +422,7 @@ export default function CraftingTable() {
     return inv;
   });
 
-  const [craftingGrid, setCraftingGrid] = useState<ItemStack[]>(
-    new Array(9).fill(null)
-  );
+  const [craftingGrid, setCraftingGrid] = useState<ItemStack[]>(new Array(9).fill(null));
   const [craftingOutput, setCraftingOutput] = useState<ItemStack>(null);
   const [heldItem, setHeldItem] = useState<ItemStack>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -394,15 +460,13 @@ export default function CraftingTable() {
             if (!item) return null;
             const n = item.count - 1;
             return n > 0 ? { ...item, count: n } : null;
-          })
+          }),
         );
         return;
       }
 
-      const items =
-        type === "inventory" ? [...inventory] : [...craftingGrid];
-      const setItems =
-        type === "inventory" ? setInventory : setCraftingGrid;
+      const items = type === "inventory" ? [...inventory] : [...craftingGrid];
+      const setItems = type === "inventory" ? setInventory : setCraftingGrid;
       const slot = items[index];
 
       if (!heldItem && !slot) return;
@@ -428,17 +492,15 @@ export default function CraftingTable() {
       }
       setItems(items);
     },
-    [heldItem, inventory, craftingGrid, craftingOutput]
+    [heldItem, inventory, craftingGrid, craftingOutput],
   );
 
   const handleSlotRightClick = useCallback(
     (type: "inventory" | "crafting" | "output", index: number) => {
       if (type === "output") return;
 
-      const items =
-        type === "inventory" ? [...inventory] : [...craftingGrid];
-      const setItems =
-        type === "inventory" ? setInventory : setCraftingGrid;
+      const items = type === "inventory" ? [...inventory] : [...craftingGrid];
+      const setItems = type === "inventory" ? setInventory : setCraftingGrid;
       const slot = items[index];
 
       if (heldItem && !slot) {
@@ -448,12 +510,7 @@ export default function CraftingTable() {
         } else {
           setHeldItem({ ...heldItem, count: heldItem.count - 1 });
         }
-      } else if (
-        heldItem &&
-        slot &&
-        heldItem.id === slot.id &&
-        slot.count < 64
-      ) {
+      } else if (heldItem && slot && heldItem.id === slot.id && slot.count < 64) {
         items[index] = { ...slot, count: slot.count + 1 };
         if (heldItem.count <= 1) {
           setHeldItem(null);
@@ -468,7 +525,7 @@ export default function CraftingTable() {
       }
       setItems(items);
     },
-    [heldItem, inventory, craftingGrid]
+    [heldItem, inventory, craftingGrid],
   );
 
   // ─── Render ──────────────────────────────────────────
@@ -540,13 +597,11 @@ export default function CraftingTable() {
                   item={craftingGrid[idx]}
                   textures={itemIcons}
                   onClick={() => handleSlotClick("crafting", idx)}
-                  onRightClick={() =>
-                    handleSlotRightClick("crafting", idx)
-                  }
+                  onRightClick={() => handleSlotRightClick("crafting", idx)}
                 />
               </div>
             );
-          })
+          }),
         )}
 
         {/* Arrow */}
@@ -596,13 +651,11 @@ export default function CraftingTable() {
                   item={inventory[idx]}
                   textures={itemIcons}
                   onClick={() => handleSlotClick("inventory", idx)}
-                  onRightClick={() =>
-                    handleSlotRightClick("inventory", idx)
-                  }
+                  onRightClick={() => handleSlotRightClick("inventory", idx)}
                 />
               </div>
             );
-          })
+          }),
         )}
 
         {/* Hotbar (1 row x 9 cols) */}
@@ -621,9 +674,7 @@ export default function CraftingTable() {
                 item={inventory[idx]}
                 textures={itemIcons}
                 onClick={() => handleSlotClick("inventory", idx)}
-                onRightClick={() =>
-                  handleSlotRightClick("inventory", idx)
-                }
+                onRightClick={() => handleSlotRightClick("inventory", idx)}
               />
             </div>
           );
@@ -668,7 +719,6 @@ export default function CraftingTable() {
           )}
         </div>
       )}
-
     </div>
   );
 }

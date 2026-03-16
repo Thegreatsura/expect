@@ -193,9 +193,7 @@ describe("getHighlightWindows", () => {
     ];
 
     const windows = getHighlightWindows(events);
-    const allCovered = windows.some(
-      (window) => window.startMs <= 5200 && window.endMs >= 22200,
-    );
+    const allCovered = windows.some((window) => window.startMs <= 5200 && window.endMs >= 22200);
     expect(allCovered).toBe(false);
   });
 });

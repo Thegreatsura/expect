@@ -10,8 +10,7 @@ const parseHex = (hex: string): [number, number, number] => {
 const rgbToHex = (red: number, green: number, blue: number): string =>
   `#${[red, green, blue].map((value) => Math.round(value).toString(16).padStart(2, "0")).join("")}`;
 
-const lerp = (start: number, end: number, factor: number): number =>
-  start + (end - start) * factor;
+const lerp = (start: number, end: number, factor: number): number => start + (end - start) * factor;
 
 export const lerpColor = (from: string, to: string, factor: number): string => {
   const [fromRed, fromGreen, fromBlue] = parseHex(from);

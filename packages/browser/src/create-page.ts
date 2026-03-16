@@ -70,10 +70,7 @@ const resolveVideoOptions = (
   };
 };
 
-const resolveContextOptions = (
-  video: VideoOptions | undefined,
-  locale: string | undefined,
-) => {
+const resolveContextOptions = (video: VideoOptions | undefined, locale: string | undefined) => {
   if (!video && !locale) return undefined;
 
   return {
@@ -103,7 +100,9 @@ export const createPage = async (
 
   try {
     const defaultBrowserContext =
-      options.cookies === true ? await resolveDefaultBrowserContext() : EMPTY_DEFAULT_BROWSER_CONTEXT;
+      options.cookies === true
+        ? await resolveDefaultBrowserContext()
+        : EMPTY_DEFAULT_BROWSER_CONTEXT;
     const recordVideo = resolveVideoOptions(options.video);
     const context = await browser.newContext(
       resolveContextOptions(recordVideo, defaultBrowserContext.preferredProfile?.locale),

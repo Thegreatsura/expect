@@ -229,7 +229,8 @@ export const createBrowserMcpServer = () => {
     async ({ code }) => {
       const page = requirePage();
       const ref = (refId: string) => {
-        if (!session!.lastSnapshot) throw new Error("No snapshot taken yet. Call screenshot with mode 'snapshot' first.");
+        if (!session!.lastSnapshot)
+          throw new Error("No snapshot taken yet. Call screenshot with mode 'snapshot' first.");
         return session!.lastSnapshot.locator(refId);
       };
       try {

@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStdout } from "ink";
-import {
-  FALLBACK_TERMINAL_COLUMNS,
-  FALLBACK_TERMINAL_ROWS,
-} from "../constants.js";
+import { FALLBACK_TERMINAL_COLUMNS, FALLBACK_TERMINAL_ROWS } from "../constants.js";
 
 const safeColumns = (value: number | undefined): number =>
   value && value > 0 ? value : FALLBACK_TERMINAL_COLUMNS;
@@ -19,8 +16,7 @@ export const useStdoutDimensions = (): [columns: number, rows: number] => {
   ]);
 
   useEffect(() => {
-    const onResize = () =>
-      setDimensions([safeColumns(stdout.columns), safeRows(stdout.rows)]);
+    const onResize = () => setDimensions([safeColumns(stdout.columns), safeRows(stdout.rows)]);
     stdout.on("resize", onResize);
     return () => {
       stdout.off("resize", onResize);

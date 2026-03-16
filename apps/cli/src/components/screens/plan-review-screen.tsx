@@ -349,9 +349,7 @@ export const PlanReviewScreen = () => {
     <Box flexDirection="column" width="100%" paddingX={1} paddingY={1}>
       {gitState ? (
         <>
-          <Text color={COLORS.DIM}>
-            {"Branch / PR"}
-          </Text>
+          <Text color={COLORS.DIM}>{"Branch / PR"}</Text>
           <Clickable onClick={() => navigateTo("select-pr")}>
             <Box
               width="100%"

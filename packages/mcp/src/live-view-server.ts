@@ -53,7 +53,9 @@ const respondText = (response: MjpegClient, status: number, body: string): void 
 };
 
 const writeMjpegFrame = (client: MjpegClient, frameBuffer: Buffer): void => {
-  client.write(`--${LIVE_VIEW_MJPEG_BOUNDARY}\r\nContent-Type: image/jpeg\r\nContent-Length: ${frameBuffer.length}\r\n\r\n`);
+  client.write(
+    `--${LIVE_VIEW_MJPEG_BOUNDARY}\r\nContent-Type: image/jpeg\r\nContent-Length: ${frameBuffer.length}\r\n\r\n`,
+  );
   client.write(frameBuffer);
   client.write("\r\n");
 };
