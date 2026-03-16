@@ -11,6 +11,7 @@ import { TESTING_TIMER_UPDATE_INTERVAL_MS } from "../../constants.js";
 export const PlanningScreen = () => {
   const COLORS = useColors();
   const flowInstruction = useAppStore((state) => state.flowInstruction);
+  const selectedContext = useAppStore((state) => state.selectedContext);
   const [startTime] = useState(() => Date.now());
   const [elapsed, setElapsed] = useState(0);
 
@@ -24,7 +25,7 @@ export const PlanningScreen = () => {
   return (
     <Box flexDirection="column" width="100%" paddingX={1} paddingY={1}>
       <Box flexDirection="column">
-        <Text color={COLORS.DIM}>Describe what to test</Text>
+        <Text color={COLORS.DIM}>{selectedContext ? selectedContext.label : "Describe what to test"}</Text>
         <Box borderStyle="round" borderColor={COLORS.BORDER} paddingX={2}>
           <Text color={COLORS.DIM}>{flowInstruction}</Text>
         </Box>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { Input } from "../ui/input.js";
 import { useColors } from "../theme-context.js";
@@ -6,9 +6,16 @@ import { stripMouseSequences } from "../../hooks/mouse-context.js";
 import { Clickable } from "../ui/clickable.js";
 import { Collapsible } from "../ui/collapsible.js";
 import { FileLink } from "../ui/file-link.js";
+import { ContextPicker } from "../ui/context-picker.js";
 import { saveFlow } from "../../utils/save-flow.js";
 import { useAppStore } from "../../store.js";
 import { ErrorMessage } from "../ui/error-message.js";
+import {
+  buildLocalContextOptions,
+  fetchRemoteContextOptions,
+  filterContextOptions,
+  type ContextOption,
+} from "../../utils/context-options.js";
 import type { BrowserFlowPlan } from "@browser-tester/supervisor";
 
 type Section = "details" | "assumptions" | "cookies" | "steps";
@@ -96,6 +103,9 @@ export const PlanReviewScreen = () => {
   const requestPlanApproval = useAppStore((state) => state.requestPlanApproval);
   const loadSavedFlows = useAppStore((state) => state.loadSavedFlows);
   const flowInstruction = useAppStore((state) => state.flowInstruction);
+  const selectedContext = useAppStore((state) => state.selectedContext);
+  const storeSelectContext = useAppStore((state) => state.selectContext);
+  const gitState = useAppStore((state) => state.gitState);
   const navigateTo = useAppStore((state) => state.navigateTo);
   const selectAction = useAppStore((state) => state.selectAction);
   const submitFlowInstruction = useAppStore((state) => state.submitFlowInstruction);
@@ -118,8 +128,106 @@ export const PlanReviewScreen = () => {
   const [topFocus, setTopFocus] = useState<"branch" | "input" | null>(null);
   const [inputValue, setInputValue] = useState(flowInstruction);
   const [resubmitConfirmVisible, setResubmitConfirmVisible] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerIndex, setPickerIndex] = useState(0);
+  const [remoteOptions, setRemoteOptions] = useState<ContextOption[]>([]);
+  const [remoteLoading, setRemoteLoading] = useState(false);
   const inputFocused = topFocus === "input";
   const branchFocused = topFocus === "branch";
+
+  const localOptions = useMemo(
+    () => (gitState ? buildLocalContextOptions(gitState) : []),
+    [gitState],
+  );
+
+  useEffect(() => {
+    if (!pickerOpen || !gitState) return;
+    let cancelled = false;
+    setRemoteLoading(true);
+    fetchRemoteContextOptions(gitState)
+      .then((options) => {
+        if (!cancelled) setRemoteOptions(options);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setRemoteLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pickerOpen, gitState]);
+
+  const allOptions = useMemo(
+    () => [...localOptions, ...remoteOptions],
+    [localOptions, remoteOptions],
+  );
+
+  const filteredOptions = useMemo(
+    () => filterContextOptions(allOptions, pickerQuery),
+    [allOptions, pickerQuery],
+  );
+
+  useEffect(() => {
+    setPickerIndex(0);
+  }, [pickerQuery]);
+
+  const openPicker = useCallback(() => {
+    setPickerOpen(true);
+    setPickerQuery("");
+    setPickerIndex(0);
+  }, []);
+
+  const closePicker = useCallback(() => {
+    setPickerOpen(false);
+    setPickerQuery("");
+  }, []);
+
+  const handleContextSelect = useCallback(
+    (option: ContextOption) => {
+      storeSelectContext(option);
+      closePicker();
+    },
+    [storeSelectContext, closePicker],
+  );
+
+  const handleInputChange = useCallback(
+    (nextValue: string) => {
+      const stripped = stripMouseSequences(nextValue);
+
+      if (
+        stripped.length > inputValue.length &&
+        stripped[stripped.length - 1] === "@" &&
+        (inputValue.length === 0 || stripped[stripped.length - 2] === " ")
+      ) {
+        setInputValue(stripped.slice(0, -1));
+        openPicker();
+        return;
+      }
+
+      if (pickerOpen) {
+        const afterAt = stripped.length - inputValue.length;
+        if (afterAt < 0) {
+          closePicker();
+          setInputValue(stripped);
+        } else {
+          setPickerQuery((previous) => {
+            const added = stripped.slice(inputValue.length);
+            if (added.includes(" ")) {
+              closePicker();
+              setInputValue(stripped);
+              return "";
+            }
+            return previous + added;
+          });
+        }
+        return;
+      }
+
+      setInputValue(stripped);
+    },
+    [inputValue, pickerOpen, openPicker, closePicker],
+  );
 
   if (!plan || !resolvedTarget) return null;
 
@@ -344,7 +452,7 @@ export const PlanReviewScreen = () => {
   return (
     <Box flexDirection="column" width="100%" paddingX={1} paddingY={1}>
       <Box flexDirection="column">
-        <Text color={COLORS.DIM}>Describe what to test</Text>
+        <Text color={COLORS.DIM}>{selectedContext ? selectedContext.label : "Describe what to test"}</Text>
         <Clickable onClick={() => setTopFocus("input")}>
           <Box
             width="100%"
@@ -356,11 +464,11 @@ export const PlanReviewScreen = () => {
               <>
                 <Text color={COLORS.PRIMARY}>{"❯ "}</Text>
                 <Input
-                  focus
+                  focus={inputFocused && !pickerOpen}
                   multiline
                   value={inputValue}
                   onSubmit={handleInputSubmit}
-                  onChange={(nextValue) => setInputValue(stripMouseSequences(nextValue))}
+                  onChange={handleInputChange}
                 />
               </>
             ) : (
@@ -368,6 +476,29 @@ export const PlanReviewScreen = () => {
             )}
           </Box>
         </Clickable>
+        {pickerOpen ? (
+          <Box flexDirection="column">
+            <Box marginBottom={0}>
+              <Text color={COLORS.DIM}>@ </Text>
+              <Text color={COLORS.PRIMARY}>{pickerQuery}</Text>
+              <Text color={COLORS.DIM}>{pickerQuery ? "" : "type to filter"}</Text>
+            </Box>
+            <ContextPicker
+              options={filteredOptions}
+              selectedIndex={pickerIndex}
+              isLoading={remoteLoading}
+              query={pickerQuery}
+              onQueryChange={setPickerQuery}
+              onSelect={handleContextSelect}
+              onNavigate={setPickerIndex}
+              onDismiss={closePicker}
+            />
+          </Box>
+        ) : inputFocused ? (
+          <Text color={COLORS.DIM}>
+            type <Text color={COLORS.PRIMARY}>@</Text> to set context
+          </Text>
+        ) : null}
       </Box>
 
       {resubmitConfirmVisible ? (
