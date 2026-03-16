@@ -58,7 +58,7 @@ const useHintSegments = (screen: Screen): HintSegment[] => {
       return [
         { key: "↑↓", label: "nav" },
         { key: "tab", label: "fold" },
-        { key: "s", label: "save" },
+        { key: "s", label: "save plan" },
         ...(generatedPlan?.cookieSync.required
           ? [
               {

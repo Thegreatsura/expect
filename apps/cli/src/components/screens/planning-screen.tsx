@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Box, Text } from "ink";
 import figures from "figures";
 import { Spinner } from "../ui/spinner.js";
-import { TextShimmer } from "../ui/text-shimmer.js";
 import { useColors } from "../theme-context.js";
 import { RuledBox } from "../ui/ruled-box.js";
 import { useAppStore } from "../../store.js";
@@ -25,21 +24,18 @@ export const PlanningScreen = () => {
 
   return (
     <Box flexDirection="column" width="100%" paddingY={1}>
-      <Box paddingX={1}>
-        <Text color={COLORS.DIM}>{selectedContext?.label ?? flowInstruction}</Text>
-      </Box>
+      {selectedContext ? (
+        <Box paddingX={1}>
+          <Text color={COLORS.DIM}>{selectedContext.label}</Text>
+        </Box>
+      ) : null}
       <RuledBox color={COLORS.BORDER}>
         <Text color={COLORS.DIM}>{flowInstruction}</Text>
       </RuledBox>
 
       <Box marginTop={1} paddingX={1}>
         <Spinner />
-        <Text> </Text>
-        <TextShimmer
-          text={`Generating plan${figures.ellipsis} ${formatElapsedTime(elapsed)}`}
-          baseColor={COLORS.DIM}
-          highlightColor={COLORS.PRIMARY}
-        />
+        <Text color={COLORS.DIM}>{` Generating plan${figures.ellipsis} ${formatElapsedTime(elapsed)}`}</Text>
       </Box>
     </Box>
   );

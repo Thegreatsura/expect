@@ -454,9 +454,11 @@ export const PlanReviewScreen = () => {
   return (
     <Box flexDirection="column" width="100%" paddingY={1}>
       <Box flexDirection="column">
-        <Box paddingX={1}>
-          <Text color={COLORS.DIM}>{selectedContext?.label ?? flowInstruction}</Text>
-        </Box>
+        {selectedContext ? (
+          <Box paddingX={1}>
+            <Text color={COLORS.DIM}>{selectedContext.label}</Text>
+          </Box>
+        ) : null}
         <Clickable onClick={() => setTopFocus("input")}>
           <RuledBox color={inputFocused ? COLORS.PRIMARY : COLORS.BORDER}>
             {inputFocused ? (

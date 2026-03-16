@@ -9,6 +9,7 @@ import { ErrorMessage } from "../ui/error-message.js";
 import { ContextPicker } from "../ui/context-picker.js";
 import { stripMouseSequences } from "../../hooks/mouse-context.js";
 import { useStdoutDimensions } from "../../hooks/use-stdout-dimensions.js";
+import { DotField } from "../ui/dot-field.js";
 
 import { generateFlowSuggestions } from "@browser-tester/supervisor";
 import { getFlowSuggestions } from "../../utils/get-flow-suggestions.js";
@@ -35,6 +36,7 @@ export const MainMenu = () => {
   const [value, setValue] = useState(flowInstruction);
   const [inputKey, setInputKey] = useState(0);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [hasCycled, setHasCycled] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [focus, setFocus] = useState<FocusArea>("input");
 
@@ -231,6 +233,7 @@ export const MainMenu = () => {
 
   const showSuggestion =
     focus === "input" && value === "" && !pickerOpen && suggestions.length > 0;
+  const showCycleHint = showSuggestion && !hasCycled;
   const currentSuggestion = suggestions[suggestionIndex % suggestions.length];
 
   useInput(
@@ -249,12 +252,14 @@ export const MainMenu = () => {
       if (!showSuggestion) return;
       if (key.rightArrow) {
         setSuggestionIndex((previous) => (previous + 1) % suggestions.length);
+        setHasCycled(true);
         return;
       }
       if (key.leftArrow) {
         setSuggestionIndex(
           (previous) => (previous - 1 + suggestions.length) % suggestions.length,
         );
+        setHasCycled(true);
         return;
       }
       if (input === "g") {
@@ -269,6 +274,7 @@ export const MainMenu = () => {
 
   return (
     <Box flexDirection="column" width="100%" paddingY={1}>
+      <DotField rows={3} dimColor="#1a1a1a" brightColor={COLORS.BORDER} />
       <Box marginBottom={1} paddingX={1}>
         <Text color={COLORS.BORDER}>
           <Text bold color={COLORS.TEXT}>{"TESTIE"}</Text>
@@ -301,27 +307,26 @@ export const MainMenu = () => {
               </Text>
             )}
           </Clickable>
-          {showSuggestion && !pickerOpen ? (
-            <Text color={COLORS.DIM}>
-              {"←→ cycle test suggestions "}[{(suggestionIndex % suggestions.length) + 1}/{suggestions.length}]
-              {isGenerating ? " generating…" : ""}
-            </Text>
-          ) : null}
         </Box>
         <Clickable onClick={() => setFocus("input")}>
-          <RuledBox color={focus === "input" ? COLORS.PRIMARY : COLORS.BORDER} marginTop={1}>
-            <Box>
-              <Text color={COLORS.PRIMARY}>{"❯ "}</Text>
-              <Input
-                key={inputKey}
-                focus={focus === "input" && !pickerOpen}
-                multiline
-                placeholder={currentSuggestion ? `${currentSuggestion}  [tab]` : ""}
-                value={value}
-                onSubmit={submit}
-                onDownArrowAtBottom={() => {}}
-                onChange={handleInputChange}
-              />
+          <RuledBox color={focus === "input" ? COLORS.PRIMARY : COLORS.BORDER} marginTop={1} paddingX={0}>
+            <Box justifyContent="space-between">
+              <Box>
+                <Text color={COLORS.PRIMARY}>{" ❯ "}</Text>
+                <Input
+                  key={inputKey}
+                  focus={focus === "input" && !pickerOpen}
+                  multiline
+                  placeholder={currentSuggestion ? `${currentSuggestion}  [tab]` : ""}
+                  value={value}
+                  onSubmit={submit}
+                  onDownArrowAtBottom={() => {}}
+                  onChange={handleInputChange}
+                />
+              </Box>
+              {showCycleHint ? (
+                <Text color={COLORS.DIM}>{"←→ cycle test suggestions "}</Text>
+              ) : null}
             </Box>
           </RuledBox>
         </Clickable>
