@@ -154,6 +154,7 @@ export const App = () => {
   useAutoSaveEffect();
 
   const navigateTo = useAppStore((state) => state.navigateTo);
+  const savedFlowSummaries = useAppStore((state) => state.savedFlowSummaries);
 
   const [, setRefreshTick] = useState(0);
   const [, rows] = useStdoutDimensions();
@@ -169,6 +170,9 @@ export const App = () => {
     }
     if (key.ctrl && input === "p" && screen === "main" && gitState?.isGitRepo) {
       navigateTo("select-pr");
+    }
+    if (key.ctrl && input === "r" && screen === "main" && savedFlowSummaries.length > 0) {
+      navigateTo("saved-flow-picker");
     }
     if (key.ctrl && input === "t") {
       navigateTo("theme");

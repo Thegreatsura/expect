@@ -299,7 +299,7 @@ export const MainMenu = () => {
           </Clickable>
           {showSuggestion && !pickerOpen ? (
             <Text color={COLORS.DIM}>
-              {"←→ cycle suggestions "}[{(suggestionIndex % suggestions.length) + 1}/{suggestions.length}]
+              {"←→ cycle test suggestions "}[{(suggestionIndex % suggestions.length) + 1}/{suggestions.length}]
               {isGenerating ? " generating…" : ""}
             </Text>
           ) : null}

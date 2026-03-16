@@ -31,7 +31,7 @@ const useHintSegments = (screen: Screen): HintSegment[] => {
       ];
       if (savedFlowSummaries.length > 0) {
         hints.push({
-          key: "r",
+          key: "ctrl+r",
           label: "reuse flow",
           onClick: () => navigateTo("saved-flow-picker"),
         });
