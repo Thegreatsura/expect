@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { assert, describe, it } from "vite-plus/test";
 import { Effect } from "effect";
 import { CdpClient } from "../src/cdp-client.js";
@@ -7,7 +8,9 @@ const CHROME_EXECUTABLE_PATH = "/Applications/Google Chrome.app/Contents/MacOS/G
 
 const CdpTestLayer = CdpClient.layer;
 
-describe("CdpClient", () => {
+const hasChrome = existsSync(CHROME_PROFILE_PATH) && existsSync(CHROME_EXECUTABLE_PATH);
+
+describe.skipIf(!hasChrome)("CdpClient", () => {
   it("extracts cookies from a Chrome profile via CDP", { timeout: 30_000 }, () =>
     Effect.gen(function* () {
       const cdpClient = yield* CdpClient;
