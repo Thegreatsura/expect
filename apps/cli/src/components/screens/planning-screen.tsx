@@ -53,19 +53,9 @@ const getStageIndex = (elapsed: number): number => {
   return index;
 };
 
-const getProviderLabel = (provider: string | null | undefined): string => {
-  if (provider === "claude") return "Claude Code";
-  if (provider === "codex") return "Codex";
-  if (provider === "cursor") return "Cursor";
-  return "Selecting agent";
-};
-
 export const PlanningScreen = () => {
   const COLORS = useColors();
   const flowInstruction = useAppStore((state) => state.flowInstruction);
-  const planningProvider = useAppStore((state) => state.planningProvider);
-  const planningModel = useAppStore((state) => state.planningModel);
-  const resolvedPlanningProvider = useAppStore((state) => state.resolvedPlanningProvider);
   const [startTime] = useState(() => Date.now());
   const [elapsed, setElapsed] = useState(0);
   const [tipIndex] = useState(() => Math.floor(Math.random() * TIPS.length));
@@ -79,7 +69,6 @@ export const PlanningScreen = () => {
 
   const stageLabel = getStageLabel(elapsed);
   const stageIndex = getStageIndex(elapsed);
-  const providerLabel = getProviderLabel(resolvedPlanningProvider ?? planningProvider);
 
   return (
     <Box flexDirection="column" width="100%" paddingY={1}>
@@ -100,16 +89,6 @@ export const PlanningScreen = () => {
               {index <= stageIndex ? "█" : "░"}
             </Text>
           ))}
-        </Text>
-      </Box>
-
-      <Box paddingX={1}>
-        <Text color={COLORS.BORDER}>
-          {"AGENT "}
-          <Text color={COLORS.DIM}>
-            {providerLabel}
-            {planningModel ? ` · ${planningModel}` : ""}
-          </Text>
         </Text>
       </Box>
 

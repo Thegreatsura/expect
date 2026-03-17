@@ -52,8 +52,19 @@ const useHintSegments = (screen: Screen): HintSegment[] => {
         { key: "esc", label: "back", cta: true, onClick: goBack },
         { key: "enter", label: "select", color: COLORS.PRIMARY, cta: true },
       ];
-    case "planning":
-      return [{ key: "esc", label: "cancel", cta: true, onClick: goBack }];
+    case "planning": {
+      const planningHints: HintSegment[] = [];
+      const provider = useAppStore.getState().resolvedPlanningProvider ?? useAppStore.getState().planningProvider;
+      const model = useAppStore.getState().planningModel;
+      const providerName = provider === "claude" ? "Claude" : provider === "codex" ? "Codex" : provider === "cursor" ? "Cursor" : null;
+      if (providerName) {
+        planningHints.push({ key: providerName + (model ? ` · ${model}` : ""), label: "agent" });
+      }
+      return [
+        ...planningHints,
+        { key: "esc", label: "cancel", cta: true, onClick: goBack },
+      ];
+    }
     case "review-plan":
       return [
         { key: "↑↓", label: "nav" },
