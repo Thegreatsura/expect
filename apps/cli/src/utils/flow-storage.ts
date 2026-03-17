@@ -180,10 +180,12 @@ const filterFlowFileNames = (fileNames: string[]): string[] =>
     .filter((fileName) => fileName.endsWith(".md") && fileName !== FLOW_DIRECTORY_INDEX_FILE_NAME)
     .sort((leftValue, rightValue) => leftValue.localeCompare(rightValue));
 
-const getModifiedAtMs = (modifiedAt: Date | number | undefined): number => {
-  if (modifiedAt === undefined) return 0;
+const getModifiedAtMs = (modifiedAt: unknown): number => {
+  if (modifiedAt === undefined || modifiedAt === null) return 0;
   if (typeof modifiedAt === "number") return modifiedAt;
-  return modifiedAt.getTime();
+  if (typeof modifiedAt === "bigint") return Number(modifiedAt);
+  if (modifiedAt instanceof Date) return modifiedAt.getTime();
+  return 0;
 };
 const EMPTY_FLOW_FILE_NAMES: string[] = [];
 
