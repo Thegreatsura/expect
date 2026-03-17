@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { Command } from "commander";
+import { Command, InvalidOptionArgumentError } from "commander";
 import { render } from "ink";
 import { App } from "./components/app.js";
 import { ALT_SCREEN_OFF, ALT_SCREEN_ON, VERSION } from "./constants.js";
@@ -7,6 +7,7 @@ import { ThemeProvider } from "./components/theme-context.js";
 import { loadThemeName } from "./utils/load-theme.js";
 import { isRunningInAgent } from "@browser-tester/supervisor";
 import { getCommitSummary } from "@browser-tester/supervisor";
+import type { AgentProvider } from "@browser-tester/supervisor";
 import { autoDetectAndTest, runTest } from "./utils/run-test.js";
 import { runHealthcheckHeadless, runHealthcheckInteractive } from "./utils/run-healthcheck.js";
 import { useAppStore, type Screen } from "./store.js";
@@ -20,6 +21,16 @@ import { CliRuntime } from "./runtime.js";
 import { loadSavedFlowBySlug } from "./utils/flow-storage.js";
 import { setInkInstance } from "./utils/clear-ink-display.js";
 
+const parseAgentProvider = (value: string): AgentProvider => {
+  if (value === "claude" || value === "codex" || value === "cursor") {
+    return value;
+  }
+
+  throw new InvalidOptionArgumentError(
+    `Unsupported agent "${value}". Use one of: claude, codex, cursor.`,
+  );
+};
+
 const program = new Command()
   .name("testie")
   .description("AI-powered browser testing for your changes")
@@ -27,6 +38,14 @@ const program = new Command()
   .option("-m, --message <instruction>", "natural language instruction for what to test")
   .option("-f, --flow <slug>", "reuse a saved flow by its slug")
   .option("-y, --yes", "skip plan review and run immediately")
+  .option("--planner <provider>", "agent for planning (claude, codex, cursor)", parseAgentProvider)
+  .option(
+    "--executor <provider>",
+    "agent for execution (claude, codex, cursor)",
+    parseAgentProvider,
+  )
+  .option("--planning-model <model>", "specific model for the planning agent")
+  .option("--execution-model <model>", "specific model for the execution agent")
   .option("--base-url <url>", "browser base URL (overrides BROWSER_TESTER_BASE_URL)")
   .option("--headed", "run browser visibly instead of headless")
   .option("--cookies", "sync cookies from your browser profile")
@@ -87,6 +106,10 @@ const seedStoreFromConfig = async (config: TestRunConfig): Promise<void> => {
     testAction: config.action,
     selectedCommit: resolvedCommit,
     autoRunAfterPlanning: config.autoRun ?? false,
+    planningProvider: config.planningProvider,
+    executionProvider: config.executionProvider,
+    planningModel: config.planningModel,
+    executionModel: config.executionModel,
     environmentOverrides: config.environmentOverrides,
     ...(config.message && { flowInstruction: config.message }),
     ...(savedFlow && {

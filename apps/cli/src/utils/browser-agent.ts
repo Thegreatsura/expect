@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import {
   planBrowserFlow,
   resolveTestTarget,
+  type AgentProvider,
   type BrowserEnvironmentHints,
   type BrowserFlowPlan,
   type CommitSummary,
@@ -17,6 +18,8 @@ interface GenerateBrowserPlanOptions {
   commit?: CommitSummary;
   userInstruction: string;
   environmentOverrides?: EnvironmentOverrides;
+  provider?: AgentProvider;
+  model?: string;
 }
 
 export interface GenerateBrowserPlanResult {
@@ -74,6 +77,8 @@ export const generateBrowserPlan = (options: GenerateBrowserPlanOptions) =>
       target,
       userInstruction: options.userInstruction,
       environment,
+      provider: options.provider,
+      ...(options.model ? { providerSettings: { model: options.model } } : {}),
     });
 
     return {

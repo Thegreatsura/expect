@@ -1,6 +1,6 @@
 import type { LanguageModelV3 } from "@ai-sdk/provider";
 import type { AgentProviderSettings } from "@browser-tester/agent";
-import { Effect, Option, Schema } from "effect";
+import { Effect, Either, Option, Schema } from "effect";
 import {
   BROWSER_TEST_MODEL,
   CODEX_PLANNER_MODEL,
@@ -17,9 +17,10 @@ import { MemoryRetrievalError, PlanParseError, PlanningError } from "./errors.js
 import { extractJsonObject } from "./json.js";
 import { retrievePlannerMemory } from "./memory/retrieve-planner-memory.js";
 import type { PlanBrowserFlowOptions, PlanStep, TestTarget } from "./types.js";
-import { commandExists } from "./utils/command-exists.js";
+import { detectAuthError } from "./utils/detect-auth-error.js";
 import { formatDiffStats } from "./utils/format-diff-stats.js";
 import { prioritizePlanningFiles } from "./utils/prioritize-planning-files.js";
+import { resolveAgentProvider } from "./utils/resolve-agent-provider.js";
 
 const NullableOptionalStringSchema = Schema.optional(Schema.NullOr(Schema.NonEmptyString));
 
@@ -220,6 +221,88 @@ const findPlanCandidate = (parsedJson: unknown): unknown => {
   return parsedJson;
 };
 
+interface PlannerModelFailure {
+  cause: unknown;
+  authMessage?: string;
+}
+
+const generatePlanResponse = Effect.fn("generatePlanResponse")(function* (
+  options: PlanBrowserFlowOptions,
+  prompt: string,
+  provider: NonNullable<PlanBrowserFlowOptions["provider"]>,
+) {
+  const model: LanguageModelV3 =
+    options.model ??
+    createAgentModel(provider, buildPlannerModelSettings({ ...options, provider }));
+
+  return yield* Effect.tryPromise({
+    try: () =>
+      model.doGenerate({
+        prompt: [{ role: "user", content: [{ type: "text", text: prompt }] }],
+      }),
+    catch: (cause) =>
+      ({
+        cause,
+        authMessage: detectAuthError(provider, cause),
+      }) satisfies PlannerModelFailure,
+  });
+});
+
+const resolvePlanningResponse = Effect.fn("resolvePlanningResponse")(function* (
+  options: PlanBrowserFlowOptions,
+  prompt: string,
+) {
+  if (options.model) {
+    return yield* generatePlanResponse(
+      options,
+      prompt,
+      options.provider ?? DEFAULT_AGENT_PROVIDER,
+    ).pipe(
+      Effect.mapError(
+        (failure) =>
+          new PlanningError({
+            stage: "model generation",
+            cause: failure.authMessage ?? failure.cause,
+          }),
+      ),
+    );
+  }
+
+  const resolvedAgentProvider = yield* resolveAgentProvider(options.provider).pipe(
+    Effect.mapError((cause) => new PlanningError({ stage: "agent selection", cause })),
+  );
+  const providersToTry = [
+    resolvedAgentProvider.provider,
+    ...resolvedAgentProvider.fallbackProviders,
+  ] as const;
+
+  for (const [providerIndex, provider] of providersToTry.entries()) {
+    const attempt = yield* Effect.either(generatePlanResponse(options, prompt, provider));
+
+    if (Either.isRight(attempt)) {
+      return attempt.right;
+    }
+
+    const isLastProvider = providerIndex === providersToTry.length - 1;
+
+    if (
+      resolvedAgentProvider.explicit ||
+      attempt.left.authMessage === undefined ||
+      isLastProvider
+    ) {
+      return yield* new PlanningError({
+        stage: "model generation",
+        cause: attempt.left.authMessage ?? attempt.left.cause,
+      }).asEffect();
+    }
+  }
+
+  return yield* new PlanningError({
+    stage: "model generation",
+    cause: "No available planning agent could complete the request.",
+  }).asEffect();
+});
+
 export const planBrowserFlow = Effect.fn("planBrowserFlow")(function* (
   options: PlanBrowserFlowOptions,
 ) {
@@ -240,26 +323,7 @@ export const planBrowserFlow = Effect.fn("planBrowserFlow")(function* (
   );
 
   const prompt = buildPlanningPrompt(options, Option.getOrUndefined(memoryContext));
-
-  const resolvedProvider =
-    options.provider ??
-    ((yield* Effect.tryPromise({
-      try: () => commandExists("codex"),
-      catch: () => false,
-    }))
-      ? ("codex" as const)
-      : DEFAULT_AGENT_PROVIDER);
-  const resolvedOptions = { ...options, provider: resolvedProvider };
-
-  const model: LanguageModelV3 =
-    options.model ?? createAgentModel(resolvedProvider, buildPlannerModelSettings(resolvedOptions));
-  const response = yield* Effect.tryPromise({
-    try: () =>
-      model.doGenerate({
-        prompt: [{ role: "user", content: [{ type: "text", text: prompt }] }],
-      }),
-    catch: (cause) => new PlanningError({ stage: "model generation", cause }),
-  });
+  const response = yield* resolvePlanningResponse(options, prompt);
 
   const text = response.content
     .filter((part) => part.type === "text")

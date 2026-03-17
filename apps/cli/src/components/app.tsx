@@ -15,7 +15,7 @@ import { ThemePickerScreen } from "./screens/theme-picker-screen.js";
 import { MainMenu } from "./screens/main-menu-screen.js";
 import { Modeline } from "./ui/modeline.js";
 import { resolveBrowserTarget, getBrowserEnvironment } from "../utils/browser-agent.js";
-import { planBrowserFlow } from "@browser-tester/supervisor";
+import { planBrowserFlow, resolveAgentProvider } from "@browser-tester/supervisor";
 import { useAppStore } from "../store.js";
 import { CliRuntime } from "../runtime.js";
 import { saveFlow } from "../utils/flow-storage.js";
@@ -29,6 +29,8 @@ const usePlanningEffect = () => {
   const flowInstruction = useAppStore((state) => state.flowInstruction);
   const selectedCommit = useAppStore((state) => state.selectedCommit);
   const environmentOverrides = useAppStore((state) => state.environmentOverrides);
+  const planningProvider = useAppStore((state) => state.planningProvider);
+  const planningModel = useAppStore((state) => state.planningModel);
   const completePlanning = useAppStore((state) => state.completePlanning);
   const failPlanning = useAppStore((state) => state.failPlanning);
 
@@ -40,14 +42,24 @@ const usePlanningEffect = () => {
       commit: selectedCommit ?? undefined,
     });
     const environment = getBrowserEnvironment(environmentOverrides);
-    useAppStore.setState({ resolvedTarget: target });
+    useAppStore.setState({ resolvedTarget: target, resolvedPlanningProvider: null });
 
     const planningFiber = Effect.runFork(
-      planBrowserFlow({
-        target,
-        userInstruction: flowInstruction,
-        environment,
-      }).pipe(
+      resolveAgentProvider(planningProvider).pipe(
+        Effect.tap((resolvedAgentProvider) =>
+          Effect.sync(() =>
+            useAppStore.setState({ resolvedPlanningProvider: resolvedAgentProvider.provider }),
+          ),
+        ),
+        Effect.flatMap(() =>
+          planBrowserFlow({
+            target,
+            userInstruction: flowInstruction,
+            environment,
+            provider: planningProvider,
+            ...(planningModel ? { providerSettings: { model: planningModel } } : {}),
+          }),
+        ),
         Effect.tap((plan) => Effect.sync(() => completePlanning({ target, plan, environment }))),
         Effect.catch((caughtError) =>
           Effect.sync(() =>
@@ -66,6 +78,8 @@ const usePlanningEffect = () => {
     failPlanning,
     flowInstruction,
     gitState,
+    planningModel,
+    planningProvider,
     screen,
     selectedCommit,
     testAction,
@@ -199,8 +213,9 @@ export const App = () => {
           <Box flexDirection="column" width="100%">
             <PlanningScreen />
             {planningError ? (
-              <Box paddingX={2}>
+              <Box flexDirection="column" paddingX={2}>
                 <Text color={COLORS.RED}>Planning failed: {planningError}</Text>
+                <Text color={COLORS.DIM}>Press esc to go back and choose a different agent.</Text>
               </Box>
             ) : null}
           </Box>

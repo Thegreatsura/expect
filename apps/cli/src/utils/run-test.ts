@@ -92,6 +92,8 @@ const resolvePlan = async (
       commit: selectedCommit,
       userInstruction,
       environmentOverrides,
+      provider: config.planningProvider,
+      model: config.planningModel,
     }),
   );
   console.error(`Plan: ${result.plan.title} (${result.plan.steps.length} steps)\n`);
@@ -123,19 +125,27 @@ export const runTest = async (config: TestRunConfig): Promise<void> => {
     const latestRunReportState: { current: BrowserRunReport | null } = { current: null };
 
     await Effect.runPromise(
-      Stream.runForEach(executeBrowserFlow({ target, plan, environment }), (event) =>
-        Effect.sync(() => {
-          if (event.type === "run-started" && event.liveViewUrl) {
-            process.stdout.write(`Live view: ${event.liveViewUrl}\n`);
-          }
-          if (event.type === "run-completed" && event.report) {
-            latestRunReportState.current = event.report;
-          }
-          const line = formatRunEvent(event);
-          if (line) {
-            process.stdout.write(line + "\n");
-          }
+      Stream.runForEach(
+        executeBrowserFlow({
+          target,
+          plan,
+          environment,
+          provider: config.executionProvider,
+          ...(config.executionModel ? { providerSettings: { model: config.executionModel } } : {}),
         }),
+        (event) =>
+          Effect.sync(() => {
+            if (event.type === "run-started" && event.liveViewUrl) {
+              process.stdout.write(`Live view: ${event.liveViewUrl}\n`);
+            }
+            if (event.type === "run-completed" && event.report) {
+              latestRunReportState.current = event.report;
+            }
+            const line = formatRunEvent(event);
+            if (line) {
+              process.stdout.write(line + "\n");
+            }
+          }),
       ),
     );
 

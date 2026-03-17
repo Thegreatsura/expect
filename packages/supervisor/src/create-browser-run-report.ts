@@ -39,6 +39,7 @@ interface CreateBrowserRunReportOptions {
   completionEvent: Extract<BrowserRunEvent, { type: "run-completed" }>;
   rawVideoPath?: string;
   screenshotPaths: string[];
+  onProgress?: (message: string) => Promise<void> | void;
 }
 
 interface TimeWindow {
@@ -272,10 +273,13 @@ export const getHighlightWindows = (events: BrowserRunEvent[]): TimeWindow[] => 
 const createHighlightVideo = async (
   rawVideoPath: string | undefined,
   events: BrowserRunEvent[],
+  onProgress?: (message: string) => Promise<void> | void,
 ) => {
   if (!rawVideoPath || !existsSync(rawVideoPath)) {
     return { highlightVideoPath: undefined, warning: undefined };
   }
+
+  await onProgress?.("Generating highlight video");
 
   if (!(await commandExists("ffmpeg"))) {
     return {
@@ -482,13 +486,14 @@ const prepareArtifacts = async (
   rawVideoPath: string | undefined,
   screenshotPaths: string[],
   events: BrowserRunEvent[],
+  onProgress?: (message: string) => Promise<void> | void,
 ): Promise<ArtifactPreparationResult> => {
   const warnings: string[] = [];
   const existingScreenshotPaths = screenshotPaths.filter((screenshotPath) =>
     existsSync(screenshotPath),
   );
   const existingRawVideoPath = rawVideoPath && existsSync(rawVideoPath) ? rawVideoPath : undefined;
-  const highlightVideoResult = await createHighlightVideo(existingRawVideoPath, events);
+  const highlightVideoResult = await createHighlightVideo(existingRawVideoPath, events, onProgress);
   if (highlightVideoResult.warning) warnings.push(highlightVideoResult.warning);
 
   return {
@@ -504,11 +509,18 @@ const prepareArtifacts = async (
 export const createBrowserRunReport = async (
   options: CreateBrowserRunReportOptions,
 ): Promise<BrowserRunReport> => {
+  await options.onProgress?.("Analyzing results");
   const stepResults = getStepResults(options.plan, options.events);
   const findings = getFindings(options.events, options.plan, options.completionEvent);
   const riskAreaSummary = getRiskAreaSummary(options.plan, stepResults, findings);
+  await options.onProgress?.("Looking up pull request");
   const [artifactPreparation, pullRequest] = await Promise.all([
-    prepareArtifacts(options.rawVideoPath, options.screenshotPaths, options.events),
+    prepareArtifacts(
+      options.rawVideoPath,
+      options.screenshotPaths,
+      options.events,
+      options.onProgress,
+    ),
     getPullRequestForBranch(options.target.cwd, options.target.branch.current),
   ]);
 
@@ -523,6 +535,7 @@ export const createBrowserRunReport = async (
     ...riskAreaSummary,
   };
 
+  await options.onProgress?.("Building report");
   return {
     ...partialReport,
     artifacts: {

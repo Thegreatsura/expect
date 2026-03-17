@@ -46,6 +46,8 @@ export const TestingScreen = () => {
   const target = useAppStore((state) => state.resolvedTarget);
   const plan = useAppStore((state) => state.generatedPlan);
   const environment = useAppStore((state) => state.browserEnvironment);
+  const executionProvider = useAppStore((state) => state.executionProvider);
+  const executionModel = useAppStore((state) => state.executionModel);
   const completeTestingRun = useAppStore((state) => state.completeTestingRun);
   const exitTesting = useAppStore((state) => state.exitTesting);
   const liveViewUrl = useAppStore((state) => state.liveViewUrl);
@@ -125,29 +127,38 @@ export const TestingScreen = () => {
     setElapsedTimeMs(0);
     setShowCancelConfirmation(false);
     setExitRequested(false);
+    useAppStore.setState({ resolvedExecutionProvider: executionProvider ?? null });
     runFiberRef.current = Effect.runFork(
-      Stream.runForEach(executeBrowserFlow({ target, plan, environment }), (event) =>
-        Effect.sync(() => {
-          if (event.type === "run-started" && event.liveViewUrl) {
-            setPendingLiveViewUrl(event.liveViewUrl);
-          }
-          if (event.type === "run-completed") {
-            setVideoPath(event.report?.artifacts.rawVideoPath ?? event.videoPath ?? null);
-            if (event.report) {
-              if (event.report.status === "passed") {
-                saveTestedFingerprint();
-              }
-              completeTestingRun(event.report);
-            }
-          }
-          if (event.type === "tool-result") {
-            const screenshotPath = extractScreenshotPath(event);
-            if (screenshotPath) {
-              setScreenshotPaths((previous) => [...previous, screenshotPath]);
-            }
-          }
-          setEvents((previous) => [...previous, event]);
+      Stream.runForEach(
+        executeBrowserFlow({
+          target,
+          plan,
+          environment,
+          provider: executionProvider,
+          ...(executionModel ? { providerSettings: { model: executionModel } } : {}),
         }),
+        (event) =>
+          Effect.sync(() => {
+            if (event.type === "run-started" && event.liveViewUrl) {
+              setPendingLiveViewUrl(event.liveViewUrl);
+            }
+            if (event.type === "run-completed") {
+              setVideoPath(event.report?.artifacts.rawVideoPath ?? event.videoPath ?? null);
+              if (event.report) {
+                if (event.report.status === "passed") {
+                  saveTestedFingerprint();
+                }
+                completeTestingRun(event.report);
+              }
+            }
+            if (event.type === "tool-result") {
+              const screenshotPath = extractScreenshotPath(event);
+              if (screenshotPath) {
+                setScreenshotPaths((previous) => [...previous, screenshotPath]);
+              }
+            }
+            setEvents((previous) => [...previous, event]);
+          }),
       ).pipe(
         Effect.catchCause((cause) =>
           Cause.hasInterruptsOnly(cause)
@@ -170,7 +181,15 @@ export const TestingScreen = () => {
         void Effect.runFork(Fiber.interrupt(runFiber));
       }
     };
-  }, [completeTestingRun, environment, plan, setLiveViewUrl, target]);
+  }, [
+    completeTestingRun,
+    environment,
+    executionModel,
+    executionProvider,
+    plan,
+    setLiveViewUrl,
+    target,
+  ]);
 
   useInput((input, key) => {
     const normalizedInput = input.toLowerCase();
@@ -219,8 +238,14 @@ export const TestingScreen = () => {
 
   if (!target || !plan || !environment || !derivedState) return null;
 
-  const { steps, currentToolCallText, activeStepStartedAt, completedCount, totalCount } =
-    derivedState;
+  const {
+    steps,
+    currentToolCallText,
+    activeStepStartedAt,
+    completedCount,
+    totalCount,
+    runStatusLabel,
+  } = derivedState;
   const stepElapsedLabel =
     activeStepStartedAt !== null ? formatElapsedTime(Date.now() - activeStepStartedAt) : null;
   const filledWidth =
@@ -312,7 +337,7 @@ export const TestingScreen = () => {
         {running && !showCancelConfirmation ? (
           <Box marginTop={1} paddingX={1}>
             <TextShimmer
-              text={`${exitRequested ? "Stopping" : "Testing"}${figures.ellipsis} ${elapsedTimeLabel}`}
+              text={`${exitRequested ? "Stopping" : runStatusLabel}${figures.ellipsis} ${elapsedTimeLabel}`}
               baseColor={COLORS.DIM}
               highlightColor={COLORS.PRIMARY}
             />

@@ -3,6 +3,12 @@ import { formatBrowserToolCall } from "./format-browser-tool-call.js";
 
 const TOOL_CALL_HIDDEN = "hidden";
 const TOOL_CALL_DETAILED = "detailed";
+const RUN_STATUS_LABELS = new Set([
+  "Analyzing results",
+  "Looking up pull request",
+  "Generating highlight video",
+  "Building report",
+]);
 
 export interface StepDisplayState {
   stepId: string;
@@ -16,6 +22,7 @@ export interface DerivedTestingState {
   activeStepStartedAt: number | null;
   completedCount: number;
   totalCount: number;
+  runStatusLabel: string;
 }
 
 export const deriveTestingState = (
@@ -37,6 +44,7 @@ export const deriveTestingState = (
   let activeStepId: string | null = null;
   let activeStepStartedAt: number | null = null;
   let currentToolCallText: string | null = null;
+  let runStatusLabel = "Testing";
 
   for (const event of events) {
     switch (event.type) {
@@ -87,6 +95,12 @@ export const deriveTestingState = (
         }
         break;
       }
+      case "text": {
+        if (RUN_STATUS_LABELS.has(event.text)) {
+          runStatusLabel = event.text;
+        }
+        break;
+      }
     }
   }
 
@@ -116,5 +130,6 @@ export const deriveTestingState = (
     activeStepStartedAt,
     completedCount,
     totalCount: steps.length,
+    runStatusLabel,
   };
 };

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { LanguageModelV3, LanguageModelV3StreamPart } from "@ai-sdk/provider";
 import type { AgentProviderSettings } from "@browser-tester/agent";
-import { Effect, Option, Stream } from "effect";
+import { Effect, Either, Option, Stream } from "effect";
 import {
   BROWSER_TEST_MODEL,
   DEFAULT_AGENT_PROVIDER,
@@ -27,6 +27,8 @@ import {
 import type { ExecutionStreamContext, ExecutionStreamState } from "./parse-execution-stream.js";
 import { retrieveExecutorMemory } from "./memory/retrieve-executor-memory.js";
 import type { ExecuteBrowserFlowOptions } from "./types.js";
+import { detectAuthError } from "./utils/detect-auth-error.js";
+import { resolveAgentProvider } from "./utils/resolve-agent-provider.js";
 import { saveBrowserImageResult } from "./utils/save-browser-image-result.js";
 import { serializeToolResult } from "./utils/serialize-tool-result.js";
 import { resolveLiveViewUrl } from "./utils/resolve-live-view-url.js";
@@ -182,6 +184,49 @@ const buildExecutionPrompt = (
       )
       .join("\n"),
   ].join("\n");
+};
+
+const createAsyncEventQueue = <T>() => {
+  const values: T[] = [];
+  const resolvers: Array<(result: IteratorResult<T>) => void> = [];
+  let closed = false;
+
+  return {
+    push: (value: T) => {
+      const resolver = resolvers.shift();
+      if (resolver) {
+        resolver({ value, done: false });
+        return;
+      }
+
+      values.push(value);
+    },
+    close: () => {
+      closed = true;
+      for (const resolver of resolvers.splice(0)) {
+        resolver({ value: undefined, done: true });
+      }
+    },
+    async *drain() {
+      for (;;) {
+        if (values.length > 0) {
+          const value = values.shift();
+          if (value !== undefined) {
+            yield value;
+            continue;
+          }
+        }
+
+        if (closed) return;
+
+        const next = await new Promise<IteratorResult<T>>((resolve) => {
+          resolvers.push(resolve);
+        });
+        if (next.done) return;
+        yield next.value;
+      }
+    },
+  };
 };
 
 const createBrowserRunEventIterable = (options: {
@@ -363,23 +408,34 @@ const createBrowserRunEventIterable = (options: {
           videoPath: options.videoOutputPath,
         } satisfies Extract<BrowserRunEvent, { type: "run-completed" }>);
 
-      const preparingResultsEvent: BrowserRunEvent = {
-        type: "text",
-        timestamp: Date.now(),
-        text: "Preparing results report...",
-      };
-      yield preparingResultsEvent;
+      const progressEvents = createAsyncEventQueue<BrowserRunEvent>();
+      const reportPromise = createBrowserRunReport({
+        target: options.target,
+        plan: options.plan,
+        events: emittedEvents,
+        completionEvent: resolvedCompletionEvent,
+        rawVideoPath: options.videoOutputPath,
+        screenshotPaths,
+        onProgress: (text) => {
+          const progressEvent: BrowserRunEvent = {
+            type: "text",
+            timestamp: Date.now(),
+            text,
+          };
+          emittedEvents.push(progressEvent);
+          progressEvents.push(progressEvent);
+        },
+      }).finally(() => {
+        progressEvents.close();
+      });
+
+      for await (const progressEvent of progressEvents.drain()) {
+        yield progressEvent;
+      }
 
       yield {
         ...resolvedCompletionEvent,
-        report: await createBrowserRunReport({
-          target: options.target,
-          plan: options.plan,
-          events: emittedEvents,
-          completionEvent: resolvedCompletionEvent,
-          rawVideoPath: options.videoOutputPath,
-          screenshotPaths,
-        }),
+        report: await reportPromise,
       };
     } catch (cause) {
       throw cause instanceof ExecutionError
@@ -392,6 +448,121 @@ const createBrowserRunEventIterable = (options: {
       } catch {}
     }
   })();
+
+interface ExecutionStreamFailure {
+  cause: unknown;
+  authMessage?: string;
+}
+
+const createModelStreamResult = Effect.fn("createModelStreamResult")(function* (
+  options: ExecuteBrowserFlowOptions,
+  prompt: string,
+  provider: NonNullable<ExecuteBrowserFlowOptions["provider"]>,
+  browserMcpServerName: string,
+  videoOutputPath: string,
+  liveViewUrl?: string,
+  abortController?: AbortController,
+) {
+  const model: LanguageModelV3 =
+    options.model ??
+    createAgentModel(
+      provider,
+      buildExecutionModelSettings({
+        provider,
+        providerSettings: options.providerSettings,
+        target: options.target,
+        browserMcpServerName,
+        videoOutputPath,
+        liveViewUrl,
+      }),
+    );
+
+  return yield* Effect.tryPromise({
+    try: () =>
+      model.doStream({
+        abortSignal: abortController?.signal,
+        prompt: [{ role: "user", content: [{ type: "text", text: prompt }] }],
+      }),
+    catch: (cause) =>
+      ({
+        cause,
+        authMessage: detectAuthError(provider, cause),
+      }) satisfies ExecutionStreamFailure,
+  });
+});
+
+const resolveExecutionStreamResult = Effect.fn("resolveExecutionStreamResult")(function* (
+  options: ExecuteBrowserFlowOptions,
+  prompt: string,
+  browserMcpServerName: string,
+  videoOutputPath: string,
+  liveViewUrl: string | undefined,
+  abortController: AbortController,
+) {
+  if (options.model) {
+    return yield* createModelStreamResult(
+      options,
+      prompt,
+      options.provider ?? DEFAULT_AGENT_PROVIDER,
+      browserMcpServerName,
+      videoOutputPath,
+      liveViewUrl,
+      abortController,
+    ).pipe(
+      Effect.mapError(
+        (failure) =>
+          new ExecutionError({
+            stage: "model streaming",
+            cause: failure.authMessage ?? failure.cause,
+          }),
+      ),
+    );
+  }
+
+  const resolvedAgentProvider = yield* resolveAgentProvider(options.provider).pipe(
+    Effect.mapError((cause) => new ExecutionError({ stage: "agent selection", cause })),
+  );
+  const providersToTry = [
+    resolvedAgentProvider.provider,
+    ...resolvedAgentProvider.fallbackProviders,
+  ] as const;
+
+  for (const [providerIndex, provider] of providersToTry.entries()) {
+    const attempt = yield* Effect.either(
+      createModelStreamResult(
+        options,
+        prompt,
+        provider,
+        browserMcpServerName,
+        videoOutputPath,
+        liveViewUrl,
+        abortController,
+      ),
+    );
+
+    if (Either.isRight(attempt)) {
+      return attempt.right;
+    }
+
+    const isLastProvider = providerIndex === providersToTry.length - 1;
+
+    if (
+      resolvedAgentProvider.explicit ||
+      attempt.left.authMessage === undefined ||
+      isLastProvider
+    ) {
+      return yield* new ExecutionError({
+        stage: "model streaming",
+        cause: attempt.left.authMessage ?? attempt.left.cause,
+      }).asEffect();
+    }
+  }
+
+  return yield* new ExecutionError({
+    stage: "model streaming",
+    cause: "No available execution agent could complete the request.",
+  }).asEffect();
+});
 
 const buildExecutionStream = Effect.fn("executeBrowserFlow")(function* (
   options: ExecuteBrowserFlowOptions,
@@ -411,19 +582,6 @@ const buildExecutionStream = Effect.fn("executeBrowserFlow")(function* (
       try: () => resolveLiveViewUrl(),
       catch: (cause) => new ExecutionError({ stage: "resolve live view url", cause }),
     }).pipe(Effect.catchTag("ExecutionError", () => Effect.succeed(undefined))));
-  const model: LanguageModelV3 =
-    options.model ??
-    createAgentModel(
-      options.provider ?? DEFAULT_AGENT_PROVIDER,
-      buildExecutionModelSettings({
-        provider: options.provider,
-        providerSettings: options.providerSettings,
-        target: options.target,
-        browserMcpServerName,
-        videoOutputPath,
-        liveViewUrl,
-      }),
-    );
   const memoryContext = yield* Effect.try({
     try: () =>
       retrieveExecutorMemory(options.target.cwd, {
@@ -441,14 +599,14 @@ const buildExecutionStream = Effect.fn("executeBrowserFlow")(function* (
     Option.getOrUndefined(memoryContext),
   );
   const abortController = new AbortController();
-  const streamResult = yield* Effect.tryPromise({
-    try: () =>
-      model.doStream({
-        abortSignal: abortController.signal,
-        prompt: [{ role: "user", content: [{ type: "text", text: prompt }] }],
-      }),
-    catch: (cause) => new ExecutionError({ stage: "model streaming", cause }),
-  });
+  const streamResult = yield* resolveExecutionStreamResult(
+    options,
+    prompt,
+    browserMcpServerName,
+    videoOutputPath,
+    liveViewUrl,
+    abortController,
+  );
 
   return Stream.fromAsyncIterable(
     createBrowserRunEventIterable({

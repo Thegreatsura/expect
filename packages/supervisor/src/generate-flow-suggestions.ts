@@ -1,4 +1,4 @@
-import { BROWSER_TEST_MODEL, DEFAULT_AGENT_PROVIDER } from "./constants.js";
+import { BROWSER_TEST_MODEL, CODEX_PLANNER_MODEL, DEFAULT_AGENT_PROVIDER } from "./constants.js";
 import { createAgentModel } from "./create-agent-model.js";
 import { extractJsonObject } from "./json.js";
 import type { AgentProvider, ChangedFile } from "./types.js";
@@ -56,30 +56,43 @@ export const generateFlowSuggestions = async (
 ): Promise<string[]> => {
   const provider = options.provider ?? DEFAULT_AGENT_PROVIDER;
 
-  const model = createAgentModel(provider, {
-    cwd: process.cwd(),
-    effort: "low",
-    maxTurns: 1,
-    model: BROWSER_TEST_MODEL,
-    permissionMode: "plan" as const,
-    tools: [],
-  });
+  try {
+    const model = createAgentModel(provider, {
+      cwd: process.cwd(),
+      effort: "low",
+      maxTurns: 1,
+      ...(provider === "claude"
+        ? { model: BROWSER_TEST_MODEL }
+        : provider === "codex"
+          ? { model: CODEX_PLANNER_MODEL }
+          : {}),
+      permissionMode: "plan" as const,
+      tools: [],
+    });
 
-  const response = await model.doGenerate({
-    abortSignal: options.signal,
-    prompt: [{ role: "user", content: [{ type: "text", text: buildSuggestionsPrompt(options) }] }],
-  });
+    const response = await model.doGenerate({
+      abortSignal: options.signal,
+      prompt: [
+        {
+          role: "user",
+          content: [{ type: "text", text: buildSuggestionsPrompt(options) }],
+        },
+      ],
+    });
 
-  const text = response.content
-    .filter((part) => part.type === "text")
-    .map((part) => part.text)
-    .join("\n");
+    const text = response.content
+      .filter((part) => part.type === "text")
+      .map((part) => part.text)
+      .join("\n");
 
-  const parsed: unknown = JSON.parse(extractJsonObject(text));
+    const parsed: unknown = JSON.parse(extractJsonObject(text));
 
-  if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === "string")) {
-    throw new Error("Invalid suggestion response format");
+    if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === "string")) {
+      throw new Error("Invalid suggestion response format");
+    }
+
+    return parsed.slice(0, SUGGESTION_COUNT);
+  } catch {
+    return [];
   }
-
-  return parsed.slice(0, SUGGESTION_COUNT);
 };

@@ -32,6 +32,7 @@ export const MainMenu = () => {
   const selectedContext = useAppStore((state) => state.selectedContext);
   const switchBranch = useAppStore((state) => state.switchBranch);
   const flowInstruction = useAppStore((state) => state.flowInstruction);
+  const planningProvider = useAppStore((state) => state.planningProvider);
 
   const [value, setValue] = useState(flowInstruction);
   const [inputKey, setInputKey] = useState(0);
@@ -127,12 +128,15 @@ export const MainMenu = () => {
       currentBranch: gitState.currentBranch,
       contextType: activeContext?.type ?? null,
       contextLabel: activeContext?.label ?? null,
+      provider: planningProvider,
       signal: abortController.signal,
     })
       .then((result) => {
         if (!abortController.signal.aborted) {
-          setAiSuggestions(result);
-          setSuggestionIndex(0);
+          setAiSuggestions(result.length > 0 ? result : null);
+          if (result.length > 0) {
+            setSuggestionIndex(0);
+          }
         }
       })
       .catch(() => {})
@@ -141,7 +145,7 @@ export const MainMenu = () => {
           setIsGenerating(false);
         }
       });
-  }, [activeContext, gitState, isGenerating]);
+  }, [activeContext, gitState, isGenerating, planningProvider]);
 
   const openPicker = useCallback(() => {
     setPickerOpen(true);

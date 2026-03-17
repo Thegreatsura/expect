@@ -42,6 +42,7 @@ export { generateFlowSuggestions } from "./generate-flow-suggestions.js";
 export { planBrowserFlow } from "./plan-browser-flow.js";
 export { formatDiffStats } from "./utils/format-diff-stats.js";
 export { isRunningInAgent } from "./utils/is-running-in-agent.js";
+export { resolveAgentProvider } from "./utils/resolve-agent-provider.js";
 export { fetchRemoteBranches, type RemoteBranch } from "./remote-branches.js";
 export { resolveTestTarget } from "./resolve-test-target.js";
 export type {

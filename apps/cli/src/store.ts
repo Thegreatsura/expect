@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import { create } from "zustand";
 import {
   checkoutBranch,
+  type AgentProvider,
   type BrowserEnvironmentHints,
   type BrowserFlowPlan,
   type BrowserRunReport,
@@ -44,6 +45,12 @@ interface AppStore {
   flowInstruction: string;
   flowInstructionHistory: string[];
   autoRunAfterPlanning: boolean;
+  planningProvider: AgentProvider | undefined;
+  executionProvider: AgentProvider | undefined;
+  planningModel: string | undefined;
+  executionModel: string | undefined;
+  resolvedPlanningProvider: AgentProvider | null;
+  resolvedExecutionProvider: AgentProvider | null;
   generatedPlan: BrowserFlowPlan | null;
   resolvedTarget: TestTarget | null;
   browserEnvironment: BrowserEnvironmentHints | null;
@@ -96,6 +103,8 @@ const RESET_PLAN_STATE = {
   generatedPlan: null,
   resolvedTarget: null,
   browserEnvironment: null,
+  resolvedPlanningProvider: null,
+  resolvedExecutionProvider: null,
   pendingSavedFlow: null,
   latestRunReport: null,
   autoSaveStatus: "idle" as const,
@@ -131,6 +140,12 @@ export const useAppStore = create<AppStore>((set) => ({
   flowInstruction: "",
   flowInstructionHistory: [],
   autoRunAfterPlanning: false,
+  planningProvider: undefined,
+  executionProvider: undefined,
+  planningModel: undefined,
+  executionModel: undefined,
+  resolvedPlanningProvider: null,
+  resolvedExecutionProvider: null,
   generatedPlan: null,
   resolvedTarget: null,
   browserEnvironment: null,
