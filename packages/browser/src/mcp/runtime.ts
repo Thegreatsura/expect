@@ -1,4 +1,9 @@
-import { ManagedRuntime } from "effect";
+import { Layer, Logger, ManagedRuntime } from "effect";
 import { McpSession } from "./mcp-session.js";
 
-export const McpRuntime = ManagedRuntime.make(McpSession.layer);
+const StderrLoggerLayer = Layer.succeed(Logger.LogToStderr, true);
+
+export const McpRuntime = ManagedRuntime.make(
+  McpSession.layer.pipe(Layer.provide(StderrLoggerLayer)),
+);
+
