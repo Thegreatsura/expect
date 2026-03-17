@@ -17,6 +17,7 @@ import { MemoryRetrievalError, PlanParseError, PlanningError } from "./errors.js
 import { extractJsonObject } from "./json.js";
 import { retrievePlannerMemory } from "./memory/retrieve-planner-memory.js";
 import type { PlanBrowserFlowOptions, PlanStep, TestTarget } from "./types.js";
+import { commandExists } from "./utils/command-exists.js";
 import { formatDiffStats } from "./utils/format-diff-stats.js";
 import { prioritizePlanningFiles } from "./utils/prioritize-planning-files.js";
 
@@ -96,7 +97,9 @@ const formatScopePlanningStrategy = (target: TestTarget): string => {
     return [
       "- Target mode: commit",
       "- Bias toward narrow validation of the specific change in the selected commit.",
-      `- Selected commit: ${target.selectedCommit?.shortHash ?? "unknown"} ${target.selectedCommit?.subject ?? ""}`.trim(),
+      `- Selected commit: ${target.selectedCommit?.shortHash ?? "unknown"} ${
+        target.selectedCommit?.subject ?? ""
+      }`.trim(),
       "- Treat the commit subject and diff as the primary testing hypothesis.",
       "- Prefer a focused before/after validation instead of a broad end-to-end tour.",
     ].join("\n");
@@ -237,12 +240,19 @@ export const planBrowserFlow = Effect.fn("planBrowserFlow")(function* (
   );
 
   const prompt = buildPlanningPrompt(options, Option.getOrUndefined(memoryContext));
+
+  const resolvedProvider =
+    options.provider ??
+    ((yield* Effect.tryPromise({
+      try: () => commandExists("codex"),
+      catch: () => false,
+    }))
+      ? ("codex" as const)
+      : DEFAULT_AGENT_PROVIDER);
+  const resolvedOptions = { ...options, provider: resolvedProvider };
+
   const model: LanguageModelV3 =
-    options.model ??
-    createAgentModel(
-      options.provider ?? DEFAULT_AGENT_PROVIDER,
-      buildPlannerModelSettings(options),
-    );
+    options.model ?? createAgentModel(resolvedProvider, buildPlannerModelSettings(resolvedOptions));
   const response = yield* Effect.tryPromise({
     try: () =>
       model.doGenerate({
