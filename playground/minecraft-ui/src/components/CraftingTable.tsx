@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 // ─── Types ───────────────────────────────────────────────
 type ItemStack = { id: string; count: number } | null;
@@ -423,7 +423,7 @@ export default function CraftingTable() {
   });
 
   const [craftingGrid, setCraftingGrid] = useState<ItemStack[]>(new Array(9).fill(null));
-  const [craftingOutput, setCraftingOutput] = useState<ItemStack>(null);
+  const craftingOutput = useMemo(() => matchRecipe(craftingGrid), [craftingGrid]);
   const [heldItem, setHeldItem] = useState<ItemStack>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -435,12 +435,6 @@ export default function CraftingTable() {
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
-
-  // Check crafting recipes whenever grid changes
-  useEffect(() => {
-    const result = matchRecipe(craftingGrid);
-    setCraftingOutput(result);
-  }, [craftingGrid]);
 
   // ─── Click Handlers ──────────────────────────────────
   const handleSlotClick = useCallback(

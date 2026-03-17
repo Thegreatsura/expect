@@ -1,8 +1,6 @@
 ```ts
-
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object";
-
 ```
 
 not needed, we can use `Predicate.isObject`
@@ -11,21 +9,21 @@ not needed, we can use `Predicate.isObject`
 
 ```ts
 const localStatePath = path.join(userDataDir, "Local State");
-const content = yield* fileSystem
-  .readFileString(localStatePath)
-  .pipe(Effect.catch(() => Effect.succeed("")));
+const content =
+  yield * fileSystem.readFileString(localStatePath).pipe(Effect.catch(() => Effect.succeed("")));
 if (!content) return EMPTY_PROFILE_METADATA;
 ```
-this catches even if we have permission errors or whatever.  we only wanna catch it if the file doesn't exist
+
+this catches even if we have permission errors or whatever. we only wanna catch it if the file doesn't exist
 
 instead, do:
 
 ```ts
-const foo = yield* fileSystem
-  .readFileString(localStatePath)
-  .pipe(
-    Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(""))
-  );
+const foo =
+  yield *
+  fileSystem
+    .readFileString(localStatePath)
+    .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed("")));
 ```
 
 (Effect.catchReason is the new meta for these kind of broad errors that contain different possible suberrors (PlatformError has { reason: <union of errors> }))
@@ -35,10 +33,12 @@ const foo = yield* fileSystem
 3. Prefer schemas over fragile property checks
 
 ```ts
-const localState = yield* Effect.try({
-  try: () => JSON.parse(content),
-  catch: () => undefined,
-});
+const localState =
+  yield *
+  Effect.try({
+    try: () => JSON.parse(content),
+    catch: () => undefined,
+  });
 if (!isObjectRecord(localState)) return EMPTY_PROFILE_METADATA;
 
 const profileState = localState["profile"];
@@ -46,25 +46,23 @@ if (!isObjectRecord(profileState)) return EMPTY_PROFILE_METADATA;
 
 const infoCache = profileState["info_cache"];
 const lastUsedProfileName =
-  typeof profileState["last_used"] === "string"
-    ? profileState["last_used"]
-    : undefined;
+  typeof profileState["last_used"] === "string" ? profileState["last_used"] : undefined;
 ```
 
-this whole just becomes 
+this whole just becomes
 
 ```ts
-const profiles = yield* fileSystem
-  .readFileString(localStatePath)
-  .pipe(
-    Effect.flatMap(Schema.decodeEffect(Schema.fromJsonString(ProfileSchema)))
-  )
+const profiles =
+  yield *
+  fileSystem
+    .readFileString(localStatePath)
+    .pipe(Effect.flatMap(Schema.decodeEffect(Schema.fromJsonString(ProfileSchema))));
 
 // @note(rasmus): im not sure what's the shape of profiles yet but im assuming that this profile contains all the needed stuff, so you can just return here
-return profiles
+return profiles;
 ```
 
-3. `BrowserDetector` service should not have code for all platforms inside the main `make`, instead the philosophy is that you have separate layers per platform, eg `layerWindows`, `layerMac`, `layerLinux`, and those layers contain the platform-specific logic. 
+3. `BrowserDetector` service should not have code for all platforms inside the main `make`, instead the philosophy is that you have separate layers per platform, eg `layerWindows`, `layerMac`, `layerLinux`, and those layers contain the platform-specific logic.
 
 this makes it so that you can focus on the platform-agnostic code, then just write whatever is left in the platform-specific layers (which usually is a small amount of glue-code)
 
@@ -74,12 +72,11 @@ Then when you construct your layers, you just match on `platform` to check which
 
 ```ts
 profiles.sort((left, right) => {
-          const leftIsLastUsed = left.profileName === lastUsedProfileName;
-          const rightIsLastUsed = right.profileName === lastUsedProfileName;
-          if (leftIsLastUsed !== rightIsLastUsed)
-            return leftIsLastUsed ? -1 : 1;
-          return naturalCompare(left.profileName, right.profileName);
-        });
+  const leftIsLastUsed = left.profileName === lastUsedProfileName;
+  const rightIsLastUsed = right.profileName === lastUsedProfileName;
+  if (leftIsLastUsed !== rightIsLastUsed) return leftIsLastUsed ? -1 : 1;
+  return naturalCompare(left.profileName, right.profileName);
+});
 ```
 
 so we just wanna sort by 1) last used first then alphabetically
@@ -89,13 +86,11 @@ this becomes
 ```ts
 const byLastUsed = Order.mapInput(
   Order.Boolean,
-  (p: BrowserProfile) => p.profileName === lastUsedProfileName
+  (p: BrowserProfile) => p.profileName === lastUsedProfileName,
 );
 const byProfileName = Order.mapInput(
-  Order.make(
-    (a: string, b: string) => naturalCompare(a, b) as -1 | 0 | 1
-  ),
-  (p: BrowserProfile) => p.profileName
+  Order.make((a: string, b: string) => naturalCompare(a, b) as -1 | 0 | 1),
+  (p: BrowserProfile) => p.profileName,
 );
 const byLastUsedThenName = Order.combine(byLastUsed, byProfileName);
 profiles.sort(byLastUsedThenName);
@@ -106,12 +101,13 @@ so this allows us to easily compose any amount of of sorting criteria, and they 
 5. use `fs.makeTempDirectoryScoped`
 
 ```ts
-  const tempUserDataDirPath = yield* fileSystem.makeTempDirectory({ prefix: "cookies-cdp-" });
-      yield* Effect.addFinalizer(() =>
-        fileSystem
-          .remove(tempUserDataDirPath, { recursive: true })
-          .pipe(Effect.catch(() => Effect.void)),
-      );
+const tempUserDataDirPath = yield * fileSystem.makeTempDirectory({ prefix: "cookies-cdp-" });
+yield *
+  Effect.addFinalizer(() =>
+    fileSystem
+      .remove(tempUserDataDirPath, { recursive: true })
+      .pipe(Effect.catch(() => Effect.void)),
+  );
 ```
 
 you wanna make a temp directory, and remove it once were done with it, you can just use `makeTempDirectoryScoped`, it cleans up the folder for you once the scope is closed (once you do Effect.scoped) so in this at the end of the function
@@ -134,11 +130,12 @@ Effect.retry({
 ```
 
 7. recursive copy fn `copyDirectoryRecursive` not needed
-just use `fs.copy()`
+   just use `fs.copy()`
 
 8. `return yield* new UnsupportedPlatformError({ platform: platform() }).asEffect();` -> `.asEffect()` is not needed
 
-9. avoid recovering from UNEXPECTED ("UNRECOVERABLE" / "DEFECT") errors 
+9. avoid recovering from UNEXPECTED ("UNRECOVERABLE" / "DEFECT") errors
+
 ```ts
 pipe(
 Effect.catchTags({
@@ -151,7 +148,7 @@ Effect.catchTags({
 }),
 ```
 
-Most of these signal deep UNRECOVERABLE errors, eg. if BinaryParseError is thrown, means we have implemented binary parsing incorrectly. this is a bug in our software, and as such this shouldn't be recovered from. if we recover from unrecoverable errors, we hide these bugs, and in turn create new bugs where the users will be like "it didn't copy cookies correctly", when in reality the BinaryParseError happened, but we recovered from it. 
+Most of these signal deep UNRECOVERABLE errors, eg. if BinaryParseError is thrown, means we have implemented binary parsing incorrectly. this is a bug in our software, and as such this shouldn't be recovered from. if we recover from unrecoverable errors, we hide these bugs, and in turn create new bugs where the users will be like "it didn't copy cookies correctly", when in reality the BinaryParseError happened, but we recovered from it.
 
 for unrecoverable errros (BinaryParseError, UnsupportedPlatformErrro, CoookieDatabaseNotFoundError, probably CookieReadError and CookieDecryptionKeyError too), we should just do Effect.die.
 
@@ -159,7 +156,7 @@ the error channel should be reserved for recoverable errors, for example, `Brows
 
 10. constrain the number of schemas (or types), and stick to those schemas everywhere
 
-previously there were different models like `BrowserProfile` and `BrowserInfo`, `ProfileMetadata` and `CdpRawCookie` instead try to just consolidate as much as possible. 
+previously there were different models like `BrowserProfile` and `BrowserInfo`, `ProfileMetadata` and `CdpRawCookie` instead try to just consolidate as much as possible.
 
 now there is simply `Browser` and `Cookie`, becomes much simpler to reason about, you always know that a function should return a `Browser` or `Cookie`.
 
@@ -168,8 +165,6 @@ now there is simply `Browser` and `Cookie`, becomes much simpler to reason about
 example from sqlite-client.ts:
 
 ```ts
-
-
 const queryWithNodeSqlite = Effect.fn("SqliteClient.queryWithNodeSqlite")(function* (
   databasePath: string,
   sqlQuery: string,
@@ -217,7 +212,7 @@ export class SqliteEngine extends ServiceMap.Service<
   SqliteEngine,
   {
     readonly open: (
-      databasePath: string
+      databasePath: string,
     ) => Effect.Effect<SqliteDatabase, CookieReadError, Scope.Scope>;
   }
 >()("@cookies/SqliteEngine") {
@@ -231,10 +226,9 @@ export class SqliteEngine extends ServiceMap.Service<
               readonly: true,
             }) as SqliteDatabase;
           },
-          catch: (cause) =>
-            new CookieReadError({ browser: "unknown", cause: String(cause) }),
+          catch: (cause) => new CookieReadError({ browser: "unknown", cause: String(cause) }),
         }),
-        (database) => Effect.sync(() => database.close())
+        (database) => Effect.sync(() => database.close()),
       ),
   });
 
@@ -249,10 +243,9 @@ export class SqliteEngine extends ServiceMap.Service<
               readBigInts: true,
             }) as unknown as SqliteDatabase;
           },
-          catch: (cause) =>
-            new CookieReadError({ browser: "unknown", cause: String(cause) }),
+          catch: (cause) => new CookieReadError({ browser: "unknown", cause: String(cause) }),
         }),
-        (database) => Effect.sync(() => database.close())
+        (database) => Effect.sync(() => database.close()),
       ),
   });
 
@@ -264,10 +257,9 @@ export class SqliteEngine extends ServiceMap.Service<
             new LibsqlDatabase(databasePath, {
               readonly: true,
             }) as unknown as SqliteDatabase,
-          catch: (cause) =>
-            new CookieReadError({ browser: "unknown", cause: String(cause) }),
+          catch: (cause) => new CookieReadError({ browser: "unknown", cause: String(cause) }),
         }),
-        (database) => Effect.sync(() => database.close())
+        (database) => Effect.sync(() => database.close()),
       ),
   });
 }
@@ -279,6 +271,6 @@ almost always better to use Effect.catchTag("SpecificError", () => ...)
 
 12. single responsibility stuff (more philosophical and code organization stuff)
 
-separated all the browsers into separate provider services, which simply register themselves with the Browsers service using  `register(...)`
+separated all the browsers into separate provider services, which simply register themselves with the Browsers service using `register(...)`
 
 also each of these rely on platform-specific config services, which are provided during runtime. this makes separation simpler, where the logic is shared across platforms, but the platform-specific details are injected via the config services.

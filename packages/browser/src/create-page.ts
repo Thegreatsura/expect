@@ -1,11 +1,5 @@
 import { Effect, Layer, Option } from "effect";
-import {
-  Browsers,
-  Cookies,
-  layerLive,
-  type Browser,
-  type Cookie,
-} from "@browser-tester/cookies";
+import { Browsers, Cookies, layerLive, type Browser, type Cookie } from "@browser-tester/cookies";
 import { tmpdir } from "node:os";
 import { chromium } from "playwright";
 import {
@@ -14,11 +8,7 @@ import {
   HEADLESS_CHROMIUM_ARGS,
 } from "./constants";
 import { injectCookies } from "./inject-cookies";
-import type {
-  CreatePageOptions,
-  CreatePageResult,
-  VideoOptions,
-} from "./types";
+import type { CreatePageOptions, CreatePageResult, VideoOptions } from "./types";
 
 const CookiesRuntime = Layer.mergeAll(layerLive, Cookies.layer);
 
@@ -30,13 +20,11 @@ const resolveDefaultBrowser = async (): Promise<Browser | undefined> =>
       return Option.getOrUndefined(defaultBrowserOption);
     }).pipe(
       Effect.provide(CookiesRuntime),
-      Effect.catch(() => Effect.succeed(undefined))
-    )
+      Effect.catch(() => Effect.succeed(undefined)),
+    ),
   );
 
-const extractCookiesFromBrowser = async (
-  browser: Browser
-): Promise<readonly Cookie[]> =>
+const extractCookiesFromBrowser = async (browser: Browser): Promise<readonly Cookie[]> =>
   Effect.runPromise(
     Effect.gen(function* () {
       const cookies = yield* Cookies;
@@ -44,12 +32,12 @@ const extractCookiesFromBrowser = async (
     }).pipe(
       Effect.scoped,
       Effect.provide(CookiesRuntime),
-      Effect.catch(() => Effect.succeed([] as Cookie[]))
-    )
+      Effect.catch(() => Effect.succeed([] as Cookie[])),
+    ),
   );
 
 const resolveVideoOptions = (
-  video: boolean | VideoOptions | undefined
+  video: boolean | VideoOptions | undefined,
 ): VideoOptions | undefined => {
   if (!video) return undefined;
   if (video === true) {
@@ -67,10 +55,7 @@ const resolveVideoOptions = (
   };
 };
 
-const resolveContextOptions = (
-  video: VideoOptions | undefined,
-  locale: string | undefined
-) => {
+const resolveContextOptions = (video: VideoOptions | undefined, locale: string | undefined) => {
   if (!video && !locale) return undefined;
 
   return {
@@ -82,7 +67,7 @@ const resolveContextOptions = (
 const navigatePage = async (
   page: CreatePageResult["page"],
   url: string | undefined,
-  waitUntil: CreatePageOptions["waitUntil"]
+  waitUntil: CreatePageOptions["waitUntil"],
 ) => {
   if (!url) return;
   await page.goto(url, { waitUntil: waitUntil ?? "load" });
@@ -90,7 +75,7 @@ const navigatePage = async (
 
 export const createPage = async (
   url: string | undefined,
-  options: CreatePageOptions = {}
+  options: CreatePageOptions = {},
 ): Promise<CreatePageResult> => {
   const browser = await chromium.launch({
     headless: !options.headed,
@@ -99,25 +84,19 @@ export const createPage = async (
   });
 
   try {
-    const defaultBrowser =
-      options.cookies === true ? await resolveDefaultBrowser() : undefined;
+    const defaultBrowser = options.cookies === true ? await resolveDefaultBrowser() : undefined;
 
-    const locale =
-      defaultBrowser?._tag === "ChromiumBrowser"
-        ? defaultBrowser.locale
-        : undefined;
+    const locale = defaultBrowser?._tag === "ChromiumBrowser" ? defaultBrowser.locale : undefined;
 
     const recordVideo = resolveVideoOptions(options.video);
-    const context = await browser.newContext(
-      resolveContextOptions(recordVideo, locale)
-    );
+    const context = await browser.newContext(resolveContextOptions(recordVideo, locale));
 
     if (options.cookies) {
       const cookies = Array.isArray(options.cookies)
         ? options.cookies
         : defaultBrowser
-        ? await extractCookiesFromBrowser(defaultBrowser)
-        : [];
+          ? await extractCookiesFromBrowser(defaultBrowser)
+          : [];
       await injectCookies(context, cookies);
     }
 

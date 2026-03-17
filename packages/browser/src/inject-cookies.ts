@@ -3,7 +3,7 @@ import type { BrowserContext } from "playwright";
 
 export const injectCookies = async (
   context: BrowserContext,
-  cookies: readonly Cookie[]
+  cookies: readonly Cookie[],
 ): Promise<void> => {
   await context.addCookies(cookies.map((cookie) => cookie.playwrightFormat));
 };

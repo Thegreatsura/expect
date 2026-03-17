@@ -9,7 +9,7 @@ const CookiesTestLayer = Layer.mergeAll(layerLive, Cookies.layer);
 const findCookie = (
   cookies: readonly { name: string; domain: string; expires?: number }[],
   name: string,
-  domain: string
+  domain: string,
 ) => cookies.find((cookie) => cookie.name === name && cookie.domain === domain);
 
 describe("Cookies", () => {
@@ -29,11 +29,11 @@ describe("Cookies", () => {
           assert.isAbove(
             result.length,
             5,
-            `expected at least 5 cookies for ${browser._tag} but got ${result.length}`
+            `expected at least 5 cookies for ${browser._tag} but got ${result.length}`,
           );
         }
       }).pipe(Effect.scoped, Effect.provide(CookiesTestLayer)),
-    { timeout: 60_000 }
+    { timeout: 60_000 },
   );
 
   it.live(
@@ -45,15 +45,14 @@ describe("Cookies", () => {
         const allBrowsers = yield* browsers.list;
 
         const dia = allBrowsers.find(
-          (browser) =>
-            browser._tag === "ChromiumBrowser" && browser.key === "dia"
+          (browser) => browser._tag === "ChromiumBrowser" && browser.key === "dia",
         );
         assert.isDefined(dia);
 
         const result = yield* cookies.extract(dia!);
         console.log(result);
       }).pipe(Effect.scoped, Effect.provide(CookiesTestLayer)),
-    { timeout: 30_000 }
+    { timeout: 30_000 },
   );
 
   it.live(
@@ -64,20 +63,15 @@ describe("Cookies", () => {
         const cookies = yield* Cookies;
         const allBrowsers = yield* browsers.list;
 
-        const firefox = allBrowsers.find(
-          (browser) => browser._tag === "FirefoxBrowser"
-        );
+        const firefox = allBrowsers.find((browser) => browser._tag === "FirefoxBrowser");
         assert.isDefined(firefox);
 
         const result = yield* cookies.extract(firefox!);
         const cookie = findCookie(result, "__Secure-YEC", "youtube.com");
-        assert.isDefined(
-          cookie,
-          "cookie __Secure-YEC not found on youtube.com"
-        );
+        assert.isDefined(cookie, "cookie __Secure-YEC not found on youtube.com");
         assert.strictEqual(cookie!.expires, 1807799243);
       }).pipe(Effect.scoped, Effect.provide(CookiesTestLayer)),
-    { timeout: 60_000 }
+    { timeout: 60_000 },
   );
 
   it.live(
@@ -88,9 +82,7 @@ describe("Cookies", () => {
         const cookies = yield* Cookies;
         const allBrowsers = yield* browsers.list;
 
-        const safari = allBrowsers.find(
-          (browser) => browser._tag === "SafariBrowser"
-        );
+        const safari = allBrowsers.find((browser) => browser._tag === "SafariBrowser");
         assert.isDefined(safari);
 
         const result = yield* cookies.extract(safari!);
@@ -98,7 +90,7 @@ describe("Cookies", () => {
         assert.isDefined(cookie, "cookie APISID not found on youtube.com");
         assert.strictEqual(cookie!.expires, 1807102306);
       }).pipe(Effect.scoped, Effect.provide(CookiesTestLayer)),
-    { timeout: 60_000 }
+    { timeout: 60_000 },
   );
 
   it.live(
@@ -110,8 +102,7 @@ describe("Cookies", () => {
         const allBrowsers = yield* browsers.list;
 
         const chrome = allBrowsers.find(
-          (browser) =>
-            browser._tag === "ChromiumBrowser" && browser.key === "chrome"
+          (browser) => browser._tag === "ChromiumBrowser" && browser.key === "chrome",
         );
         assert.isDefined(chrome);
 
@@ -120,6 +111,6 @@ describe("Cookies", () => {
         assert.isDefined(cookie, "cookie APISID not found on google.com");
         assert.strictEqual(cookie!.expires, 1807347526);
       }).pipe(Effect.scoped, Effect.provide(CookiesTestLayer)),
-    { timeout: 60_000 }
+    { timeout: 60_000 },
   );
 });

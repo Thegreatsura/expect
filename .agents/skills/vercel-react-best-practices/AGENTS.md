@@ -215,10 +215,7 @@ export async function GET(request: Request) {
   const sessionPromise = auth();
   const configPromise = fetchConfig();
   const session = await sessionPromise;
-  const [config, data] = await Promise.all([
-    configPromise,
-    fetchData(session.user.id),
-  ]);
+  const [config, data] = await Promise.all([configPromise, fetchData(session.user.id)]);
   return Response.json({ data, config });
 }
 ```
@@ -242,11 +239,7 @@ const comments = await fetchComments();
 **Correct: parallel execution, 1 round trip**
 
 ```typescript
-const [user, posts, comments] = await Promise.all([
-  fetchUser(),
-  fetchPosts(),
-  fetchComments(),
-]);
+const [user, posts, comments] = await Promise.all([fetchUser(), fetchPosts(), fetchComments()]);
 ```
 
 ### 1.5 Strategic Suspense Boundaries
@@ -465,10 +458,9 @@ export default function RootLayout({ children }) {
 ```tsx
 import dynamic from "next/dynamic";
 
-const Analytics = dynamic(
-  () => import("@vercel/analytics/react").then((m) => m.Analytics),
-  { ssr: false },
-);
+const Analytics = dynamic(() => import("@vercel/analytics/react").then((m) => m.Analytics), {
+  ssr: false,
+});
 
 export default function RootLayout({ children }) {
   return (
@@ -503,10 +495,9 @@ function CodePanel({ code }: { code: string }) {
 ```tsx
 import dynamic from "next/dynamic";
 
-const MonacoEditor = dynamic(
-  () => import("./monaco-editor").then((m) => m.MonacoEditor),
-  { ssr: false },
-);
+const MonacoEditor = dynamic(() => import("./monaco-editor").then((m) => m.MonacoEditor), {
+  ssr: false,
+});
 
 function CodePanel({ code }: { code: string }) {
   return <MonacoEditor value={code} />;
@@ -547,9 +538,7 @@ function FlagsProvider({ children, flags }: Props) {
     }
   }, [flags.editorEnabled]);
 
-  return (
-    <FlagsContext.Provider value={flags}>{children}</FlagsContext.Provider>
-  );
+  return <FlagsContext.Provider value={flags}>{children}</FlagsContext.Provider>;
 }
 ```
 
@@ -771,8 +760,7 @@ export async function POST(request: Request) {
   // Log after response is sent
   after(async () => {
     const userAgent = (await headers()).get("user-agent") || "unknown";
-    const sessionCookie =
-      (await cookies()).get("session-id")?.value || "anonymous";
+    const sessionCookie = (await cookies()).get("session-id")?.value || "anonymous";
 
     logUserAction({ sessionCookie, userAgent });
   });
@@ -1190,9 +1178,7 @@ function FilteredList({ items }: { items: Item[] }) {
 
 function UserProfile() {
   // JSON.parse runs on every render
-  const [settings, setSettings] = useState(
-    JSON.parse(localStorage.getItem("settings") || "{}"),
-  );
+  const [settings, setSettings] = useState(JSON.parse(localStorage.getItem("settings") || "{}"));
 
   return <SettingsForm settings={settings} onChange={setSettings} />;
 }
@@ -1768,9 +1754,7 @@ let cookieCache: Record<string, string> | null = null;
 
 function getCookie(name: string) {
   if (!cookieCache) {
-    cookieCache = Object.fromEntries(
-      document.cookie.split("; ").map((c) => c.split("=")),
-    );
+    cookieCache = Object.fromEntries(document.cookie.split("; ").map((c) => c.split("=")));
   }
   return cookieCache[name];
 }

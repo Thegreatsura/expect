@@ -1,22 +1,10 @@
 import path from "node:path";
-import {
-  Effect,
-  Layer,
-  Match,
-  Option,
-  Schema,
-  SchemaGetter,
-  ServiceMap,
-} from "effect";
+import { Effect, Layer, Match, Option, Schema, SchemaGetter, ServiceMap } from "effect";
 import * as FileSystem from "effect/FileSystem";
 import { NodeServices } from "@effect/platform-node";
 import { CdpClient } from "./cdp-client.js";
 import { SqliteClient } from "./sqlite-client.js";
-import {
-  ExtractionError,
-  RequiresFullDiskAccess,
-  UnknownError,
-} from "./errors.js";
+import { ExtractionError, RequiresFullDiskAccess, UnknownError } from "./errors.js";
 import { parseBinaryCookies } from "./utils/binary-cookies.js";
 import { SameSitePolicy, Cookie, type Browser } from "./types.js";
 
@@ -29,14 +17,10 @@ const SqliteBool = Schema.Union([Schema.Number, Schema.BigInt]).pipe(
   Schema.decodeTo(Schema.Boolean, {
     decode: SchemaGetter.transform((value) => Number(value) !== 0),
     encode: SchemaGetter.transform((value) => (value ? 1 : 0)),
-  })
+  }),
 );
 
-const FirefoxExpiry = Schema.Union([
-  Schema.Number,
-  Schema.BigInt,
-  Schema.String,
-]).pipe(
+const FirefoxExpiry = Schema.Union([Schema.Number, Schema.BigInt, Schema.String]).pipe(
   Schema.decodeTo(Schema.optional(Schema.Number), {
     decode: SchemaGetter.transform((value) => {
       const milliseconds = Number(value);
@@ -44,14 +28,10 @@ const FirefoxExpiry = Schema.Union([
       return Math.floor(milliseconds / MS_PER_SECOND);
     }),
     encode: SchemaGetter.transform((value) => (value ?? 0) * MS_PER_SECOND),
-  })
+  }),
 );
 
-const FirefoxSameSite = Schema.Union([
-  Schema.Number,
-  Schema.BigInt,
-  Schema.String,
-]).pipe(
+const FirefoxSameSite = Schema.Union([Schema.Number, Schema.BigInt, Schema.String]).pipe(
   Schema.decodeTo(Schema.optional(SameSitePolicy), {
     decode: SchemaGetter.transform((value) => {
       const numeric = Number(value);
@@ -65,7 +45,7 @@ const FirefoxSameSite = Schema.Union([
       if (value === "Lax") return SAME_SITE_LAX;
       return SAME_SITE_NONE;
     }),
-  })
+  }),
 );
 
 const FirefoxCookieRow = Schema.Struct({
@@ -97,9 +77,7 @@ export class Cookies extends ServiceMap.Service<Cookies>()("@cookies/Cookies", {
     const sqliteClient = yield* SqliteClient;
     const fs = yield* FileSystem.FileSystem;
 
-    const extractChromium = (
-      browser: Extract<Browser, { _tag: "ChromiumBrowser" }>,
-    ) =>
+    const extractChromium = (browser: Extract<Browser, { _tag: "ChromiumBrowser" }>) =>
       cdpClient
         .extractCookies({
           key: browser.key,
@@ -108,17 +86,20 @@ export class Cookies extends ServiceMap.Service<Cookies>()("@cookies/Cookies", {
         })
         .pipe(
           Effect.catchTags({
-            TimeoutError: (cause) => new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
-            SchemaError: (cause) => new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
-            SocketError: (cause) => new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
-            HttpClientError: (cause) => new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
-            PlatformError: (cause) => new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
+            TimeoutError: (cause) =>
+              new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
+            SchemaError: (cause) =>
+              new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
+            SocketError: (cause) =>
+              new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
+            HttpClientError: (cause) =>
+              new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
+            PlatformError: (cause) =>
+              new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
           }),
         );
 
-    const extractFirefox = (
-      browser: Extract<Browser, { _tag: "FirefoxBrowser" }>,
-    ) =>
+    const extractFirefox = (browser: Extract<Browser, { _tag: "FirefoxBrowser" }>) =>
       Effect.gen(function* () {
         const cookieDbPath = path.join(browser.profilePath, "cookies.sqlite");
         const { tempDatabasePath } = yield* sqliteClient.copyToTemp(
@@ -135,22 +116,21 @@ export class Cookies extends ServiceMap.Service<Cookies>()("@cookies/Cookies", {
         );
 
         return yield* Effect.forEach(rows, (row) =>
-          Schema.decodeUnknownEffect(FirefoxCookieRow)(row).pipe(
-            Effect.map(firefoxRowToCookie),
-          ),
+          Schema.decodeUnknownEffect(FirefoxCookieRow)(row).pipe(Effect.map(firefoxRowToCookie)),
         );
       }).pipe(
         Effect.scoped,
         Effect.catchTags({
-          CookieReadError: (cause) => new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
-          CookieDatabaseCopyError: (cause) => new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
-          SchemaError: (cause) => new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
+          CookieReadError: (cause) =>
+            new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
+          CookieDatabaseCopyError: (cause) =>
+            new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
+          SchemaError: (cause) =>
+            new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
         }),
       );
 
-    const extractSafari = (
-      browser: Extract<Browser, { _tag: "SafariBrowser" }>,
-    ) =>
+    const extractSafari = (browser: Extract<Browser, { _tag: "SafariBrowser" }>) =>
       Effect.gen(function* () {
         if (Option.isNone(browser.cookieFilePath)) {
           return yield* new ExtractionError({
@@ -164,7 +144,8 @@ export class Cookies extends ServiceMap.Service<Cookies>()("@cookies/Cookies", {
         );
       }).pipe(
         Effect.catchTags({
-          PlatformError: (cause) => new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
+          PlatformError: (cause) =>
+            new ExtractionError({ reason: new UnknownError({ cause }) }).asEffect(),
         }),
       );
 
@@ -181,12 +162,12 @@ export class Cookies extends ServiceMap.Service<Cookies>()("@cookies/Cookies", {
   static layer = Layer.effect(this, this.make).pipe(
     Layer.provide(CdpClient.layer),
     Layer.provide(SqliteClient.layer),
-    Layer.provide(NodeServices.layer)
+    Layer.provide(NodeServices.layer),
   );
 
   static layerTest = Layer.effect(this, this.make).pipe(
     Layer.provide(CdpClient.layerTest),
     Layer.provide(SqliteClient.layer),
-    Layer.provide(NodeServices.layer)
+    Layer.provide(NodeServices.layer),
   );
 }

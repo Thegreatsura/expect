@@ -1,10 +1,6 @@
 import { Option, Order, Schema, SchemaGetter } from "effect";
 
-export const SameSitePolicy = Schema.Literals([
-  "Strict",
-  "Lax",
-  "None",
-] as const);
+export const SameSitePolicy = Schema.Literals(["Strict", "Lax", "None"] as const);
 export type SameSitePolicy = typeof SameSitePolicy.Type;
 
 export const BrowserKey = Schema.Literals([
@@ -55,9 +51,7 @@ export type ChromiumBrowserKey = typeof ChromiumBrowserKey.Type;
 
 const DotlessDomain = Schema.String.pipe(
   Schema.decodeTo(Schema.String, {
-    decode: SchemaGetter.transform((domain) =>
-      domain.startsWith(".") ? domain.slice(1) : domain,
-    ),
+    decode: SchemaGetter.transform((domain) => (domain.startsWith(".") ? domain.slice(1) : domain)),
     encode: SchemaGetter.transform((domain) => domain),
   }),
 );
@@ -67,12 +61,14 @@ export class Cookie extends Schema.Class<Cookie>("@cookies/Cookie")({
   value: Schema.String,
   domain: DotlessDomain,
   path: Schema.String,
-  expires: Schema.optional(Schema.Number.pipe(
-    Schema.decodeTo(Schema.Number, {
-      decode: SchemaGetter.transform((value) => Math.floor(value)),
-      encode: SchemaGetter.transform((value) => value),
-    }),
-  )),
+  expires: Schema.optional(
+    Schema.Number.pipe(
+      Schema.decodeTo(Schema.Number, {
+        decode: SchemaGetter.transform((value) => Math.floor(value)),
+        encode: SchemaGetter.transform((value) => value),
+      }),
+    ),
+  ),
   secure: Schema.Boolean,
   httpOnly: Schema.Boolean,
   sameSite: Schema.optional(SameSitePolicy),
@@ -100,9 +96,7 @@ export class Cookie extends Schema.Class<Cookie>("@cookies/Cookie")({
   }
 }
 
-export class ChromiumBrowser extends Schema.Class<ChromiumBrowser>(
-  "@cookies/ChromiumBrowser",
-)({
+export class ChromiumBrowser extends Schema.Class<ChromiumBrowser>("@cookies/ChromiumBrowser")({
   _tag: Schema.tag("ChromiumBrowser"),
   key: ChromiumBrowserKey,
   profileName: Schema.String,
@@ -117,32 +111,28 @@ export class ChromiumBrowser extends Schema.Class<ChromiumBrowser>(
         (profile: ChromiumBrowser) => profile.profileName === lastUsedProfileName,
       ),
       Order.mapInput(
-        Order.make((left: string, right: string) =>
-          left.localeCompare(right, undefined, { numeric: true }) as -1 | 0 | 1,
+        Order.make(
+          (left: string, right: string) =>
+            left.localeCompare(right, undefined, { numeric: true }) as -1 | 0 | 1,
         ),
         (profile: ChromiumBrowser) => profile.profileName,
       ),
     );
 }
 
-export class FirefoxBrowser extends Schema.Class<FirefoxBrowser>(
-  "@cookies/FirefoxBrowser",
-)({
+export class FirefoxBrowser extends Schema.Class<FirefoxBrowser>("@cookies/FirefoxBrowser")({
   _tag: Schema.tag("FirefoxBrowser"),
   profileName: Schema.String,
   profilePath: Schema.String,
 }) {}
 
-export class SafariBrowser extends Schema.Class<SafariBrowser>(
-  "@cookies/SafariBrowser",
-)({
+export class SafariBrowser extends Schema.Class<SafariBrowser>("@cookies/SafariBrowser")({
   _tag: Schema.tag("SafariBrowser"),
   cookieFilePath: Schema.OptionFromNullishOr(Schema.String),
 }) {}
 
 export const Browser = Schema.Union([ChromiumBrowser, FirefoxBrowser, SafariBrowser]);
 export type Browser = typeof Browser.Type;
-
 
 export interface ExtractOptions {
   url: string;

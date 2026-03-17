@@ -42,70 +42,54 @@ export class FirefoxPlatform extends ServiceMap.Service<
     dataDir: path.join(homedir(), FIREFOX_CONFIG.dataDir.win32),
     executablePaths: FIREFOX_CONFIG.executable.win32.flatMap((relative) => {
       const programFiles = process.env["ProgramFiles"] ?? "C:\\Program Files";
-      const programFilesX86 =
-        process.env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)";
-      return [
-        path.join(programFiles, relative),
-        path.join(programFilesX86, relative),
-      ];
+      const programFilesX86 = process.env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)";
+      return [path.join(programFiles, relative), path.join(programFilesX86, relative)];
     }),
   });
 }
 
-export class FirefoxSource extends ServiceMap.Service<FirefoxSource>()(
-  "@cookies/FirefoxSource",
-  {
-    make: Effect.gen(function* () {
-      const browsers = yield* Browsers;
-      const config = yield* FirefoxPlatform;
-      const fileSystem = yield* FileSystem.FileSystem;
+export class FirefoxSource extends ServiceMap.Service<FirefoxSource>()("@cookies/FirefoxSource", {
+  make: Effect.gen(function* () {
+    const browsers = yield* Browsers;
+    const config = yield* FirefoxPlatform;
+    const fileSystem = yield* FileSystem.FileSystem;
 
-      yield* browsers.register(
-        Effect.gen(function* () {
-          let executablePath: string | undefined;
-          for (const candidate of config.executablePaths) {
-            if (yield* fileSystem.exists(candidate)) {
-              executablePath = candidate;
-              break;
-            }
+    yield* browsers.register(
+      Effect.gen(function* () {
+        let executablePath: string | undefined;
+        for (const candidate of config.executablePaths) {
+          if (yield* fileSystem.exists(candidate)) {
+            executablePath = candidate;
+            break;
           }
-          if (!executablePath) return [];
+        }
+        if (!executablePath) return [];
 
-          const iniPath = path.join(config.dataDir, "profiles.ini");
-          const iniContent = yield* fileSystem.readFileString(iniPath);
+        const iniPath = path.join(config.dataDir, "profiles.ini");
+        const iniContent = yield* fileSystem.readFileString(iniPath);
 
-          const parsedProfiles = parseProfilesIni(iniContent);
+        const parsedProfiles = parseProfilesIni(iniContent);
 
-          return yield* Effect.forEach(
-            parsedProfiles,
-            (parsed) =>
-              Effect.gen(function* () {
-                const profileEntryPath = parsed.isRelative
-                  ? path.join(config.dataDir, parsed.path)
-                  : parsed.path;
-                const cookiesPath = path.join(
-                  profileEntryPath,
-                  "cookies.sqlite"
-                );
-                if (!(yield* fileSystem.exists(cookiesPath))) return undefined;
+        return yield* Effect.forEach(
+          parsedProfiles,
+          (parsed) =>
+            Effect.gen(function* () {
+              const profileEntryPath = parsed.isRelative
+                ? path.join(config.dataDir, parsed.path)
+                : parsed.path;
+              const cookiesPath = path.join(profileEntryPath, "cookies.sqlite");
+              if (!(yield* fileSystem.exists(cookiesPath))) return undefined;
 
-                return new FirefoxBrowser({
-                  profileName: path.basename(profileEntryPath),
-                  profilePath: profileEntryPath,
-                });
-              }),
-            { concurrency: "unbounded" }
-          ).pipe(
-            Effect.map((results) => results.filter(Predicate.isNotUndefined))
-          );
-        }).pipe(
-          Effect.catch((cause) =>
-            new ListBrowsersError({ cause: String(cause) }).asEffect()
-          )
-        )
-      );
-    }),
-  }
-) {
+              return new FirefoxBrowser({
+                profileName: path.basename(profileEntryPath),
+                profilePath: profileEntryPath,
+              });
+            }),
+          { concurrency: "unbounded" },
+        ).pipe(Effect.map((results) => results.filter(Predicate.isNotUndefined)));
+      }).pipe(Effect.catch((cause) => new ListBrowsersError({ cause: String(cause) }).asEffect())),
+    );
+  }),
+}) {
   static layer = Layer.effectDiscard(this.make);
 }

@@ -23,7 +23,7 @@ export const ScreenHeading = ({ title, subtitle }: ScreenHeadingProps) => {
         {upperTitle}
       </Text>
       {subtitle ? <Text color={theme.textMuted}>{subtitleContent}</Text> : null}
-      <Text color={theme.border}>{" "}{"─".repeat(lineWidth)}</Text>
+      <Text color={theme.border}> {"─".repeat(lineWidth)}</Text>
     </Text>
   );
 };

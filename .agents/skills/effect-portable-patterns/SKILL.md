@@ -127,8 +127,7 @@ const result =
   fetchUser("123").pipe(
     Effect.catchTags({
       NotFoundError: (error) => Effect.succeed(defaultUser),
-      ValidationError: (error) =>
-        Effect.fail(new BadRequestError({ message: error.message })),
+      ValidationError: (error) => Effect.fail(new BadRequestError({ message: error.message })),
     }),
   );
 ```
@@ -149,8 +148,7 @@ const result =
   fetchUser("123").pipe(
     Effect.timeoutFail({
       duration: "5 seconds",
-      onTimeout: () =>
-        new TimeoutError({ operation: "fetchUser", durationMs: 5000 }),
+      onTimeout: () => new TimeoutError({ operation: "fetchUser", durationMs: 5000 }),
     }),
   );
 ```
@@ -185,11 +183,7 @@ const result = yield * fetchUser("123").pipe(Effect.retry({ times: 3 }));
 const result =
   yield *
   fetchUser("123").pipe(
-    Effect.retry(
-      Schedule.exponential("100 millis").pipe(
-        Schedule.compose(Schedule.recurs(5)),
-      ),
-    ),
+    Effect.retry(Schedule.exponential("100 millis").pipe(Schedule.compose(Schedule.recurs(5)))),
   );
 ```
 
@@ -223,14 +217,9 @@ const robustFetch = Effect.fn("robustFetch")(function* (userId: string) {
   const user = yield* fetchUser(userId).pipe(
     Effect.timeoutFail({
       duration: "3 seconds",
-      onTimeout: () =>
-        new TimeoutError({ operation: "fetchUser", durationMs: 3000 }),
+      onTimeout: () => new TimeoutError({ operation: "fetchUser", durationMs: 3000 }),
     }),
-    Effect.retry(
-      Schedule.exponential("200 millis").pipe(
-        Schedule.compose(Schedule.recurs(3)),
-      ),
-    ),
+    Effect.retry(Schedule.exponential("200 millis").pipe(Schedule.compose(Schedule.recurs(3)))),
   );
   return user;
 });
@@ -240,31 +229,21 @@ const robustFetch = Effect.fn("robustFetch")(function* (userId: string) {
 
 ```typescript
 // Try primary, fall back to secondary on any failure
-const result =
-  yield *
-  fetchFromPrimary(id).pipe(Effect.orElse(() => fetchFromSecondary(id)));
+const result = yield * fetchFromPrimary(id).pipe(Effect.orElse(() => fetchFromSecondary(id)));
 
 // Fall back to a default value
-const result =
-  yield * fetchUser(id).pipe(Effect.orElseSucceed(() => defaultUser));
+const result = yield * fetchUser(id).pipe(Effect.orElseSucceed(() => defaultUser));
 
 // Remap the error type on failure
 const result =
   yield *
   fetchUser(id).pipe(
-    Effect.orElseFail(
-      () => new ServiceUnavailableError({ message: "All sources failed" }),
-    ),
+    Effect.orElseFail(() => new ServiceUnavailableError({ message: "All sources failed" })),
   );
 
 // Try multiple sources, use the first that succeeds
 const result =
-  yield *
-  Effect.firstSuccessOf([
-    fetchFromCache(id),
-    fetchFromPrimary(id),
-    fetchFromSecondary(id),
-  ]);
+  yield * Effect.firstSuccessOf([fetchFromCache(id), fetchFromPrimary(id), fetchFromSecondary(id)]);
 ```
 
 ## Caching
@@ -290,8 +269,7 @@ const program = Effect.gen(function* () {
 ### Cache with Manual Invalidation
 
 ```typescript
-const [getConfig, invalidate] =
-  yield * Effect.cachedInvalidateWithTTL(fetchConfig, "10 minutes");
+const [getConfig, invalidate] = yield * Effect.cachedInvalidateWithTTL(fetchConfig, "10 minutes");
 
 const config = yield * getConfig;
 yield * invalidate; // force re-fetch on next call
@@ -303,9 +281,7 @@ yield * invalidate; // force re-fetch on next call
 const memoizedFetchUser =
   yield *
   Effect.cachedFunction((userId: string) =>
-    Effect.tryPromise(() =>
-      fetch(`/api/users/${userId}`).then((r) => r.json()),
-    ),
+    Effect.tryPromise(() => fetch(`/api/users/${userId}`).then((r) => r.json())),
   );
 
 const user1 = yield * memoizedFetchUser("123"); // fetches
@@ -329,8 +305,7 @@ const [users, posts, comments] =
 const results = yield * Effect.all(tasks, { concurrency: 5 });
 
 // Parallel forEach
-const enrichedUsers =
-  yield * Effect.forEach(userIds, (id) => fetchUser(id), { concurrency: 10 });
+const enrichedUsers = yield * Effect.forEach(userIds, (id) => fetchUser(id), { concurrency: 10 });
 ```
 
 ### Racing (First to Succeed)
@@ -340,9 +315,7 @@ const enrichedUsers =
 const result = yield * Effect.race(fetchFromEast, fetchFromWest);
 
 // Race many effects
-const result =
-  yield *
-  Effect.raceAll([fetchFromCache(id), fetchFromDb(id), fetchFromRemote(id)]);
+const result = yield * Effect.raceAll([fetchFromCache(id), fetchFromDb(id), fetchFromRemote(id)]);
 ```
 
 ## Pattern Matching
@@ -359,10 +332,7 @@ type ApiError = NotFoundError | TimeoutError | ValidationError;
 const describeError = (error: ApiError) =>
   Match.value(error).pipe(
     Match.tag("NotFoundError", (e) => `${e.resource} ${e.id} not found`),
-    Match.tag(
-      "TimeoutError",
-      (e) => `${e.operation} timed out after ${e.durationMs}ms`,
-    ),
+    Match.tag("TimeoutError", (e) => `${e.operation} timed out after ${e.durationMs}ms`),
     Match.tag("ValidationError", (e) => `Invalid ${e.field}: ${e.message}`),
     Match.exhaustive,
   );
@@ -400,16 +370,12 @@ const categorize = Match.type<{ status: number }>().pipe(
 `Effect.fn` automatically creates a span with the given name. For additional spans or annotations:
 
 ```typescript
-const fetchAndProcess = Effect.fn("fetchAndProcess")(function* (
-  userId: string,
-) {
+const fetchAndProcess = Effect.fn("fetchAndProcess")(function* (userId: string) {
   yield* Effect.annotateCurrentSpan("userId", userId);
 
   const user = yield* fetchUser(userId).pipe(Effect.withSpan("fetchUser"));
 
-  const processed = yield* processUser(user).pipe(
-    Effect.withSpan("processUser"),
-  );
+  const processed = yield* processUser(user).pipe(Effect.withSpan("processUser"));
 
   yield* Effect.annotateCurrentSpan("processed", true);
   return processed;
@@ -457,11 +423,7 @@ const fetchApi = Effect.fn("fetchApi")(function* <T>(url: string) {
       duration: "10 seconds",
       onTimeout: () => new ApiTimeoutError({ url, durationMs: 10_000 }),
     }),
-    Effect.retry(
-      Schedule.exponential("500 millis").pipe(
-        Schedule.compose(Schedule.recurs(3)),
-      ),
-    ),
+    Effect.retry(Schedule.exponential("500 millis").pipe(Schedule.compose(Schedule.recurs(3)))),
   );
 
   if (!response.ok) {
@@ -476,8 +438,7 @@ const fetchApi = Effect.fn("fetchApi")(function* <T>(url: string) {
 
   return yield* Effect.tryPromise({
     try: () => response.json() as Promise<T>,
-    catch: () =>
-      new ApiError({ url, status: response.status, message: "Invalid JSON" }),
+    catch: () => new ApiError({ url, status: response.status, message: "Invalid JSON" }),
   });
 });
 

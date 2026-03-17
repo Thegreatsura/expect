@@ -187,9 +187,7 @@ export const Modeline = () => {
               ) : (
                 <Text>
                   <Text color={theme.textMuted}>{action.label} </Text>
-                  <Text color={theme.textMuted}>
-                    [{action.key}]
-                  </Text>
+                  <Text color={theme.textMuted}>[{action.key}]</Text>
                 </Text>
               )}
             </Text>

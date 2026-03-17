@@ -17,40 +17,33 @@ export class SafariPlatform extends ServiceMap.Service<
   });
 }
 
-export class SafariSource extends ServiceMap.Service<SafariSource>()(
-  "@cookies/SafariSource",
-  {
-    make: Effect.gen(function* () {
-      const browsers = yield* Browsers;
-      const config = yield* SafariPlatform;
-      const fileSystem = yield* FileSystem.FileSystem;
+export class SafariSource extends ServiceMap.Service<SafariSource>()("@cookies/SafariSource", {
+  make: Effect.gen(function* () {
+    const browsers = yield* Browsers;
+    const config = yield* SafariPlatform;
+    const fileSystem = yield* FileSystem.FileSystem;
 
-      yield* browsers.register(
-        Effect.gen(function* () {
-          if (!(yield* fileSystem.exists(config.executable))) return [];
+    yield* browsers.register(
+      Effect.gen(function* () {
+        if (!(yield* fileSystem.exists(config.executable))) return [];
 
-          let cookieFilePath = Option.none<string>();
-          for (const relativePath of config.cookieRelativePaths) {
-            const candidate = path.join(
-              homedir(),
-              relativePath,
-              "Cookies.binarycookies"
-            );
-            if (yield* fileSystem.exists(candidate)) {
-              cookieFilePath = Option.some(candidate);
-              break;
-            }
+        let cookieFilePath = Option.none<string>();
+        for (const relativePath of config.cookieRelativePaths) {
+          const candidate = path.join(homedir(), relativePath, "Cookies.binarycookies");
+          if (yield* fileSystem.exists(candidate)) {
+            cookieFilePath = Option.some(candidate);
+            break;
           }
+        }
 
-          return [new SafariBrowser({ cookieFilePath })];
-        }).pipe(
-          Effect.catchTag("PlatformError", (cause) =>
-            new ListBrowsersError({ cause: String(cause) }).asEffect()
-          )
-        )
-      );
-    }),
-  }
-) {
+        return [new SafariBrowser({ cookieFilePath })];
+      }).pipe(
+        Effect.catchTag("PlatformError", (cause) =>
+          new ListBrowsersError({ cause: String(cause) }).asEffect(),
+        ),
+      ),
+    );
+  }),
+}) {
   static layer = Layer.effectDiscard(this.make);
 }

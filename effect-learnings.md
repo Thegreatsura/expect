@@ -108,14 +108,14 @@ export class Tasks extends ServiceMap.Service<Tasks>()("@ami/Tasks", {
 
 ### Key Conventions
 
-| Convention | Detail |
-|---|---|
-| **Service tag naming** | `"@ami/ServiceName"` or `"ServiceName"` |
-| **Method wrapping** | Every method uses `Effect.fn("Service.method")` |
-| **Return** | `return { ... } as const` — explicit public API |
-| **Layer** | Static `layer` property with `Layer.provide` for each dependency |
-| **Test layer** | Optionally `static layerTest` for testing |
-| **Dependencies** | Yielded at service construction time, not per-method |
+| Convention             | Detail                                                           |
+| ---------------------- | ---------------------------------------------------------------- |
+| **Service tag naming** | `"@ami/ServiceName"` or `"ServiceName"`                          |
+| **Method wrapping**    | Every method uses `Effect.fn("Service.method")`                  |
+| **Return**             | `return { ... } as const` — explicit public API                  |
+| **Layer**              | Static `layer` property with `Layer.provide` for each dependency |
+| **Test layer**         | Optionally `static layerTest` for testing                        |
+| **Dependencies**       | Yielded at service construction time, not per-method             |
 
 ### Interface-First Services
 
@@ -125,7 +125,10 @@ For abstract services (e.g., `CodingAgent`), define the interface in the class g
 export class CodingAgent extends ServiceMap.Service<
   CodingAgent,
   {
-    readonly sendMessage: (sessionId: SessionId, content: string) => Effect.Effect<void, AgentError>;
+    readonly sendMessage: (
+      sessionId: SessionId,
+      content: string,
+    ) => Effect.Effect<void, AgentError>;
     readonly waitForIdle: (sessionId: SessionId) => Effect.Effect<void, AgentError>;
     readonly abort: (sessionId: SessionId) => Effect.Effect<void, never>;
   }
@@ -141,9 +144,7 @@ export class CodingAgent extends ServiceMap.Service<
 All errors use `Schema.ErrorClass` with explicit `_tag`:
 
 ```typescript
-export class TaskNotFoundError extends Schema.ErrorClass<TaskNotFoundError>(
-  "TaskNotFoundError",
-)({
+export class TaskNotFoundError extends Schema.ErrorClass<TaskNotFoundError>("TaskNotFoundError")({
   _tag: Schema.tag("TaskNotFoundError"),
   taskId: TaskId,
 }) {
@@ -153,23 +154,23 @@ export class TaskNotFoundError extends Schema.ErrorClass<TaskNotFoundError>(
 
 ### Conventions
 
-| Convention | Detail |
-|---|---|
-| **Naming** | `{Entity}{Reason}Error` — e.g., `TaskNotFoundError`, `ProjectAlreadyExistsError` |
-| **Fields** | Always include the relevant entity ID(s) |
-| **Message** | Computed `message` getter using template literal with error fields |
-| **Specificity** | One error per failure mode — never collapse to generic `NotFoundError` |
-| **`_tag`** | Always `Schema.tag("ErrorClassName")` — enables `catchTag` |
-| **RPC error unions** | `Schema.Union([ErrorA, ErrorB, ...])` for RPC error types |
+| Convention           | Detail                                                                           |
+| -------------------- | -------------------------------------------------------------------------------- |
+| **Naming**           | `{Entity}{Reason}Error` — e.g., `TaskNotFoundError`, `ProjectAlreadyExistsError` |
+| **Fields**           | Always include the relevant entity ID(s)                                         |
+| **Message**          | Computed `message` getter using template literal with error fields               |
+| **Specificity**      | One error per failure mode — never collapse to generic `NotFoundError`           |
+| **`_tag`**           | Always `Schema.tag("ErrorClassName")` — enables `catchTag`                       |
+| **RPC error unions** | `Schema.Union([ErrorA, ErrorB, ...])` for RPC error types                        |
 
 ### Error Handling
 
 ```typescript
 // Single tag
-Effect.catchTag("CommentNotFoundError", () => Effect.succeed(Option.none()))
+Effect.catchTag("CommentNotFoundError", () => Effect.succeed(Option.none()));
 
 // Multiple tags — infrastructure errors become defects
-Effect.catchTags({ PlatformError: Effect.die, SqlError: Effect.die, SchemaError: Effect.die })
+Effect.catchTags({ PlatformError: Effect.die, SqlError: Effect.die, SchemaError: Effect.die });
 ```
 
 ### Error Remapping Rules
@@ -208,28 +209,35 @@ export class Task extends Model.Class<Task>("Task")({
   createdAt: Model.DateTimeInsert,
   updatedAt: Model.DateTimeUpdate,
 }) {
-  get slug() { return Task.slug(this.title, this.id); }
-  get isTerminalState() { return this.status._tag === "Merged" || this.status._tag === "Closed"; }
+  get slug() {
+    return Task.slug(this.title, this.id);
+  }
+  get isTerminalState() {
+    return this.status._tag === "Merged" || this.status._tag === "Closed";
+  }
 }
 ```
 
 ### Model Helpers
 
-| Helper | Purpose |
-|---|---|
+| Helper                         | Purpose                                |
+| ------------------------------ | -------------------------------------- |
 | `Model.GeneratedByApp(schema)` | App-generated field (not DB-generated) |
-| `Model.DateTimeInsert` | Timestamp set on insert |
-| `Model.DateTimeUpdate` | Timestamp updated on every write |
-| `Model.JsonFromString(schema)` | JSON column decoded to schema type |
-| `Model.FieldOption(schema)` | Optional field mapped to `Option<T>` |
+| `Model.DateTimeInsert`         | Timestamp set on insert                |
+| `Model.DateTimeUpdate`         | Timestamp updated on every write       |
+| `Model.JsonFromString(schema)` | JSON column decoded to schema type     |
+| `Model.FieldOption(schema)`    | Optional field mapped to `Option<T>`   |
 
 ### Schema.TaggedClass for Domain Events
 
 ```typescript
 export class TaskUpdated extends Schema.TaggedClass<TaskUpdated>()("TaskUpdated", {
-  taskId: TaskId, status: TaskStatus,
+  taskId: TaskId,
+  status: TaskStatus,
 }) {
-  get message() { return `Task status changed to ${this.status._tag}`; }
+  get message() {
+    return `Task status changed to ${this.status._tag}`;
+  }
 }
 ```
 
@@ -256,9 +264,15 @@ export class Diff extends Schema.Class<Diff>("@ami/Diff")({
   comments: Schema.Array(TextComment),
   commitHash: Schema.Option(CommitHash),
 }) {
-  get hasComments() { return this.comments.length > 0; }
-  attachComments(comment: Comment) { /* immutable update */ }
-  get stats() { /* computed additions/deletions */ }
+  get hasComments() {
+    return this.comments.length > 0;
+  }
+  attachComments(comment: Comment) {
+    /* immutable update */
+  }
+  get stats() {
+    /* computed additions/deletions */
+  }
 }
 ```
 
@@ -296,8 +310,13 @@ export const layerServerDev = (verbose = false) =>
 
 ```typescript
 export const AmiRpcsLive = Layer.mergeAll(
-  TasksRpcsLive, TaskRunnerRpcsLive, ProjectsRpcsLive,
-  TerminalsRpcsLive, ReviewRpcsLive, UpdatesRpcsLive, ClaudeCodeRpcsLive,
+  TasksRpcsLive,
+  TaskRunnerRpcsLive,
+  ProjectsRpcsLive,
+  TerminalsRpcsLive,
+  ReviewRpcsLive,
+  UpdatesRpcsLive,
+  ClaudeCodeRpcsLive,
 );
 ```
 
@@ -326,7 +345,11 @@ export const layerServer = (options) =>
 ```typescript
 const TasksRpcsBase = RpcGroup.make(
   Rpc.make("GetTask", { success: Task, error: TasksError, payload: { taskId: TaskId } }),
-  Rpc.make("CreateTask", { success: Task, error: TasksError, payload: { taskId: TaskId, projectId: ProjectId, description: Schema.NonEmptyString } }),
+  Rpc.make("CreateTask", {
+    success: Task,
+    error: TasksError,
+    payload: { taskId: TaskId, projectId: ProjectId, description: Schema.NonEmptyString },
+  }),
 );
 export const TasksRpcs = TasksRpcsBase.prefix("tasks.");
 ```
@@ -376,7 +399,7 @@ export const TasksRpcsLive = TasksRpcs.toLayer(
 ```typescript
 export class AmiClient extends AtomRpc.Service<AmiClient>()("AmiClient", {
   group: AmiRpcs,
-  protocol,  // WebSocket via RpcClient.layerProtocolSocket()
+  protocol, // WebSocket via RpcClient.layerProtocolSocket()
 }) {}
 
 export const AmiRuntime = Atom.runtime(AmiDev);
@@ -451,30 +474,37 @@ export const chatStateFamily = Atom.family((taskId: TaskId) => {
     Effect.fnUntraced(function* () {
       const client = yield* AmiClient;
       const messages = yield* client("claudeCode.StreamMessages", { taskId }).pipe(
-        Stream.runCollect, Effect.map(Arr.map((line) => line.toMessageWithParts)), Effect.map(Arr.getSomes),
+        Stream.runCollect,
+        Effect.map(Arr.map((line) => line.toMessageWithParts)),
+        Effect.map(Arr.getSomes),
       );
       return new ChatState({ status: "Idle", messages });
     }),
   ).pipe(Atom.keepAlive);
 
   return Atom.writable(
-    (ctx) => { ctx.subscribe(sourceAtom, (value) => ctx.setSelf(value)); return ctx.once(sourceAtom); },
-    (ctx, value) => { ctx.setSelf(value); },
+    (ctx) => {
+      ctx.subscribe(sourceAtom, (value) => ctx.setSelf(value));
+      return ctx.once(sourceAtom);
+    },
+    (ctx, value) => {
+      ctx.setSelf(value);
+    },
   ).pipe(Atom.keepAlive);
 });
 ```
 
 ### Conventions
 
-| Convention | Detail |
-|---|---|
-| `xxxAtom` / `xxxFn` | Query atoms / mutation functions |
-| `Effect.fnUntraced` | No tracing overhead in frontend |
-| `Effect.annotateLogs({ atom: "name" })` | Every atom/fn annotated |
-| `ctx.refresh(atom)` | Invalidate after mutations |
-| `yield* get.some(atom)` | Unwrap `Option` atom |
-| `yield* ctx.result(atom)` | Unwrap `AsyncResult` atom |
-| `Atom.keepAlive` | Persist across unmounts |
+| Convention                              | Detail                           |
+| --------------------------------------- | -------------------------------- |
+| `xxxAtom` / `xxxFn`                     | Query atoms / mutation functions |
+| `Effect.fnUntraced`                     | No tracing overhead in frontend  |
+| `Effect.annotateLogs({ atom: "name" })` | Every atom/fn annotated          |
+| `ctx.refresh(atom)`                     | Invalidate after mutations       |
+| `yield* get.some(atom)`                 | Unwrap `Option` atom             |
+| `yield* ctx.result(atom)`               | Unwrap `AsyncResult` atom        |
+| `Atom.keepAlive`                        | Persist across unmounts          |
 
 ---
 
@@ -487,11 +517,24 @@ export class Observability extends ServiceMap.Service<Observability>()("@ami/Obs
   make: Effect.gen(function* () {
     const analytics = yield* Analytics;
     const orDie = <A, E, R>(self: Effect.Effect<A, E, R>) =>
-      self.pipe(Effect.tapCause((cause) => analytics.capture("error:unexpected", captureErrorProps(cause))), Effect.orDie);
-    const tapCause = (...messageParts) => <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-      effect.pipe(Effect.tapCause((cause) =>
-        Effect.all([analytics.capture("error:expected", captureErrorProps(cause)), Effect.logError(...messageParts, cause)], { discard: true }),
-      ));
+      self.pipe(
+        Effect.tapCause((cause) => analytics.capture("error:unexpected", captureErrorProps(cause))),
+        Effect.orDie,
+      );
+    const tapCause =
+      (...messageParts) =>
+      <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+        effect.pipe(
+          Effect.tapCause((cause) =>
+            Effect.all(
+              [
+                analytics.capture("error:expected", captureErrorProps(cause)),
+                Effect.logError(...messageParts, cause),
+              ],
+              { discard: true },
+            ),
+          ),
+        );
     return { orDie, streamOrDie, tapCause } as const;
   }),
 }) {}
@@ -510,19 +553,24 @@ export class TaskRepo extends ServiceMap.Service<TaskRepo>()("TaskRepo", {
   make: Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
     const repo = yield* SqlModel.makeRepository(Task, {
-      tableName: "tasks", idColumn: "id", spanPrefix: "TaskRepo",
+      tableName: "tasks",
+      idColumn: "id",
+      spanPrefix: "TaskRepo",
     });
 
     const findById = (id: TaskId) =>
       repo.findById(id).pipe(
-        Effect.catchTag("NoSuchElementError", () => new TaskNotFoundError({ taskId: id }).asEffect()),
+        Effect.catchTag("NoSuchElementError", () =>
+          new TaskNotFoundError({ taskId: id }).asEffect(),
+        ),
         Effect.catchTags({ SchemaError: Effect.die, SqlError: Effect.die }),
       );
 
     const findByProject = SqlSchema.findAll({
       Request: Schema.Struct({ projectId: ProjectId }),
       Result: Task,
-      execute: (req) => sql`SELECT * FROM tasks WHERE project_id = ${req.projectId} ORDER BY created_at DESC`,
+      execute: (req) =>
+        sql`SELECT * FROM tasks WHERE project_id = ${req.projectId} ORDER BY created_at DESC`,
     });
 
     return { findById, findAll, insert, update, findByProject, deleteById } as const;
@@ -534,12 +582,12 @@ export class TaskRepo extends ServiceMap.Service<TaskRepo>()("TaskRepo", {
 
 ### SqlSchema Helpers
 
-| API | Purpose |
-|---|---|
-| `SqlModel.makeRepository(Model, opts)` | Auto-CRUD from Model.Class |
-| `SqlSchema.findAll({ Request, Result, execute })` | Typed multi-row query |
-| `SqlSchema.findOne({ Request, Result, execute })` | Typed single-row query |
-| `SqlSchema.void({ Request, execute })` | Typed void query |
+| API                                               | Purpose                    |
+| ------------------------------------------------- | -------------------------- |
+| `SqlModel.makeRepository(Model, opts)`            | Auto-CRUD from Model.Class |
+| `SqlSchema.findAll({ Request, Result, execute })` | Typed multi-row query      |
+| `SqlSchema.findOne({ Request, Result, execute })` | Typed single-row query     |
+| `SqlSchema.void({ Request, execute })`            | Typed void query           |
 
 ### Error Handling Pattern
 
@@ -614,7 +662,7 @@ const stream = Effect.fn("Updates.stream")(function* () {
 ### Terminal PubSub with Replay
 
 ```typescript
-const pubsub = yield* PubSub.unbounded<string>({ replay: 10_000 });
+const pubsub = yield * PubSub.unbounded<string>({ replay: 10_000 });
 terminal.onData((data) => PubSub.publishUnsafe(pubsub, data));
 ```
 
@@ -625,7 +673,7 @@ terminal.onData((data) => PubSub.publishUnsafe(pubsub, data));
 ### TaskRunner Pattern
 
 ```typescript
-const runningIterations = yield* FiberMap.make<TaskId>();
+const runningIterations = yield * FiberMap.make<TaskId>();
 
 const sendMessage = Effect.fn("TaskRunner.sendMessage")(function* (taskId, message) {
   yield* FiberMap.run(runningIterations, taskId, runIteration(taskId, message));
@@ -640,8 +688,8 @@ const interrupt = Effect.fn("TaskRunner.interrupt")(function* (taskId) {
 ### Guard Against Double-Runs
 
 ```typescript
-const isRunning = yield* FiberMap.has(runningIterations, taskId);
-if (isRunning) return yield* Effect.logWarning(`Skipping (already running)`);
+const isRunning = yield * FiberMap.has(runningIterations, taskId);
+if (isRunning) return yield * Effect.logWarning(`Skipping (already running)`);
 ```
 
 ---
@@ -651,32 +699,35 @@ if (isRunning) return yield* Effect.logWarning(`Skipping (already running)`);
 ### Terminal PTY Lifecycle
 
 ```typescript
-const terminal = yield* Effect.acquireRelease(
-  Effect.try({ try: () => pty.spawn(shell, [], { cwd, env }), catch: (cause) => new TerminalSpawnError({ taskId, cause }) }),
-  (terminal) => Effect.sync(() => terminal.kill()),
-);
+const terminal =
+  yield *
+  Effect.acquireRelease(
+    Effect.try({
+      try: () => pty.spawn(shell, [], { cwd, env }),
+      catch: (cause) => new TerminalSpawnError({ taskId, cause }),
+    }),
+    (terminal) => Effect.sync(() => terminal.kill()),
+  );
 
-const pubsub = yield* Effect.acquireRelease(
-  PubSub.unbounded<string>({ replay: 10_000 }),
-  (ps) => PubSub.shutdown(ps),
-);
+const pubsub =
+  yield *
+  Effect.acquireRelease(PubSub.unbounded<string>({ replay: 10_000 }), (ps) => PubSub.shutdown(ps));
 
-yield* Effect.addFinalizer(() => Effect.sync(() => terminals.delete(taskId)));
-yield* Effect.never;  // Block forever — cleanup via fiber interruption
+yield * Effect.addFinalizer(() => Effect.sync(() => terminals.delete(taskId)));
+yield * Effect.never; // Block forever — cleanup via fiber interruption
 ```
 
 ### Scoped Effects
 
 ```typescript
-const runIteration = Effect.fn("TaskRunner.runIteration")(
-  function* (taskId, message) {
-    yield* Effect.addFinalizer(() => tasks.updateStatus(task.id, task.baseStatus).pipe(
-      Effect.ignore({ log: "Warn", message: "Updating status failed" }),
-    ));
-    // ... do work ...
-  },
-  Effect.scoped,
-);
+const runIteration = Effect.fn("TaskRunner.runIteration")(function* (taskId, message) {
+  yield* Effect.addFinalizer(() =>
+    tasks
+      .updateStatus(task.id, task.baseStatus)
+      .pipe(Effect.ignore({ log: "Warn", message: "Updating status failed" })),
+  );
+  // ... do work ...
+}, Effect.scoped);
 ```
 
 ### Process Spawning
@@ -686,11 +737,20 @@ export const runProcess = (cmd, options) =>
   Effect.gen(function* () {
     const handle = yield* options.spawner.spawn(ChildProcess.make(cmd, args, { cwd }));
     const [exitCode, stdout, stderr] = yield* Effect.all(
-      [handle.exitCode, Stream.mkString(Stream.decodeText(handle.stdout)), Stream.mkString(Stream.decodeText(handle.stderr))],
+      [
+        handle.exitCode,
+        Stream.mkString(Stream.decodeText(handle.stdout)),
+        Stream.mkString(Stream.decodeText(handle.stderr)),
+      ],
       { concurrency: "unbounded" },
     );
     if (options.errorOnNonZero && exitCode !== 0) {
-      return yield* new NonZeroExitCodeError({ cmd, args, exitCode, output: (stderr || stdout).trim() }).asEffect();
+      return yield* new NonZeroExitCodeError({
+        cmd,
+        args,
+        exitCode,
+        output: (stderr || stdout).trim(),
+      }).asEffect();
     }
     return { exitCode, stdout, stderr };
   }).pipe(Effect.scoped, Effect.catchTag("PlatformError", Effect.die));
@@ -707,7 +767,9 @@ const capture = (eventName, properties) =>
   Effect.gen(function* () {
     yield* provider.capture({ eventName, properties, distinctId });
   }).pipe(
-    Effect.catchCause((cause) => Effect.logWarning("Analytics capture failed", { eventName, cause })),
+    Effect.catchCause((cause) =>
+      Effect.logWarning("Analytics capture failed", { eventName, cause }),
+    ),
   );
 ```
 
@@ -748,13 +810,25 @@ const runtime = ManagedRuntime.make(rateLimiterLayer);
 export async function POST(request: NextRequest) {
   const program = Effect.gen(function* () {
     const rateLimiter = yield* RateLimiter.RateLimiter;
-    yield* rateLimiter.consume({ key: `summarize:${ip}`, limit: 15, window: "1 hour", algorithm: "fixed-window", onExceeded: "fail" });
+    yield* rateLimiter.consume({
+      key: `summarize:${ip}`,
+      limit: 15,
+      window: "1 hour",
+      algorithm: "fixed-window",
+      onExceeded: "fail",
+    });
     // ... business logic
   }).pipe(
     Effect.map((response) => NextResponse.json(response)),
-    Effect.catchTag("RateLimiterError", () => Effect.succeed(NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 }))),
-    Effect.catchTag("InvalidPayloadError", (e) => Effect.succeed(NextResponse.json({ error: e.message }, { status: 400 }))),
-    Effect.catchCause(() => Effect.succeed(NextResponse.json({ error: "Internal server error" }, { status: 500 }))),
+    Effect.catchTag("RateLimiterError", () =>
+      Effect.succeed(NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })),
+    ),
+    Effect.catchTag("InvalidPayloadError", (e) =>
+      Effect.succeed(NextResponse.json({ error: e.message }, { status: 400 })),
+    ),
+    Effect.catchCause(() =>
+      Effect.succeed(NextResponse.json({ error: "Internal server error" }, { status: 500 })),
+    ),
   );
   return await runtime.runPromise(program);
 }
@@ -780,11 +854,12 @@ const raw = (options) => Effect.gen(function* () {
 Same service, different repos via `Effect.provideService`:
 
 ```typescript
-yield* git.getChanges(ChangesFor.Branch({ base, branchName }))
-  .pipe(Effect.provideService(GitRepoRoot, task.taskPath));
+yield *
+  git
+    .getChanges(ChangesFor.Branch({ base, branchName }))
+    .pipe(Effect.provideService(GitRepoRoot, task.taskPath));
 
-yield* git.pull(targetBranch)
-  .pipe(Effect.provideService(GitRepoRoot, task.projectId));
+yield * git.pull(targetBranch).pipe(Effect.provideService(GitRepoRoot, task.projectId));
 ```
 
 ### Data.taggedEnum
@@ -797,7 +872,7 @@ export type ChangesFor = Data.TaggedEnum<{
 }>;
 export const ChangesFor = Data.taggedEnum<ChangesFor>();
 
-ChangesFor.Branch({ base: mergeBase, branchName: task.branchName })
+ChangesFor.Branch({ base: mergeBase, branchName: task.branchName });
 ```
 
 ### Chained catchTag Fallback
@@ -821,11 +896,15 @@ const getMainBranch = Effect.fn("Git.getMainBranch")(function* () {
 
 ```typescript
 export class ToolCallProgress extends Schema.TaggedClass<ToolCallProgress>()("ToolCallProgress", {
-  id: Schema.String, taskId: TaskId, tool: Schema.String,
-  title: Schema.optional(Schema.String), input: Schema.optional(Schema.Unknown),
+  id: Schema.String,
+  taskId: TaskId,
+  tool: Schema.String,
+  title: Schema.optional(Schema.String),
+  input: Schema.optional(Schema.Unknown),
 }) {
   get displayName(): string {
-    return pipe(Match.value(this.tool),
+    return pipe(
+      Match.value(this.tool),
       Match.when("edit", () => "Editing"),
       Match.when("write", () => "Writing"),
       Match.when("bash", () => "Running"),
@@ -835,9 +914,17 @@ export class ToolCallProgress extends Schema.TaggedClass<ToolCallProgress>()("To
 }
 
 export const UpdateContent = Schema.Union([
-  TaskUpdated, CreatePlanFailed, ImplementationFailed, AgentRetrying,
-  TaskErrored, ReviewRequested, AgentStreamFinished, ToolCallProgress,
-  MessageEvent, StreamingStarted, StreamingStopped,
+  TaskUpdated,
+  CreatePlanFailed,
+  ImplementationFailed,
+  AgentRetrying,
+  TaskErrored,
+  ReviewRequested,
+  AgentStreamFinished,
+  ToolCallProgress,
+  MessageEvent,
+  StreamingStarted,
+  StreamingStopped,
 ]);
 ```
 
@@ -854,11 +941,13 @@ Subscribes to streaming RPC and accumulates/forwards values:
 ```typescript
 export const terminalOutputAtom = AmiRuntime.pull(
   (get: Atom.Context) =>
-    Stream.unwrap(Effect.gen(function* () {
-      const task = yield* get.result(spawnTerminalAtom);
-      const client = yield* AmiClient;
-      return client("terminals.StreamTerminalOutput", { taskId: task.id });
-    })),
+    Stream.unwrap(
+      Effect.gen(function* () {
+        const task = yield* get.result(spawnTerminalAtom);
+        const client = yield* AmiClient;
+        return client("terminals.StreamTerminalOutput", { taskId: task.id });
+      }),
+    ),
   { disableAccumulation: true },
 );
 ```
@@ -870,22 +959,42 @@ Single pull atom dispatches to multiple family atoms based on `_tag`:
 ```typescript
 export const updatesAtom = AmiRuntime.pull(
   (get: Atom.Context) =>
-    Stream.unwrap(Effect.gen(function* () {
-      const client = yield* AmiClient;
-      return client("updates.StreamUpdates", undefined).pipe(
-        Stream.tap((update) => Effect.sync(() => {
-          if (update.value._tag === "ToolCallProgress") {
-            get.set(taskUpdatesFamily(update.taskId), [...get.once(taskUpdatesFamily(update.taskId)), update]);
-          }
-          if (update.value._tag === "MessageEvent") {
-            get.set(chatStateFamily(update.taskId), AsyncResult.success(ChatState.appendMessage(get.once(chatStateFamily(update.taskId)), update.value.message)));
-          }
-          if (update.value._tag === "StreamingStopped") {
-            get.set(chatStateFamily(update.taskId), AsyncResult.success(ChatState.updateStatus(get.once(chatStateFamily(update.taskId)), "Idle")));
-          }
-        })),
-      );
-    })),
+    Stream.unwrap(
+      Effect.gen(function* () {
+        const client = yield* AmiClient;
+        return client("updates.StreamUpdates", undefined).pipe(
+          Stream.tap((update) =>
+            Effect.sync(() => {
+              if (update.value._tag === "ToolCallProgress") {
+                get.set(taskUpdatesFamily(update.taskId), [
+                  ...get.once(taskUpdatesFamily(update.taskId)),
+                  update,
+                ]);
+              }
+              if (update.value._tag === "MessageEvent") {
+                get.set(
+                  chatStateFamily(update.taskId),
+                  AsyncResult.success(
+                    ChatState.appendMessage(
+                      get.once(chatStateFamily(update.taskId)),
+                      update.value.message,
+                    ),
+                  ),
+                );
+              }
+              if (update.value._tag === "StreamingStopped") {
+                get.set(
+                  chatStateFamily(update.taskId),
+                  AsyncResult.success(
+                    ChatState.updateStatus(get.once(chatStateFamily(update.taskId)), "Idle"),
+                  ),
+                );
+              }
+            }),
+          ),
+        );
+      }),
+    ),
   { disableAccumulation: true },
 ).pipe(Atom.keepAlive);
 ```
@@ -936,8 +1045,12 @@ static layerTest = Layer.effect(this)(
 Converts failure to `Option.none()`, success to `Option.some()`:
 
 ```typescript
-const existing = yield* findByCommitHash(commitHash).pipe(Effect.option);
-if (Option.isSome(existing)) { /* update */ } else { /* insert */ }
+const existing = yield * findByCommitHash(commitHash).pipe(Effect.option);
+if (Option.isSome(existing)) {
+  /* update */
+} else {
+  /* insert */
+}
 ```
 
 ### Effect.flip
@@ -945,10 +1058,11 @@ if (Option.isSome(existing)) { /* update */ } else { /* insert */ }
 Swaps success/error — "fail if found" pattern:
 
 ```typescript
-yield* get(taskId).pipe(
-  Effect.flip,
-  Effect.mapError(() => new TerminalAlreadyExistsError({ taskId })),
-);
+yield *
+  get(taskId).pipe(
+    Effect.flip,
+    Effect.mapError(() => new TerminalAlreadyExistsError({ taskId })),
+  );
 ```
 
 ### .asEffect()
@@ -956,47 +1070,47 @@ yield* get(taskId).pipe(
 Schema.ErrorClass instances have `.asEffect()`:
 
 ```typescript
-return yield* new TaskNotFoundError({ taskId: id }).asEffect();
+return yield * new TaskNotFoundError({ taskId: id }).asEffect();
 // Equivalent to: Effect.fail(new TaskNotFoundError({ taskId: id }))
 ```
 
 ### Effect.ignore with logging
 
 ```typescript
-Effect.ignore({ log: "Warn", message: "Updating status failed" })
+Effect.ignore({ log: "Warn", message: "Updating status failed" });
 ```
 
 ---
 
 ## Schema Type Hierarchy
 
-| Type | Base | Usage | Has `_tag`? |
-|---|---|---|---|
-| `Schema.TaggedClass` | `Schema.TaggedClass<T>()("Tag", {...})` | Domain events, update content | Yes (auto) |
-| `Schema.Class` | `Schema.Class<T>("Name")({...})` | Value objects (Diff, CodeRange) | Optional |
-| `Schema.ErrorClass` | `Schema.ErrorClass<T>("Name")({...})` | Errors with `_tag: Schema.tag(...)` | Yes (explicit) |
-| `Schema.TaggedStruct` | `Schema.TaggedStruct("Tag", {...})` | Enum variants (TaskStatus) | Yes (auto) |
-| `Model.Class` | `Model.Class<T>("Name")({...})` | DB-backed entities (Task, Project) | No |
+| Type                  | Base                                    | Usage                               | Has `_tag`?    |
+| --------------------- | --------------------------------------- | ----------------------------------- | -------------- |
+| `Schema.TaggedClass`  | `Schema.TaggedClass<T>()("Tag", {...})` | Domain events, update content       | Yes (auto)     |
+| `Schema.Class`        | `Schema.Class<T>("Name")({...})`        | Value objects (Diff, CodeRange)     | Optional       |
+| `Schema.ErrorClass`   | `Schema.ErrorClass<T>("Name")({...})`   | Errors with `_tag: Schema.tag(...)` | Yes (explicit) |
+| `Schema.TaggedStruct` | `Schema.TaggedStruct("Tag", {...})`     | Enum variants (TaskStatus)          | Yes (auto)     |
+| `Model.Class`         | `Model.Class<T>("Name")({...})`         | DB-backed entities (Task, Project)  | No             |
 
 ---
 
 ## Anti-Patterns
 
-| Pattern | Reason | Correct |
-|---|---|---|
-| `Effect.runSync` / `Effect.runPromise` inside services | Breaks composition | Return effects, run at boundary |
-| `throw` inside `Effect.gen` | Bypasses error channel | `Effect.fail(new TaggedError(...))` |
-| `catchAll` | Loses type info | `catchTag` / `catchTags` |
-| `console.log` | Not structured | `Effect.log`, `Effect.logInfo` |
-| `process.env` | No validation | `Config.string`, `Config.integer` |
-| `null` / `undefined` in domain types | Error-prone | `Option<T>` |
-| `Option.getOrThrow` | Throws | `Option.match` / `Option.getOrElse` |
-| `any` / `unknown` casts | Bypasses type safety | `Schema.decodeUnknown` |
-| `Promise` in service signatures | Loses Effect composition | Return `Effect` types |
-| Mutable `let` without `Ref` | Race conditions | `Ref.make` / `Ref.update` |
-| Creating atoms inside components | New atom each render | Module-level definition |
-| Missing `Atom.keepAlive` for global state | Resets on unmount | Pipe with `Atom.keepAlive` |
-| Missing `get.addFinalizer()` | Memory leaks | Always register cleanup |
+| Pattern                                                | Reason                   | Correct                             |
+| ------------------------------------------------------ | ------------------------ | ----------------------------------- |
+| `Effect.runSync` / `Effect.runPromise` inside services | Breaks composition       | Return effects, run at boundary     |
+| `throw` inside `Effect.gen`                            | Bypasses error channel   | `Effect.fail(new TaggedError(...))` |
+| `catchAll`                                             | Loses type info          | `catchTag` / `catchTags`            |
+| `console.log`                                          | Not structured           | `Effect.log`, `Effect.logInfo`      |
+| `process.env`                                          | No validation            | `Config.string`, `Config.integer`   |
+| `null` / `undefined` in domain types                   | Error-prone              | `Option<T>`                         |
+| `Option.getOrThrow`                                    | Throws                   | `Option.match` / `Option.getOrElse` |
+| `any` / `unknown` casts                                | Bypasses type safety     | `Schema.decodeUnknown`              |
+| `Promise` in service signatures                        | Loses Effect composition | Return `Effect` types               |
+| Mutable `let` without `Ref`                            | Race conditions          | `Ref.make` / `Ref.update`           |
+| Creating atoms inside components                       | New atom each render     | Module-level definition             |
+| Missing `Atom.keepAlive` for global state              | Resets on unmount        | Pipe with `Atom.keepAlive`          |
+| Missing `get.addFinalizer()`                           | Memory leaks             | Always register cleanup             |
 
 ---
 
@@ -1004,24 +1118,24 @@ Effect.ignore({ log: "Warn", message: "Updating status failed" })
 
 **Version**: `4.0.0-beta.28`
 
-| Module | Import Path |
-|---|---|
-| Core | `effect` (`Effect`, `Layer`, `Schema`, `Option`, `ServiceMap`, `PubSub`, `FiberMap`, `Ref`, `Data`, `Match`, `Stream`, `Schedule`) |
-| RPC | `effect/unstable/rpc` (`Rpc`, `RpcGroup`, `RpcClient`, `RpcServer`, `RpcSerialization`) |
-| Reactivity | `effect/unstable/reactivity` (`AsyncResult`, `Atom`, `AtomRpc`) |
-| Atom internals | `effect/unstable/reactivity/Atom` |
-| HTTP | `effect/unstable/http` (`HttpRouter`, `HttpClient`, `FetchHttpClient`) |
-| SQL | `effect/unstable/sql` (`SqlClient`, `SqlModel`, `SqlSchema`, `Migrator`) |
-| Process | `effect/unstable/process` (`ChildProcess`, `ChildProcessSpawner`) |
-| Persistence | `effect/unstable/persistence` (`KeyValueStore`, `RateLimiter`) |
-| Socket | `effect/unstable/socket` (`Socket`) |
-| Model | `effect/unstable/schema` (`Model`) |
-| Encoding | `effect/unstable/encoding` (`Ndjson`) |
-| FileSystem | `effect/FileSystem` |
-| Platform Node | `@effect/platform-node` (`NodeServices`, `NodeHttpServer`) |
-| Platform Browser | `@effect/platform-browser` (`BrowserKeyValueStore`) |
-| SQLite | `@effect/sql-sqlite-node` (`SqliteClient`) |
-| Atom React | `@effect/atom-react` (`useAtomValue`, `useAtomSet`, `useAtom`) |
+| Module           | Import Path                                                                                                                        |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Core             | `effect` (`Effect`, `Layer`, `Schema`, `Option`, `ServiceMap`, `PubSub`, `FiberMap`, `Ref`, `Data`, `Match`, `Stream`, `Schedule`) |
+| RPC              | `effect/unstable/rpc` (`Rpc`, `RpcGroup`, `RpcClient`, `RpcServer`, `RpcSerialization`)                                            |
+| Reactivity       | `effect/unstable/reactivity` (`AsyncResult`, `Atom`, `AtomRpc`)                                                                    |
+| Atom internals   | `effect/unstable/reactivity/Atom`                                                                                                  |
+| HTTP             | `effect/unstable/http` (`HttpRouter`, `HttpClient`, `FetchHttpClient`)                                                             |
+| SQL              | `effect/unstable/sql` (`SqlClient`, `SqlModel`, `SqlSchema`, `Migrator`)                                                           |
+| Process          | `effect/unstable/process` (`ChildProcess`, `ChildProcessSpawner`)                                                                  |
+| Persistence      | `effect/unstable/persistence` (`KeyValueStore`, `RateLimiter`)                                                                     |
+| Socket           | `effect/unstable/socket` (`Socket`)                                                                                                |
+| Model            | `effect/unstable/schema` (`Model`)                                                                                                 |
+| Encoding         | `effect/unstable/encoding` (`Ndjson`)                                                                                              |
+| FileSystem       | `effect/FileSystem`                                                                                                                |
+| Platform Node    | `@effect/platform-node` (`NodeServices`, `NodeHttpServer`)                                                                         |
+| Platform Browser | `@effect/platform-browser` (`BrowserKeyValueStore`)                                                                                |
+| SQLite           | `@effect/sql-sqlite-node` (`SqliteClient`)                                                                                         |
+| Atom React       | `@effect/atom-react` (`useAtomValue`, `useAtomSet`, `useAtom`)                                                                     |
 
 ### Key API Differences from Stable
 

@@ -15,10 +15,7 @@ import {
   configByDisplayName,
   CHROMIUM_CONFIGS,
 } from "./browser-config.js";
-import {
-  BrowserDetector,
-  type DetectBrowserProfilesOptions,
-} from "./browser-detector.js";
+import { BrowserDetector, type DetectBrowserProfilesOptions } from "./browser-detector.js";
 import { parseBinaryCookies } from "./utils/binary-cookies.js";
 import { CdpClient } from "./cdp-client.js";
 import { ChromiumExtractor } from "./chromium-extractor.js";
@@ -26,11 +23,7 @@ import { FirefoxExtractor } from "./firefox-extractor.js";
 import { SafariExtractor } from "./safari-extractor.js";
 import { CookieDatabaseNotFoundError, CookieReadError } from "./errors.js";
 import { SqliteClient } from "./sqlite-client.js";
-import {
-  dedupeCookies,
-  originsToHosts,
-  stripLeadingDot,
-} from "./utils/host-matching.js";
+import { dedupeCookies, originsToHosts, stripLeadingDot } from "./utils/host-matching.js";
 import { normalizeSameSite, parseFirefoxExpiry } from "./utils/normalize.js";
 import { sqliteBool, stringField } from "./utils/sql-helpers.js";
 import type {

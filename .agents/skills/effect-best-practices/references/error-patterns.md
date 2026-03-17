@@ -30,12 +30,9 @@ export class NotFoundError extends Schema.TaggedError<NotFoundError>()(
 
 // At API boundaries:
 Effect.catchTags({
-  UserNotFoundError: (err) =>
-    Effect.fail(new NotFoundError({ message: "Not found" })),
-  ChannelNotFoundError: (err) =>
-    Effect.fail(new NotFoundError({ message: "Not found" })),
-  MessageNotFoundError: (err) =>
-    Effect.fail(new NotFoundError({ message: "Not found" })),
+  UserNotFoundError: (err) => Effect.fail(new NotFoundError({ message: "Not found" })),
+  ChannelNotFoundError: (err) => Effect.fail(new NotFoundError({ message: "Not found" })),
+  MessageNotFoundError: (err) => Effect.fail(new NotFoundError({ message: "Not found" })),
 });
 
 // Frontend receives: { _tag: "NotFoundError", message: "Not found" }
@@ -208,9 +205,7 @@ const findUser = Effect.fn("UserService.findUser")(function* (id: UserId) {
 ### catchTags for Multiple Error Types
 
 ```typescript
-const processOrder = Effect.fn("OrderService.processOrder")(function* (
-  input: OrderInput,
-) {
+const processOrder = Effect.fn("OrderService.processOrder")(function* (input: OrderInput) {
   return yield* validateAndProcess(input).pipe(
     Effect.catchTags({
       ValidationError: (err) =>
@@ -245,9 +240,7 @@ const processOrder = Effect.fn("OrderService.processOrder")(function* (
 // WRONG - Loses type information
 yield *
   effect.pipe(
-    Effect.catchAll((err) =>
-      Effect.fail(new InternalServerError({ message: "Something failed" })),
-    ),
+    Effect.catchAll((err) => Effect.fail(new InternalServerError({ message: "Something failed" }))),
   );
 
 // Problems:
@@ -290,9 +283,7 @@ export const withRemapDbErrors = <A, E, R>(
 
 // Usage
 const findUser = Effect.fn("UserService.findUser")(function* (id: UserId) {
-  return yield* repo
-    .findById(id)
-    .pipe(withRemapDbErrors({ entityType: "User", entityId: id }));
+  return yield* repo.findById(id).pipe(withRemapDbErrors({ entityType: "User", entityId: id }));
 });
 ```
 
@@ -362,14 +353,11 @@ When defining workflow activities, use explicit error unions:
 // Activity error type - union of possible errors
 export type GetChannelMembersError = DatabaseError | ChannelNotFoundError;
 
-export class DatabaseError extends Schema.TaggedError<DatabaseError>()(
-  "DatabaseError",
-  {
-    message: Schema.String,
-    cause: Schema.optional(Schema.String),
-    retryable: Schema.optionalWith(Schema.Boolean, { default: () => true }),
-  },
-) {}
+export class DatabaseError extends Schema.TaggedError<DatabaseError>()("DatabaseError", {
+  message: Schema.String,
+  cause: Schema.optional(Schema.String),
+  retryable: Schema.optionalWith(Schema.Boolean, { default: () => true }),
+}) {}
 
 export class ChannelNotFoundError extends Schema.TaggedError<ChannelNotFoundError>()(
   "ChannelNotFoundError",
@@ -437,12 +425,9 @@ export class UnauthorizedError extends Schema.TaggedError<UnauthorizedError>()(
 
 // Then mapping everything to it - loses critical information!
 Effect.catchTags({
-  SessionExpiredError: (err) =>
-    Effect.fail(new UnauthorizedError({ message: "Unauthorized" })),
-  InvalidCredentialsError: (err) =>
-    Effect.fail(new UnauthorizedError({ message: "Unauthorized" })),
-  MissingTokenError: (err) =>
-    Effect.fail(new UnauthorizedError({ message: "Unauthorized" })),
+  SessionExpiredError: (err) => Effect.fail(new UnauthorizedError({ message: "Unauthorized" })),
+  InvalidCredentialsError: (err) => Effect.fail(new UnauthorizedError({ message: "Unauthorized" })),
+  MissingTokenError: (err) => Effect.fail(new UnauthorizedError({ message: "Unauthorized" })),
 });
 // Frontend can't distinguish: expired session vs wrong password vs missing token
 ```
@@ -479,9 +464,7 @@ Effect.catchAll((unexpectedError) =>
 Log errors with structured context:
 
 ```typescript
-const processWithLogging = Effect.fn("OrderService.process")(function* (
-  orderId: OrderId,
-) {
+const processWithLogging = Effect.fn("OrderService.process")(function* (orderId: OrderId) {
   return yield* processOrder(orderId).pipe(
     Effect.tapError((err) =>
       Effect.log("Order processing failed", {

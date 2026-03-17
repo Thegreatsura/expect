@@ -52,7 +52,11 @@ export const TableHeader = ({ title, subtitle, color, highlightColor }: TableHea
   return (
     <>
       <Text color={color}>{topBorder}</Text>
-      <Text color={color}>{"│"}{padCenter(title, innerWidth)}{"│"}</Text>
+      <Text color={color}>
+        {"│"}
+        {padCenter(title, innerWidth)}
+        {"│"}
+      </Text>
       {subtitle ? (
         <Text color={color}>
           {"│"}
@@ -83,7 +87,11 @@ export const TableDivider = ({ position = "middle", color }: TableDividerProps) 
 
   return (
     <Text color={color}>
-      {symbols.left}{leftSegment}{symbols.mid}{rightSegment}{symbols.right}
+      {symbols.left}
+      {leftSegment}
+      {symbols.mid}
+      {rightSegment}
+      {symbols.right}
     </Text>
   );
 };
@@ -110,8 +118,12 @@ export const TableRow = ({
   const { valueCol } = useTableLayout();
   const paddedLabel = label.padEnd(LABEL_COL).slice(0, LABEL_COL);
   const lines = wrapText(value, valueCol);
-  const effectiveLabelColor = selected ? (selectedColor ?? labelColor ?? color) : (labelColor ?? color);
-  const effectiveValueColor = selected ? (selectedColor ?? valueColor ?? color) : (valueColor ?? color);
+  const effectiveLabelColor = selected
+    ? (selectedColor ?? labelColor ?? color)
+    : (labelColor ?? color);
+  const effectiveValueColor = selected
+    ? (selectedColor ?? valueColor ?? color)
+    : (valueColor ?? color);
 
   return (
     <>

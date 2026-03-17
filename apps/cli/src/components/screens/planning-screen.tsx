@@ -35,7 +35,9 @@ export const PlanningScreen = () => {
 
       <Box marginTop={1} paddingX={1}>
         <Spinner />
-        <Text color={COLORS.DIM}>{` Generating plan${figures.ellipsis} ${formatElapsedTime(elapsed)}`}</Text>
+        <Text
+          color={COLORS.DIM}
+        >{` Generating plan${figures.ellipsis} ${formatElapsedTime(elapsed)}`}</Text>
       </Box>
     </Box>
   );

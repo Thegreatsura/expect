@@ -11,9 +11,7 @@ import { Schema } from "effect";
 export const UserId = Schema.UUID.pipe(Schema.brand("@App/UserId"));
 export type UserId = Schema.Schema.Type<typeof UserId>;
 
-export const OrganizationId = Schema.UUID.pipe(
-  Schema.brand("@App/OrganizationId"),
-);
+export const OrganizationId = Schema.UUID.pipe(Schema.brand("@App/OrganizationId"));
 export type OrganizationId = Schema.Schema.Type<typeof OrganizationId>;
 
 export const OrderId = Schema.UUID.pipe(Schema.brand("@App/OrderId"));
@@ -35,9 +33,7 @@ Use `@Namespace/EntityName` format:
 
 ```typescript
 // From string (validates UUID format)
-const userId = Schema.decodeSync(UserId)(
-  "123e4567-e89b-12d3-a456-426614174000",
-);
+const userId = Schema.decodeSync(UserId)("123e4567-e89b-12d3-a456-426614174000");
 
 // Generate new ID
 const newUserId = UserId.make(crypto.randomUUID());
@@ -54,9 +50,7 @@ Don't brand simple strings that don't need type safety:
 // NOT branded - acceptable
 export const Url = Schema.String;
 export const FilePath = Schema.String;
-export const EmailAddress = Schema.String.pipe(
-  Schema.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/),
-);
+export const EmailAddress = Schema.String.pipe(Schema.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/));
 
 // These don't need branding because:
 // 1. They don't cross service boundaries in ways that could be confused
@@ -113,14 +107,10 @@ export type UpdateUserInput = Schema.Schema.Type<typeof UpdateUserInput>;
 
 ```typescript
 // Transform string to Date
-export const DateFromString = Schema.transform(
-  Schema.String,
-  Schema.DateTimeUtc,
-  {
-    decode: (s) => new Date(s),
-    encode: (d) => d.toISOString(),
-  },
-);
+export const DateFromString = Schema.transform(Schema.String, Schema.DateTimeUtc, {
+  decode: (s) => new Date(s),
+  encode: (d) => d.toISOString(),
+});
 
 // Transform with validation (can fail)
 export const PositiveNumber = Schema.transformOrFail(
@@ -147,28 +137,20 @@ export const JsonFromString = <A, I>(schema: Schema.Schema<A, I>) =>
   });
 
 // Comma-separated string to array
-export const CommaSeparatedList = Schema.transform(
-  Schema.String,
-  Schema.Array(Schema.String),
-  {
-    decode: (s) =>
-      s
-        .split(",")
-        .map((x) => x.trim())
-        .filter(Boolean),
-    encode: (arr) => arr.join(","),
-  },
-);
+export const CommaSeparatedList = Schema.transform(Schema.String, Schema.Array(Schema.String), {
+  decode: (s) =>
+    s
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean),
+  encode: (arr) => arr.join(","),
+});
 
 // Cents to dollars
-export const DollarsFromCents = Schema.transform(
-  Schema.Number.pipe(Schema.int()),
-  Schema.Number,
-  {
-    decode: (cents) => cents / 100,
-    encode: (dollars) => Math.round(dollars * 100),
-  },
-);
+export const DollarsFromCents = Schema.transform(Schema.Number.pipe(Schema.int()), Schema.Number, {
+  decode: (cents) => cents / 100,
+  encode: (dollars) => Math.round(dollars * 100),
+});
 ```
 
 ## Schema.Class for Entities with Methods
@@ -216,9 +198,7 @@ Add annotations for documentation and validation messages:
 
 ```typescript
 export const CreateOrderInput = Schema.Struct({
-  productId: ProductId.pipe(
-    Schema.annotations({ description: "The product to order" }),
-  ),
+  productId: ProductId.pipe(Schema.annotations({ description: "The product to order" })),
   quantity: Schema.Number.pipe(
     Schema.int(),
     Schema.positive(),
@@ -228,9 +208,7 @@ export const CreateOrderInput = Schema.Struct({
     }),
   ),
   shippingAddress: Schema.Struct({
-    line1: Schema.String.pipe(
-      Schema.annotations({ description: "Street address" }),
-    ),
+    line1: Schema.String.pipe(Schema.annotations({ description: "Street address" })),
     line2: Schema.optional(Schema.String),
     city: Schema.String,
     state: Schema.String.pipe(Schema.length(2)),

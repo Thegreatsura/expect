@@ -17,18 +17,10 @@ interface HintBarProps {
   readonly mutedColor: string;
 }
 
-const HintContent = ({
-  segment,
-  mutedColor,
-}: {
-  segment: HintSegment;
-  mutedColor: string;
-}) => (
+const HintContent = ({ segment, mutedColor }: { segment: HintSegment; mutedColor: string }) => (
   <>
     <Text color={segment.color ?? mutedColor}>{segment.label} </Text>
-    <Text color={segment.color ?? mutedColor}>
-      [{segment.key}]
-    </Text>
+    <Text color={segment.color ?? mutedColor}>[{segment.key}]</Text>
   </>
 );
 

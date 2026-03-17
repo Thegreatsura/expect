@@ -1,14 +1,6 @@
 import path from "node:path";
 import { homedir } from "node:os";
-import {
-  Array as Arr,
-  Effect,
-  Layer,
-  Option,
-  Predicate,
-  Schema,
-  ServiceMap,
-} from "effect";
+import { Array as Arr, Effect, Layer, Option, Predicate, Schema, ServiceMap } from "effect";
 import * as FileSystem from "effect/FileSystem";
 import { ChildProcess } from "effect/unstable/process";
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner";
@@ -24,7 +16,7 @@ const LocalStateSchema = Schema.Struct({
   profile: Schema.optional(
     Schema.Struct({
       last_used: Schema.optional(Schema.String),
-    })
+    }),
   ),
 });
 
@@ -33,7 +25,7 @@ const PreferencesSchema = Schema.Struct({
     Schema.Struct({
       selected_languages: Schema.optional(Schema.String),
       accept_languages: Schema.optional(Schema.String),
-    })
+    }),
   ),
 });
 
@@ -45,16 +37,9 @@ export class ChromiumPlatform extends ServiceMap.Service<
   }
 >()("@cookies/ChromiumPlatform") {
   static layerDarwin = Layer.succeed(this, {
-    executableCandidates: (config: ChromiumConfig) => [
-      config.executable.darwin,
-    ],
+    executableCandidates: (config: ChromiumConfig) => [config.executable.darwin],
     userDataDir: (config: ChromiumConfig) =>
-      path.join(
-        homedir(),
-        "Library",
-        "Application Support",
-        config.userData.darwin
-      ),
+      path.join(homedir(), "Library", "Application Support", config.userData.darwin),
   });
 
   static layerLinux = Layer.succeed(this, {
@@ -62,7 +47,7 @@ export class ChromiumPlatform extends ServiceMap.Service<
     userDataDir: (config: ChromiumConfig) =>
       path.join(
         process.env["XDG_CONFIG_HOME"] ?? path.join(homedir(), ".config"),
-        config.userData.linux
+        config.userData.linux,
       ),
   });
 
@@ -77,7 +62,7 @@ export class ChromiumPlatform extends ServiceMap.Service<
           .string(ChildProcess.make("reg", ["query", regPath, "/ve"]))
           .pipe(
             Effect.map((result) => result.trim()),
-            Effect.catch(() => Effect.succeed(""))
+            Effect.catch(() => Effect.succeed("")),
           );
         if (output) {
           const match = output.match(/REG_SZ\s+(.+)/);
@@ -87,10 +72,8 @@ export class ChromiumPlatform extends ServiceMap.Service<
       }
 
       const programFiles = process.env["ProgramFiles"] ?? "C:\\Program Files";
-      const programFilesX86 =
-        process.env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)";
-      const localAppData =
-        process.env["LOCALAPPDATA"] ?? path.join(homedir(), "AppData", "Local");
+      const programFilesX86 = process.env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)";
+      const localAppData = process.env["LOCALAPPDATA"] ?? path.join(homedir(), "AppData", "Local");
 
       return {
         executableCandidates: (config: ChromiumConfig) => {
@@ -101,15 +84,14 @@ export class ChromiumPlatform extends ServiceMap.Service<
             candidates.push(
               path.join(programFiles, relative),
               path.join(programFilesX86, relative),
-              path.join(localAppData, relative)
+              path.join(localAppData, relative),
             );
           }
           return candidates;
         },
-        userDataDir: (config: ChromiumConfig) =>
-          path.join(localAppData, config.userData.win32),
+        userDataDir: (config: ChromiumConfig) => path.join(localAppData, config.userData.win32),
       };
-    })
+    }),
   ).pipe(Layer.provide(NodeServices.layer));
 }
 
@@ -124,42 +106,35 @@ export class ChromiumSource extends ServiceMap.Service<ChromiumSource>()(
       const getLastUsedProfile = (userDataDir: string) =>
         fs.readFileString(path.join(userDataDir, "Local State")).pipe(
           Effect.flatMap((content) =>
-            Schema.decodeEffect(Schema.fromJsonString(LocalStateSchema))(
-              content
-            )
+            Schema.decodeEffect(Schema.fromJsonString(LocalStateSchema))(content),
           ),
-          Effect.map((localState) =>
-            Option.fromNullishOr(localState.profile?.last_used)
-          ),
+          Effect.map((localState) => Option.fromNullishOr(localState.profile?.last_used)),
           Effect.catchReason("PlatformError", "NotFound", () =>
-            Effect.succeed(Option.none<string>())
-          )
+            Effect.succeed(Option.none<string>()),
+          ),
         );
 
       const loadProfileLocale = (profilePath: string) =>
         fs.readFileString(path.join(profilePath, "Preferences")).pipe(
           Effect.flatMap((content) =>
-            Schema.decodeEffect(Schema.fromJsonString(PreferencesSchema))(
-              content
-            )
+            Schema.decodeEffect(Schema.fromJsonString(PreferencesSchema))(content),
           ),
           Effect.map((preferences) => {
             const languages =
-              preferences.intl?.selected_languages ??
-              preferences.intl?.accept_languages;
+              preferences.intl?.selected_languages ?? preferences.intl?.accept_languages;
             if (!languages) return undefined;
             return languages
               .split(",")
               .map((language) => language.trim())
               .find((language) => language.length > 0);
           }),
-          Effect.catch(() => Effect.succeed(undefined))
+          Effect.catch(() => Effect.succeed(undefined)),
         );
 
       const detectProfiles = (
         key: ChromiumBrowserKey,
         executablePath: string,
-        userDataDir: string
+        userDataDir: string,
       ) =>
         Effect.gen(function* () {
           if (!(yield* fs.exists(userDataDir))) return [];
@@ -168,18 +143,14 @@ export class ChromiumSource extends ServiceMap.Service<ChromiumSource>()(
           const entries = yield* fs
             .readDirectory(userDataDir)
             .pipe(
-              Effect.catchReason("PlatformError", "NotFound", () =>
-                Effect.succeed([] as string[])
-              )
+              Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed([] as string[])),
             );
 
           const hasPreferences = (profileEntryPath: string) =>
             fs
               .exists(path.join(profileEntryPath, "Preferences"))
               .pipe(
-                Effect.catchReason("PlatformError", "BadResource", () =>
-                  Effect.succeed(false)
-                )
+                Effect.catchReason("PlatformError", "BadResource", () => Effect.succeed(false)),
               );
 
           return yield* Effect.forEach(
@@ -187,8 +158,7 @@ export class ChromiumSource extends ServiceMap.Service<ChromiumSource>()(
             (entry) =>
               Effect.gen(function* () {
                 const profileEntryPath = path.join(userDataDir, entry);
-                if (!(yield* hasPreferences(profileEntryPath)))
-                  return undefined;
+                if (!(yield* hasPreferences(profileEntryPath))) return undefined;
 
                 const locale = yield* loadProfileLocale(profileEntryPath);
 
@@ -200,16 +170,12 @@ export class ChromiumSource extends ServiceMap.Service<ChromiumSource>()(
                   ...(locale ? { locale } : {}),
                 });
               }),
-            { concurrency: CONCURRENCY_PROFILE_SCAN }
+            { concurrency: CONCURRENCY_PROFILE_SCAN },
           ).pipe(
             Effect.map(Arr.filter(Predicate.isNotUndefined)),
             Effect.map(
-              Arr.sort(
-                ChromiumBrowser.orderBy(
-                  Option.getOrUndefined(lastUsedProfileName)
-                )
-              )
-            )
+              Arr.sort(ChromiumBrowser.orderBy(Option.getOrUndefined(lastUsedProfileName))),
+            ),
           );
         });
 
@@ -219,9 +185,7 @@ export class ChromiumSource extends ServiceMap.Service<ChromiumSource>()(
           (chromiumConfig) =>
             Effect.gen(function* () {
               let executablePath: string | undefined;
-              for (const candidate of config.executableCandidates(
-                chromiumConfig
-              )) {
+              for (const candidate of config.executableCandidates(chromiumConfig)) {
                 if (yield* fs.exists(candidate)) {
                   executablePath = candidate;
                   break;
@@ -232,21 +196,17 @@ export class ChromiumSource extends ServiceMap.Service<ChromiumSource>()(
               return yield* detectProfiles(
                 chromiumConfig.key,
                 executablePath,
-                config.userDataDir(chromiumConfig)
+                config.userDataDir(chromiumConfig),
               );
             }),
-          { concurrency: "unbounded" }
+          { concurrency: "unbounded" },
         ).pipe(
           Effect.map(Arr.flatten),
-          Effect.catch((cause) =>
-            new ListBrowsersError({ cause: String(cause) }).asEffect()
-          )
-        )
+          Effect.catch((cause) => new ListBrowsersError({ cause: String(cause) }).asEffect()),
+        ),
       );
     }),
-  }
+  },
 ) {
-  static layer = Layer.effectDiscard(this.make).pipe(
-    Layer.provide(NodeServices.layer)
-  );
+  static layer = Layer.effectDiscard(this.make).pipe(Layer.provide(NodeServices.layer));
 }

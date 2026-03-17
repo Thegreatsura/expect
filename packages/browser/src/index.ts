@@ -6,11 +6,7 @@ export { annotatedScreenshot } from "./annotated-screenshot";
 export { diffSnapshots } from "./diff";
 export { saveVideo } from "./save-video";
 export { waitForNavigationSettle } from "./utils/wait-for-settle";
-export {
-  Browsers,
-  Cookies,
-  layerLive,
-} from "@browser-tester/cookies";
+export { Browsers, Cookies, layerLive } from "@browser-tester/cookies";
 export type {
   Browser,
   BrowserKey,

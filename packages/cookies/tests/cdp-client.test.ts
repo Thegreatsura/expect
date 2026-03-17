@@ -2,10 +2,8 @@ import { assert, describe, it } from "@effect/vitest";
 import { Effect } from "effect";
 import { CdpClient } from "../src/cdp-client.js";
 
-const CHROME_PROFILE_PATH =
-  "/Users/rasmus/Library/Application Support/Google/Chrome/Default";
-const CHROME_EXECUTABLE_PATH =
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const CHROME_PROFILE_PATH = "/Users/rasmus/Library/Application Support/Google/Chrome/Default";
+const CHROME_EXECUTABLE_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 const CdpTestLayer = CdpClient.layer;
 
@@ -31,7 +29,7 @@ describe("CdpClient", () => {
         assert.isBoolean(first.secure);
         assert.isBoolean(first.httpOnly);
       }).pipe(Effect.scoped, Effect.provide(CdpTestLayer)),
-    { timeout: 30_000 }
+    { timeout: 30_000 },
   );
 
   it.effect(
@@ -47,10 +45,10 @@ describe("CdpClient", () => {
         for (const cookie of cookies) {
           assert.isFalse(
             cookie.domain.startsWith("."),
-            `domain should not start with dot: ${cookie.domain}`
+            `domain should not start with dot: ${cookie.domain}`,
           );
         }
       }).pipe(Effect.scoped, Effect.provide(CdpTestLayer)),
-    { timeout: 30_000 }
+    { timeout: 30_000 },
   );
 });

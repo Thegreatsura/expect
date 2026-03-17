@@ -6,7 +6,7 @@ const STYLE_EXTENSIONS = new Set([".css", ".scss", ".sass", ".less", ".styl"]);
 const WEB_CODE_EXTENSIONS = new Set([".ts", ".js", ".mjs", ".cjs", ".mts", ".cts"]);
 const MARKUP_EXTENSIONS = new Set([".html", ".vue", ".svelte", ".astro"]);
 
-interface FileCategory {
+export interface FileCategory {
   label: string;
   count: number;
 }

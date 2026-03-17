@@ -106,13 +106,10 @@ export class CurrentUser extends Context.Tag("CurrentUser")<
 >() {}
 
 // Auth middleware - extracts and validates auth
-export class AuthMiddleware extends RpcMiddleware.Tag<AuthMiddleware>()(
-  "AuthMiddleware",
-  {
-    provides: CurrentUser,
-    failure: UnauthorizedError,
-  },
-) {}
+export class AuthMiddleware extends RpcMiddleware.Tag<AuthMiddleware>()("AuthMiddleware", {
+  provides: CurrentUser,
+  failure: UnauthorizedError,
+}) {}
 
 // Middleware implementation
 export const AuthMiddlewareLive = Layer.effect(
@@ -123,14 +120,10 @@ export const AuthMiddlewareLive = Layer.effect(
     return AuthMiddleware.of({
       execute: (request) =>
         Effect.gen(function* () {
-          const token = request.headers
-            .get("authorization")
-            ?.replace("Bearer ", "");
+          const token = request.headers.get("authorization")?.replace("Bearer ", "");
 
           if (!token) {
-            return yield* Effect.fail(
-              new UnauthorizedError({ message: "Missing token" }),
-            );
+            return yield* Effect.fail(new UnauthorizedError({ message: "Missing token" }));
           }
 
           const user = yield* authService.validateToken(token).pipe(
@@ -280,14 +273,11 @@ yield *
 ### Activity Error Handling with Retryable
 
 ```typescript
-export class ExternalApiError extends Schema.TaggedError<ExternalApiError>()(
-  "ExternalApiError",
-  {
-    message: Schema.String,
-    statusCode: Schema.Number,
-    retryable: Schema.Boolean,
-  },
-) {
+export class ExternalApiError extends Schema.TaggedError<ExternalApiError>()("ExternalApiError", {
+  message: Schema.String,
+  statusCode: Schema.Number,
+  retryable: Schema.Boolean,
+}) {
   static fromResponse(response: Response): ExternalApiError {
     return new ExternalApiError({
       message: `API error: ${response.statusText}`,
@@ -372,45 +362,37 @@ const createOrderHandler = Effect.gen(function* () {
 ### From Backend Service
 
 ```typescript
-export class MessageService extends Effect.Service<MessageService>()(
-  "MessageService",
-  {
-    accessors: true,
-    dependencies: [MessageRepo.Default, WorkflowClient.Default],
-    effect: Effect.gen(function* () {
-      const repo = yield* MessageRepo;
-      const workflows = yield* WorkflowClient;
+export class MessageService extends Effect.Service<MessageService>()("MessageService", {
+  accessors: true,
+  dependencies: [MessageRepo.Default, WorkflowClient.Default],
+  effect: Effect.gen(function* () {
+    const repo = yield* MessageRepo;
+    const workflows = yield* WorkflowClient;
 
-      const create = Effect.fn("MessageService.create")(function* (
-        input: CreateMessageInput,
-      ) {
-        const message = yield* repo.create(input);
+    const create = Effect.fn("MessageService.create")(function* (input: CreateMessageInput) {
+      const message = yield* repo.create(input);
 
-        // Trigger notification workflow
-        yield* workflows.workflows.NotificationWorkflow.execute({
-          id: message.id,
-          messageId: message.id,
-          channelId: message.channelId,
-          authorId: message.authorId,
-        });
-
-        return message;
+      // Trigger notification workflow
+      yield* workflows.workflows.NotificationWorkflow.execute({
+        id: message.id,
+        messageId: message.id,
+        channelId: message.channelId,
+        authorId: message.authorId,
       });
 
-      return { create };
-    }),
-  },
-) {}
+      return message;
+    });
+
+    return { create };
+  }),
+}) {}
 ```
 
 ## Workflow HTTP API
 
 ```typescript
 // Expose workflow execution via HTTP
-const executeWorkflow = HttpApiEndpoint.post(
-  "executeWorkflow",
-  "/workflows/:name/execute",
-)
+const executeWorkflow = HttpApiEndpoint.post("executeWorkflow", "/workflows/:name/execute")
   .setPath(Schema.Struct({ name: Schema.String }))
   .setPayload(Schema.Unknown)
   .addSuccess(Schema.Struct({ executionId: Schema.String }))

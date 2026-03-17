@@ -330,9 +330,7 @@ import { Atom } from "@effect-atom/atom-react";
 import { Schema } from "effect";
 
 // Create runtime with localStorage
-const localStorageRuntime = Atom.runtime(
-  BrowserKeyValueStore.layerLocalStorage,
-);
+const localStorageRuntime = Atom.runtime(BrowserKeyValueStore.layerLocalStorage);
 
 // Persisted atom with schema validation
 const themeAtom = Atom.kvs({

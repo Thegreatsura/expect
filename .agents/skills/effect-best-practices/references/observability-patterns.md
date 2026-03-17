@@ -27,8 +27,7 @@ yield *
 // Different log levels
 yield * Effect.logDebug("Cache lookup", { key, hit: true });
 yield * Effect.logInfo("User logged in", { userId });
-yield *
-  Effect.logWarning("Rate limit approaching", { current: 95, limit: 100 });
+yield * Effect.logWarning("Rate limit approaching", { current: 95, limit: 100 });
 yield * Effect.logError("Payment failed", { orderId, reason: error.message });
 yield * Effect.logFatal("Database connection lost");
 ```
@@ -36,9 +35,7 @@ yield * Effect.logFatal("Database connection lost");
 ### Logging in Services
 
 ```typescript
-const processOrder = Effect.fn("OrderService.processOrder")(function* (
-  input: OrderInput,
-) {
+const processOrder = Effect.fn("OrderService.processOrder")(function* (input: OrderInput) {
   yield* Effect.log("Starting order processing", { orderId: input.orderId });
 
   const result = yield* validateAndProcess(input).pipe(
@@ -92,9 +89,7 @@ Use `ServiceName.methodName` format consistently:
 Add important context to spans, but don't overdo it:
 
 ```typescript
-const processOrder = Effect.fn("OrderService.process")(function* (
-  orderId: OrderId,
-) {
+const processOrder = Effect.fn("OrderService.process")(function* (orderId: OrderId) {
   // GOOD - Important business identifiers
   yield* Effect.annotateCurrentSpan("orderId", orderId);
   yield* Effect.annotateCurrentSpan("userId", order.userId);
@@ -139,9 +134,7 @@ const ordersFailed = Metric.counter("orders_failed", {
 });
 
 // Use in service
-const processOrder = Effect.fn("OrderService.process")(function* (
-  input: OrderInput,
-) {
+const processOrder = Effect.fn("OrderService.process")(function* (input: OrderInput) {
   return yield* process(input).pipe(
     Effect.tap(() => Metric.increment(ordersProcessed)),
     Effect.tapError(() => Metric.increment(ordersFailed)),
@@ -276,9 +269,7 @@ const appConfig = Config.all({
   }),
   features: Config.all({
     enableBeta: Config.boolean("ENABLE_BETA").pipe(Config.withDefault(false)),
-    maxUploadSize: Config.integer("MAX_UPLOAD_SIZE").pipe(
-      Config.withDefault(10485760),
-    ),
+    maxUploadSize: Config.integer("MAX_UPLOAD_SIZE").pipe(Config.withDefault(10485760)),
   }),
 });
 ```
@@ -316,9 +307,7 @@ const JsonLoggerLive = Logger.json;
 ## Combining Observability
 
 ```typescript
-const processOrder = Effect.fn("OrderService.process")(function* (
-  input: OrderInput,
-) {
+const processOrder = Effect.fn("OrderService.process")(function* (input: OrderInput) {
   const startTime = yield* Effect.clockWith((clock) => clock.currentTimeMillis);
 
   // Annotate span

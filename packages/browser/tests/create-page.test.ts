@@ -1,25 +1,16 @@
 import { ChromiumBrowser, Cookie } from "@browser-tester/cookies";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  DEFAULT_VIDEO_HEIGHT_PX,
-  DEFAULT_VIDEO_WIDTH_PX,
-} from "../src/constants";
+import { DEFAULT_VIDEO_HEIGHT_PX, DEFAULT_VIDEO_WIDTH_PX } from "../src/constants";
 
-const {
-  injectCookiesMock,
-  launchMock,
-  newContextMock,
-  newPageMock,
-  gotoMock,
-  closeMock,
-} = vi.hoisted(() => ({
-  injectCookiesMock: vi.fn(),
-  launchMock: vi.fn(),
-  newContextMock: vi.fn(),
-  newPageMock: vi.fn(),
-  gotoMock: vi.fn(),
-  closeMock: vi.fn(),
-}));
+const { injectCookiesMock, launchMock, newContextMock, newPageMock, gotoMock, closeMock } =
+  vi.hoisted(() => ({
+    injectCookiesMock: vi.fn(),
+    launchMock: vi.fn(),
+    newContextMock: vi.fn(),
+    newPageMock: vi.fn(),
+    gotoMock: vi.fn(),
+    closeMock: vi.fn(),
+  }));
 
 vi.mock("playwright", () => ({
   chromium: {
@@ -97,10 +88,7 @@ describe("createPage cookie reuse", () => {
     });
     expect(newContextMock).toHaveBeenCalledWith({ locale: "en-US" });
     expect(extractCookiesMock).not.toHaveBeenCalled();
-    expect(injectCookiesMock).toHaveBeenCalledWith(
-      expect.anything(),
-      profileCookies
-    );
+    expect(injectCookiesMock).toHaveBeenCalledWith(expect.anything(), profileCookies);
   });
 
   it("falls back to sqlite extraction when profile extraction returns no cookies", async () => {
@@ -115,10 +103,7 @@ describe("createPage cookie reuse", () => {
       url: "https://github.com",
       browsers: ["helium"],
     });
-    expect(injectCookiesMock).toHaveBeenCalledWith(
-      expect.anything(),
-      fallbackCookies
-    );
+    expect(injectCookiesMock).toHaveBeenCalledWith(expect.anything(), fallbackCookies);
   });
 });
 
@@ -195,9 +180,6 @@ describe("createPage video recording", () => {
 
     await createPage("https://github.com", { cookies: testCookies });
 
-    expect(injectCookiesMock).toHaveBeenCalledWith(
-      expect.anything(),
-      testCookies
-    );
+    expect(injectCookiesMock).toHaveBeenCalledWith(expect.anything(), testCookies);
   });
 });

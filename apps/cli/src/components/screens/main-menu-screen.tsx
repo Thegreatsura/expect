@@ -88,7 +88,10 @@ export const MainMenu = () => {
   }, [gitState, localOptions]);
 
   const activeContext = selectedContext ?? defaultContext;
-  const staticSuggestions = useMemo(() => getFlowSuggestions(activeContext, gitState), [activeContext, gitState]);
+  const staticSuggestions = useMemo(
+    () => getFlowSuggestions(activeContext, gitState),
+    [activeContext, gitState],
+  );
   const [aiSuggestions, setAiSuggestions] = useState<readonly string[] | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const generationAbortRef = useRef<AbortController | null>(null);
@@ -231,8 +234,7 @@ export const MainMenu = () => {
     [openPicker, closePicker],
   );
 
-  const showSuggestion =
-    focus === "input" && value === "" && !pickerOpen && suggestions.length > 0;
+  const showSuggestion = focus === "input" && value === "" && !pickerOpen && suggestions.length > 0;
   const showCycleHint = showSuggestion && !hasCycled;
   const currentSuggestion = suggestions[suggestionIndex % suggestions.length];
 
@@ -256,9 +258,7 @@ export const MainMenu = () => {
         return;
       }
       if (key.leftArrow) {
-        setSuggestionIndex(
-          (previous) => (previous - 1 + suggestions.length) % suggestions.length,
-        );
+        setSuggestionIndex((previous) => (previous - 1 + suggestions.length) % suggestions.length);
         setHasCycled(true);
         return;
       }
@@ -277,10 +277,10 @@ export const MainMenu = () => {
       <DotField rows={3} dimColor="#1a1a1a" brightColor={COLORS.BORDER} />
       <Box marginBottom={1} paddingX={1}>
         <Text color={COLORS.BORDER}>
-          <Text bold color={COLORS.TEXT}>{"TESTIE"}</Text>
-          <Text color={COLORS.DIM}>{" v0.0.1"}</Text>
-          {" "}
-          {"─".repeat(Math.max(0, columns - 18))}
+          <Text bold color={COLORS.TEXT}>
+            {"TESTIE"}
+          </Text>
+          <Text color={COLORS.DIM}>{" v0.0.1"}</Text> {"─".repeat(Math.max(0, columns - 18))}
         </Text>
       </Box>
 
@@ -297,7 +297,8 @@ export const MainMenu = () => {
               <Text color={COLORS.DIM}>
                 Testing{" "}
                 <Text color={COLORS.PRIMARY}>
-                  @{activeContext.type === "pr" ? `#${activeContext.prNumber}` : activeContext.label}
+                  @
+                  {activeContext.type === "pr" ? `#${activeContext.prNumber}` : activeContext.label}
                 </Text>{" "}
                 {activeContext.description}
               </Text>
@@ -309,7 +310,11 @@ export const MainMenu = () => {
           </Clickable>
         </Box>
         <Clickable onClick={() => setFocus("input")}>
-          <RuledBox color={focus === "input" ? COLORS.PRIMARY : COLORS.BORDER} marginTop={1} paddingX={0}>
+          <RuledBox
+            color={focus === "input" ? COLORS.PRIMARY : COLORS.BORDER}
+            marginTop={1}
+            paddingX={0}
+          >
             <Box justifyContent="space-between">
               <Box>
                 <Text color={COLORS.PRIMARY}>{"❯ "}</Text>

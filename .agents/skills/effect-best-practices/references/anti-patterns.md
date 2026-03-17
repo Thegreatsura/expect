@@ -51,9 +51,7 @@ yield *
   Effect.gen(function* () {
     const user = yield* repo.findById(id);
     if (!user) {
-      return yield* Effect.fail(
-        new UserNotFoundError({ userId: id, message: "Not found" }),
-      );
+      return yield* Effect.fail(new UserNotFoundError({ userId: id, message: "Not found" }));
     }
     return user;
   });
@@ -65,9 +63,7 @@ yield *
 // FORBIDDEN
 yield *
   someEffect.pipe(
-    Effect.catchAll((err) =>
-      Effect.fail(new GenericError({ message: "Something failed" })),
-    ),
+    Effect.catchAll((err) => Effect.fail(new GenericError({ message: "Something failed" }))),
   );
 ```
 
@@ -79,10 +75,8 @@ yield *
 yield *
   someEffect.pipe(
     Effect.catchTags({
-      DatabaseError: (err) =>
-        Effect.fail(new ServiceUnavailableError({ message: err.message })),
-      ValidationError: (err) =>
-        Effect.fail(new BadRequestError({ message: err.message })),
+      DatabaseError: (err) => Effect.fail(new ServiceUnavailableError({ message: err.message })),
+      ValidationError: (err) => Effect.fail(new BadRequestError({ message: err.message })),
     }),
   );
 ```
@@ -213,8 +207,7 @@ const name = pipe(maybeName, Option.getOrThrow);
 // Handle both cases explicitly
 yield *
   Option.match(maybeUser, {
-    onNone: () =>
-      Effect.fail(new UserNotFoundError({ userId, message: "Not found" })),
+    onNone: () => Effect.fail(new UserNotFoundError({ userId, message: "Not found" })),
     onSome: Effect.succeed,
   });
 
@@ -280,10 +273,7 @@ yield *
 
 ```typescript
 // FORBIDDEN
-yield *
-  effect.pipe(
-    Effect.mapError((err) => new GenericError({ message: String(err) })),
-  );
+yield * effect.pipe(Effect.mapError((err) => new GenericError({ message: String(err) })));
 ```
 
 **Why:** Loses error type information, can't discriminate between error types.

@@ -63,19 +63,19 @@ src/
 
 Exported from `index.ts`:
 
-| Export | What it does |
-|---|---|
-| `extractCookies(options)` | Main entry. Extracts cookies from specified browsers for a URL via SQLite. |
-| `extractProfileCookies(options)` | Extracts cookies from a specific browser profile (CDP for Chromium, SQLite for Firefox/Safari). |
-| `extractAllProfileCookies(profiles)` | Extracts cookies from multiple profiles sequentially. |
-| `detectBrowserProfiles(options?)` | Detects all installed browsers and their profiles on the system. |
-| `matchCookies(cookies, url)` | Filters cookies that match a given URL (domain, path, secure, expiry). |
-| `matchCookieHeader(cookies, url)` | Same as matchCookies but returns a `Cookie:` header string. |
-| `toPlaywrightCookies(cookies)` | Converts to Playwright's cookie format. |
-| `toPuppeteerCookies(cookies)` | Converts to Puppeteer's cookie format. |
-| `toCookieHeader(cookies)` | Formats cookies as `name=value; ...` string. |
-| `detectDefaultBrowser()` | Returns the OS default browser as a `Browser` key. |
-| `SUPPORTED_BROWSERS` | List of all supported browser keys. |
+| Export                               | What it does                                                                                    |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `extractCookies(options)`            | Main entry. Extracts cookies from specified browsers for a URL via SQLite.                      |
+| `extractProfileCookies(options)`     | Extracts cookies from a specific browser profile (CDP for Chromium, SQLite for Firefox/Safari). |
+| `extractAllProfileCookies(profiles)` | Extracts cookies from multiple profiles sequentially.                                           |
+| `detectBrowserProfiles(options?)`    | Detects all installed browsers and their profiles on the system.                                |
+| `matchCookies(cookies, url)`         | Filters cookies that match a given URL (domain, path, secure, expiry).                          |
+| `matchCookieHeader(cookies, url)`    | Same as matchCookies but returns a `Cookie:` header string.                                     |
+| `toPlaywrightCookies(cookies)`       | Converts to Playwright's cookie format.                                                         |
+| `toPuppeteerCookies(cookies)`        | Converts to Puppeteer's cookie format.                                                          |
+| `toCookieHeader(cookies)`            | Formats cookies as `name=value; ...` string.                                                    |
+| `detectDefaultBrowser()`             | Returns the OS default browser as a `Browser` key.                                              |
+| `SUPPORTED_BROWSERS`                 | List of all supported browser keys.                                                             |
 
 ---
 
@@ -172,27 +172,45 @@ detectBrowserProfiles()
 interface Cookie {
   name: string;
   value: string;
-  domain: string;        // Leading dot stripped
+  domain: string; // Leading dot stripped
   path: string;
-  expires?: number;      // Unix epoch seconds
+  expires?: number; // Unix epoch seconds
   secure: boolean;
   httpOnly: boolean;
   sameSite?: "Strict" | "Lax" | "None";
-  browser: Browser;      // Which browser this came from
+  browser: Browser; // Which browser this came from
 }
 
-type Browser = "chrome" | "edge" | "brave" | "arc" | "dia" | "helium" | "chromium"
-  | "vivaldi" | "opera" | "ghost" | "sidekick" | "yandex" | "iridium" | "thorium"
-  | "sigmaos" | "wavebox" | "comet" | "blisk" | "firefox" | "safari";
+type Browser =
+  | "chrome"
+  | "edge"
+  | "brave"
+  | "arc"
+  | "dia"
+  | "helium"
+  | "chromium"
+  | "vivaldi"
+  | "opera"
+  | "ghost"
+  | "sidekick"
+  | "yandex"
+  | "iridium"
+  | "thorium"
+  | "sigmaos"
+  | "wavebox"
+  | "comet"
+  | "blisk"
+  | "firefox"
+  | "safari";
 
 type ChromiumBrowser = Exclude<Browser, "firefox" | "safari">;
 
 interface BrowserProfile {
-  profileName: string;   // Directory name (e.g., "Default", "Profile 1")
-  profilePath: string;   // Absolute path to profile directory
-  displayName: string;   // Human-readable name from Local State
-  browser: BrowserInfo;  // { name, executablePath }
-  locale?: string;       // From Preferences intl.selected_languages
+  profileName: string; // Directory name (e.g., "Default", "Profile 1")
+  profilePath: string; // Absolute path to profile directory
+  displayName: string; // Human-readable name from Local State
+  browser: BrowserInfo; // { name, executablePath }
+  locale?: string; // From Preferences intl.selected_languages
 }
 ```
 
@@ -204,17 +222,18 @@ interface BrowserProfile {
 
 Three decryption paths based on platform:
 
-| Platform | Cipher | Key Source | Key Derivation |
-|---|---|---|---|
-| macOS | AES-128-CBC | `security find-generic-password -w -s "Chrome Safe Storage"` | PBKDF2(password, "saltysalt", 1003 iters, sha1) |
-| Linux | AES-128-CBC | `secret-tool lookup application chrome` (fallback: "peanuts") | PBKDF2(password, "saltysalt", 1 iter, sha1) |
-| Windows | AES-256-GCM | Local State → `os_crypt.encrypted_key` → DPAPI via PowerShell | Direct master key from DPAPI |
+| Platform | Cipher      | Key Source                                                    | Key Derivation                                  |
+| -------- | ----------- | ------------------------------------------------------------- | ----------------------------------------------- |
+| macOS    | AES-128-CBC | `security find-generic-password -w -s "Chrome Safe Storage"`  | PBKDF2(password, "saltysalt", 1003 iters, sha1) |
+| Linux    | AES-128-CBC | `secret-tool lookup application chrome` (fallback: "peanuts") | PBKDF2(password, "saltysalt", 1 iter, sha1)     |
+| Windows  | AES-256-GCM | Local State → `os_crypt.encrypted_key` → DPAPI via PowerShell | Direct master key from DPAPI                    |
 
 Chromium cookie values are prefixed with `v10`, `v11`, etc. The prefix is stripped before decryption. After meta version 24, an additional 32-byte hash prefix is stripped from the plaintext.
 
 ### Safari Binary Cookie Parser (`sqlite/safari.ts`)
 
 Parses Apple's proprietary `Cookies.binarycookies` format:
+
 - Magic: `"cook"` (4 bytes)
 - Page count (4 bytes BE)
 - Page sizes array
@@ -226,12 +245,14 @@ Parses Apple's proprietary `Cookies.binarycookies` format:
 ### SQLite Adapter (`sqlite/adapter.ts`)
 
 Runtime-adaptive: detects Bun vs Node and uses the appropriate SQLite API:
+
 - Bun: `import("bun:sqlite")` → `new Database(path, { readonly: true })`
 - Node: `import("node:sqlite")` → `new DatabaseSync(path, { readOnly: true, readBigInts: true })`
 
 ### CDP Profile Extraction (`profiles/cdp-extract.ts`)
 
 For Chromium profiles, SQLite doesn't work because the cookie encryption key is tied to the profile. Instead:
+
 1. Copy the entire profile directory + `Local State` to a temp dir
 2. Launch the browser headless with `--remote-debugging-port`
 3. Wait 3 seconds for startup
@@ -241,6 +262,7 @@ For Chromium profiles, SQLite doesn't work because the cookie encryption key is 
 ### Profile Detection (`profiles/detector.ts`)
 
 Platform-specific browser discovery:
+
 - **macOS**: Checks `/Applications/*.app` existence
 - **Linux**: Scans `/usr/bin`, `/usr/local/bin`, `/snap/bin`
 - **Windows**: Registry query (`HKLM\SOFTWARE\...\App Paths`), then `Program Files` scan
@@ -253,15 +275,15 @@ Firefox profiles: parses `profiles.ini` (INI format) for profile paths.
 
 ## Dependencies
 
-| Dependency | Usage |
-|---|---|
-| `@browser-tester/utils` | `execCommand`, `getEpochSeconds`, `formatError`, `sleep`, `copyDir`, `MS_PER_SECOND` |
-| `default-browser` | Detects OS default browser (returns bundle ID / .desktop name) |
-| `ws` | WebSocket client for CDP communication |
-| `node:crypto` | PBKDF2 key derivation, AES decryption |
-| `node:sqlite` / `bun:sqlite` | SQLite queries (runtime-detected) |
-| `node:child_process` | Spawning headless browser for CDP extraction |
-| `node:fs` | File operations (read, copy, temp dirs) |
+| Dependency                   | Usage                                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
+| `@browser-tester/utils`      | `execCommand`, `getEpochSeconds`, `formatError`, `sleep`, `copyDir`, `MS_PER_SECOND` |
+| `default-browser`            | Detects OS default browser (returns bundle ID / .desktop name)                       |
+| `ws`                         | WebSocket client for CDP communication                                               |
+| `node:crypto`                | PBKDF2 key derivation, AES decryption                                                |
+| `node:sqlite` / `bun:sqlite` | SQLite queries (runtime-detected)                                                    |
+| `node:child_process`         | Spawning headless browser for CDP extraction                                         |
+| `node:fs`                    | File operations (read, copy, temp dirs)                                              |
 
 ---
 
@@ -292,6 +314,7 @@ There is **significant duplication** between the sqlite configs, profile configs
 ## How the Jar Works (`jar.ts`)
 
 Cookie matching for a URL:
+
 1. Parse URL → extract hostname, pathname, protocol
 2. For each cookie: check domain match (host matches or is subdomain), path prefix, secure flag, expiry
 3. Handle `__Host-` prefix cookies (must not have leading dot on domain)
@@ -329,6 +352,7 @@ All SQLite reads copy the database + WAL/SHM to a temp directory first (avoids l
 ### Expiration Normalization
 
 Handles three epoch formats:
+
 - Chrome epoch: microseconds since 1601-01-01 → divide by 1M, subtract 11644473600
 - Millisecond timestamps: divide by 1000
 - Unix seconds: pass through
@@ -339,6 +363,7 @@ Handles three epoch formats:
 ## Test Coverage
 
 53 files total, 18 test files covering:
+
 - Crypto decryption
 - Jar matching
 - Default browser detection

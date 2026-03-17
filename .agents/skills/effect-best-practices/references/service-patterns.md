@@ -21,15 +21,11 @@ export class UserService extends Effect.Service<UserService>()("UserService", {
       // Implementation
     });
 
-    const findByEmail = Effect.fn("UserService.findByEmail")(function* (
-      email: string,
-    ) {
+    const findByEmail = Effect.fn("UserService.findByEmail")(function* (email: string) {
       // Implementation
     });
 
-    const create = Effect.fn("UserService.create")(function* (
-      input: CreateUserInput,
-    ) {
+    const create = Effect.fn("UserService.create")(function* (input: CreateUserInput) {
       // Implementation
     });
 
@@ -47,66 +43,51 @@ export class UserService extends Effect.Service<UserService>()("UserService", {
 - No manual `Layer.provide` at usage sites
 
 ```typescript
-export class OrderService extends Effect.Service<OrderService>()(
-  "OrderService",
-  {
-    accessors: true,
-    dependencies: [
-      UserService.Default,
-      ProductService.Default,
-      InventoryService.Default,
-    ],
-    effect: Effect.gen(function* () {
-      // Dependencies are automatically available
-      const users = yield* UserService;
-      const products = yield* ProductService;
-      const inventory = yield* InventoryService;
+export class OrderService extends Effect.Service<OrderService>()("OrderService", {
+  accessors: true,
+  dependencies: [UserService.Default, ProductService.Default, InventoryService.Default],
+  effect: Effect.gen(function* () {
+    // Dependencies are automatically available
+    const users = yield* UserService;
+    const products = yield* ProductService;
+    const inventory = yield* InventoryService;
 
-      const create = Effect.fn("OrderService.create")(function* (
-        input: CreateOrderInput,
-      ) {
-        // Validate user exists
-        const user = yield* users.findById(input.userId);
+    const create = Effect.fn("OrderService.create")(function* (input: CreateOrderInput) {
+      // Validate user exists
+      const user = yield* users.findById(input.userId);
 
-        // Check product availability
-        const product = yield* products.findById(input.productId);
-        const available = yield* inventory.checkAvailability(
-          input.productId,
-          input.quantity,
+      // Check product availability
+      const product = yield* products.findById(input.productId);
+      const available = yield* inventory.checkAvailability(input.productId, input.quantity);
+
+      if (!available) {
+        return yield* Effect.fail(
+          new InsufficientInventoryError({
+            productId: input.productId,
+            message: "Not enough inventory",
+          }),
         );
+      }
 
-        if (!available) {
-          return yield* Effect.fail(
-            new InsufficientInventoryError({
-              productId: input.productId,
-              message: "Not enough inventory",
-            }),
-          );
-        }
+      // Create order...
+    });
 
-        // Create order...
-      });
-
-      return { create };
-    }),
-  },
-) {}
+    return { create };
+  }),
+}) {}
 ```
 
 ### Wrong: Leaking Dependencies
 
 ```typescript
 // WRONG - Dependencies not declared, must be provided manually
-export class OrderService extends Effect.Service<OrderService>()(
-  "OrderService",
-  {
-    accessors: true,
-    effect: Effect.gen(function* () {
-      const users = yield* UserService; // Dependency not in `dependencies` array!
-      // ...
-    }),
-  },
-) {}
+export class OrderService extends Effect.Service<OrderService>()("OrderService", {
+  accessors: true,
+  effect: Effect.gen(function* () {
+    const users = yield* UserService; // Dependency not in `dependencies` array!
+    // ...
+  }),
+}) {}
 
 // Now every usage site must do this:
 const program = OrderService.create(input).pipe(
@@ -169,15 +150,9 @@ yield * Effect.annotateCurrentSpan("step", "completing");
 import { Context } from "effect";
 
 // These are provided by the runtime, not created by our code
-export class KVNamespace extends Context.Tag("KVNamespace")<
-  KVNamespace,
-  CloudflareKVNamespace
->() {}
+export class KVNamespace extends Context.Tag("KVNamespace")<KVNamespace, CloudflareKVNamespace>() {}
 
-export class R2Bucket extends Context.Tag("R2Bucket")<
-  R2Bucket,
-  CloudflareR2Bucket
->() {}
+export class R2Bucket extends Context.Tag("R2Bucket")<R2Bucket, CloudflareR2Bucket>() {}
 
 // In the worker entry point
 const handler = {
@@ -274,8 +249,7 @@ const findById = Effect.fn("UserService.findById")(function* (
 ): Effect.Effect<User, UserNotFoundError> {
   const maybeUser = yield* repo.findById(id);
   return yield* Option.match(maybeUser, {
-    onNone: () =>
-      Effect.fail(new UserNotFoundError({ userId: id, message: "Not found" })),
+    onNone: () => Effect.fail(new UserNotFoundError({ userId: id, message: "Not found" })),
     onSome: Effect.succeed,
   });
 });
@@ -302,34 +276,25 @@ export const UserServiceTest = Layer.succeed(
 );
 
 // Or with Effect.Service for stateful mocks
-export class UserServiceTest extends Effect.Service<UserService>()(
-  "UserService",
-  {
-    accessors: true,
-    effect: Effect.gen(function* () {
-      const users = new Map<string, User>();
+export class UserServiceTest extends Effect.Service<UserService>()("UserService", {
+  accessors: true,
+  effect: Effect.gen(function* () {
+    const users = new Map<string, User>();
 
-      const findById = Effect.fn("UserService.findById")(function* (
-        id: UserId,
-      ) {
-        const user = users.get(id);
-        if (!user)
-          return yield* Effect.fail(
-            new UserNotFoundError({ userId: id, message: "Not found" }),
-          );
-        return user;
-      });
+    const findById = Effect.fn("UserService.findById")(function* (id: UserId) {
+      const user = users.get(id);
+      if (!user)
+        return yield* Effect.fail(new UserNotFoundError({ userId: id, message: "Not found" }));
+      return user;
+    });
 
-      const create = Effect.fn("UserService.create")(function* (
-        input: CreateUserInput,
-      ) {
-        const user = { id: UserId.make(crypto.randomUUID()), ...input };
-        users.set(user.id, user);
-        return user;
-      });
+    const create = Effect.fn("UserService.create")(function* (input: CreateUserInput) {
+      const user = { id: UserId.make(crypto.randomUUID()), ...input };
+      users.set(user.id, user);
+      return user;
+    });
 
-      return { findById, create };
-    }),
-  },
-) {}
+    return { findById, create };
+  }),
+}) {}
 ```

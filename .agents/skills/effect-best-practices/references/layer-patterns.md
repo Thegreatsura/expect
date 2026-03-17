@@ -7,29 +7,26 @@
 ### Correct Pattern
 
 ```typescript
-export class OrderService extends Effect.Service<OrderService>()(
-  "OrderService",
-  {
-    accessors: true,
-    dependencies: [
-      UserService.Default,
-      ProductService.Default,
-      InventoryService.Default,
-      PaymentService.Default,
-    ],
-    effect: Effect.gen(function* () {
-      const users = yield* UserService;
-      const products = yield* ProductService;
-      const inventory = yield* InventoryService;
-      const payments = yield* PaymentService;
+export class OrderService extends Effect.Service<OrderService>()("OrderService", {
+  accessors: true,
+  dependencies: [
+    UserService.Default,
+    ProductService.Default,
+    InventoryService.Default,
+    PaymentService.Default,
+  ],
+  effect: Effect.gen(function* () {
+    const users = yield* UserService;
+    const products = yield* ProductService;
+    const inventory = yield* InventoryService;
+    const payments = yield* PaymentService;
 
-      // Service implementation...
-      return {
-        /* methods */
-      };
-    }),
-  },
-) {}
+    // Service implementation...
+    return {
+      /* methods */
+    };
+  }),
+}) {}
 
 // At app root - simple, flat composition
 const AppLive = Layer.mergeAll(
@@ -44,16 +41,13 @@ const AppLive = Layer.mergeAll(
 
 ```typescript
 // WRONG - Dependencies not declared
-export class OrderService extends Effect.Service<OrderService>()(
-  "OrderService",
-  {
-    accessors: true,
-    effect: Effect.gen(function* () {
-      const users = yield* UserService; // Not in dependencies!
-      // ...
-    }),
-  },
-) {}
+export class OrderService extends Effect.Service<OrderService>()("OrderService", {
+  accessors: true,
+  effect: Effect.gen(function* () {
+    const users = yield* UserService; // Not in dependencies!
+    // ...
+  }),
+}) {}
 
 // Now every usage requires manual wiring
 const program = OrderService.create(input).pipe(
@@ -95,9 +89,7 @@ export class UserRepo extends Effect.Service<UserRepo>()("UserRepo", {
     const sql = yield* PgClient.PgClient;
 
     const findById = Effect.fn("UserRepo.findById")(function* (id: UserId) {
-      const rows = yield* sql`SELECT * FROM users WHERE id = ${id}`.pipe(
-        Effect.orDie,
-      );
+      const rows = yield* sql`SELECT * FROM users WHERE id = ${id}`.pipe(Effect.orDie);
       return rows[0] as User | undefined;
     });
 
@@ -125,11 +117,7 @@ const ServicesLive = Layer.mergeAll(
   NotificationService.Default,
 );
 
-const InfrastructureLive = Layer.mergeAll(
-  DatabaseLive,
-  RedisLive,
-  HttpClientLive,
-);
+const InfrastructureLive = Layer.mergeAll(DatabaseLive, RedisLive, HttpClientLive);
 
 const AppLive = ServicesLive.pipe(Layer.provide(InfrastructureLive));
 ```
@@ -167,29 +155,25 @@ export const UserServiceTest = Layer.succeed(
 );
 
 // Test with in-memory state
-export class UserServiceInMemory extends Effect.Service<UserService>()(
-  "UserService",
-  {
-    accessors: true,
-    effect: Effect.gen(function* () {
-      const store = new Map<string, User>();
+export class UserServiceInMemory extends Effect.Service<UserService>()("UserService", {
+  accessors: true,
+  effect: Effect.gen(function* () {
+    const store = new Map<string, User>();
 
-      return {
-        findById: Effect.fn("UserService.findById")(function* (id) {
-          const user = store.get(id);
-          if (!user)
-            return yield* Effect.fail(new UserNotFoundError({ userId: id }));
-          return user;
-        }),
-        create: Effect.fn("UserService.create")(function* (input) {
-          const user = { id: UserId.make(crypto.randomUUID()), ...input };
-          store.set(user.id, user);
-          return user;
-        }),
-      };
-    }),
-  },
-) {}
+    return {
+      findById: Effect.fn("UserService.findById")(function* (id) {
+        const user = store.get(id);
+        if (!user) return yield* Effect.fail(new UserNotFoundError({ userId: id }));
+        return user;
+      }),
+      create: Effect.fn("UserService.create")(function* (input) {
+        const user = { id: UserId.make(crypto.randomUUID()), ...input };
+        store.set(user.id, user);
+        return user;
+      }),
+    };
+  }),
+}) {}
 ```
 
 ## Layer.unwrapEffect for Config-Dependent Layers
@@ -204,14 +188,9 @@ const ApiClientLive = Layer.unwrapEffect(
   Effect.gen(function* () {
     const apiKey = yield* Config.string("API_KEY");
     const baseUrl = yield* Config.string("API_BASE_URL");
-    const timeout = yield* Config.integer("API_TIMEOUT").pipe(
-      Config.withDefault(5000),
-    );
+    const timeout = yield* Config.integer("API_TIMEOUT").pipe(Config.withDefault(5000));
 
-    return Layer.succeed(
-      ApiClient,
-      new ApiClientImpl({ apiKey, baseUrl, timeout }),
-    );
+    return Layer.succeed(ApiClient, new ApiClientImpl({ apiKey, baseUrl, timeout }));
   }),
 );
 
@@ -226,9 +205,7 @@ const ValidatedConfigLive = Layer.unwrapEffect(
 
     // Validate config
     if (!config.dbUrl.startsWith("postgresql://")) {
-      return yield* Effect.fail(
-        new ConfigError({ message: "Invalid DATABASE_URL" }),
-      );
+      return yield* Effect.fail(new ConfigError({ message: "Invalid DATABASE_URL" }));
     }
 
     return Layer.succeed(AppConfig, config);
@@ -281,11 +258,9 @@ export class UserRepo extends Effect.Service<UserRepo>()("UserRepo", {
 // test/setup.ts
 import { Layer } from "effect";
 
-export const TestLive = Layer.mergeAll(
-  UserServiceTest,
-  OrderServiceTest,
-  ProductServiceTest,
-).pipe(Layer.provide(InMemoryDatabaseLive));
+export const TestLive = Layer.mergeAll(UserServiceTest, OrderServiceTest, ProductServiceTest).pipe(
+  Layer.provide(InMemoryDatabaseLive),
+);
 
 // test/user.test.ts
 import { Effect } from "effect";
@@ -321,9 +296,7 @@ const LoggerLive = Layer.effect(
   Effect.gen(function* () {
     const config = yield* AppConfig;
     const transport =
-      config.env === "production"
-        ? createCloudTransport()
-        : createConsoleTransport();
+      config.env === "production" ? createCloudTransport() : createConsoleTransport();
     return new LoggerImpl(transport);
   }),
 );

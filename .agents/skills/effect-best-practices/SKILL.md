@@ -52,9 +52,7 @@ export class UserService extends Effect.Service<UserService>()("UserService", {
       return user;
     });
 
-    const create = Effect.fn("UserService.create")(function* (
-      data: CreateUserInput,
-    ) {
+    const create = Effect.fn("UserService.create")(function* (data: CreateUserInput) {
       const user = yield* repo.create(data);
       yield* Effect.log("User created", { userId: user.id });
       return user;
@@ -115,14 +113,10 @@ export class UserCreateError extends Schema.TaggedError<UserCreateError>()(
 yield *
   repo.findById(id).pipe(
     Effect.catchTag("DatabaseError", (err) =>
-      Effect.fail(
-        new UserNotFoundError({ userId: id, message: "Lookup failed" }),
-      ),
+      Effect.fail(new UserNotFoundError({ userId: id, message: "Lookup failed" })),
     ),
     Effect.catchTag("ConnectionError", (err) =>
-      Effect.fail(
-        new ServiceUnavailableError({ message: "Database unreachable" }),
-      ),
+      Effect.fail(new ServiceUnavailableError({ message: "Database unreachable" })),
     ),
   );
 
@@ -131,13 +125,9 @@ yield *
   effect.pipe(
     Effect.catchTags({
       DatabaseError: (err) =>
-        Effect.fail(
-          new UserNotFoundError({ userId: id, message: err.message }),
-        ),
+        Effect.fail(new UserNotFoundError({ userId: id, message: err.message })),
       ValidationError: (err) =>
-        Effect.fail(
-          new InvalidEmailError({ email: input.email, message: err.message }),
-        ),
+        Effect.fail(new InvalidEmailError({ email: input.email, message: err.message })),
     }),
   );
 ```
@@ -156,12 +146,9 @@ export class NotFoundError extends Schema.TaggedError<NotFoundError>()(
 
 // Then mapping everything to it:
 Effect.catchTags({
-  UserNotFoundError: (err) =>
-    Effect.fail(new NotFoundError({ message: "Not found" })),
-  ChannelNotFoundError: (err) =>
-    Effect.fail(new NotFoundError({ message: "Not found" })),
-  MessageNotFoundError: (err) =>
-    Effect.fail(new NotFoundError({ message: "Not found" })),
+  UserNotFoundError: (err) => Effect.fail(new NotFoundError({ message: "Not found" })),
+  ChannelNotFoundError: (err) => Effect.fail(new NotFoundError({ message: "Not found" })),
+  MessageNotFoundError: (err) => Effect.fail(new NotFoundError({ message: "Not found" })),
 });
 // Frontend gets useless: { _tag: "NotFoundError", message: "Not found" }
 // Which resource? User? Channel? Message? Can't tell!
@@ -210,9 +197,7 @@ import { Schema } from "effect";
 export const UserId = Schema.UUID.pipe(Schema.brand("@App/UserId"));
 export type UserId = Schema.Schema.Type<typeof UserId>;
 
-export const OrganizationId = Schema.UUID.pipe(
-  Schema.brand("@App/OrganizationId"),
-);
+export const OrganizationId = Schema.UUID.pipe(Schema.brand("@App/OrganizationId"));
 export type OrganizationId = Schema.Schema.Type<typeof OrganizationId>;
 
 // Domain types - use Schema.Struct
@@ -272,23 +257,16 @@ const transfer = Effect.fn("AccountService.transfer")(function* (
 
 ```typescript
 // CORRECT - dependencies in service definition
-export class OrderService extends Effect.Service<OrderService>()(
-  "OrderService",
-  {
-    accessors: true,
-    dependencies: [
-      UserService.Default,
-      ProductService.Default,
-      PaymentService.Default,
-    ],
-    effect: Effect.gen(function* () {
-      const users = yield* UserService;
-      const products = yield* ProductService;
-      const payments = yield* PaymentService;
-      // ...
-    }),
-  },
-) {}
+export class OrderService extends Effect.Service<OrderService>()("OrderService", {
+  accessors: true,
+  dependencies: [UserService.Default, ProductService.Default, PaymentService.Default],
+  effect: Effect.gen(function* () {
+    const users = yield* UserService;
+    const products = yield* ProductService;
+    const payments = yield* PaymentService;
+    // ...
+  }),
+}) {}
 
 // At app root - simple merge
 const AppLive = Layer.mergeAll(
@@ -309,8 +287,7 @@ See `references/layer-patterns.md` for testing layers and config-dependent layer
 // CORRECT - explicit handling
 yield *
   Option.match(maybeUser, {
-    onNone: () =>
-      Effect.fail(new UserNotFoundError({ userId, message: "Not found" })),
+    onNone: () => Effect.fail(new UserNotFoundError({ userId, message: "Not found" })),
     onSome: (user) => Effect.succeed(user),
   });
 

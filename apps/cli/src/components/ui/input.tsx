@@ -186,8 +186,7 @@ export const Input = ({
         handled = true;
       } else if (key.ctrl && input === "d") {
         if (cursorOffset < originalValue.length) {
-          nextValue =
-            originalValue.slice(0, cursorOffset) + originalValue.slice(cursorOffset + 1);
+          nextValue = originalValue.slice(0, cursorOffset) + originalValue.slice(cursorOffset + 1);
         }
         handled = true;
       } else if (key.ctrl && input === "t") {
