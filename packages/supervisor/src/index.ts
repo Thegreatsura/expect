@@ -17,7 +17,7 @@ export {
 } from "./constants";
 export { createBrowserRunReport } from "./create-browser-run-report";
 export { ExecutionError } from "./errors";
-export type { BrowserRunEvent } from "./events";
+export type { BrowserRunEvent, BrowserRunToolResultEvent } from "./events";
 export { executeBrowserFlow } from "./execute-browser-flow";
 export { loadFlow, loadFlowBySlug, listFlows, removeFlow, saveFlow } from "./flow-storage";
 export { FlowNotFoundError, FlowParseError, FlowStorageError } from "./flow-storage-errors";

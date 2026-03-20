@@ -211,7 +211,7 @@ export const startLiveViewServer = async ({
       for (const viewer of viewers) viewer.end();
       viewers.clear();
       await new Promise<void>((resolve, reject) => {
-        server.close((error) => (error ? reject(error) : resolve()));
+        server.close((error: Error | undefined) => (error ? reject(error) : resolve()));
       });
     },
   };
