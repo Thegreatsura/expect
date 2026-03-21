@@ -25,4 +25,4 @@ jobs:
           GITHUB_ACTIONS: "1"
       - name: Build
         run: pnpm build
-      - run: pnpm dlx pkg-pr-new publish ./packages/cli
+      - run: pnpm dlx pkg-pr-new publish ./apps/cli
