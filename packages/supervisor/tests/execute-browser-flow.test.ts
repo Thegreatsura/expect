@@ -182,7 +182,7 @@ describe("executeBrowserFlow", () => {
     expect(promptText).toContain("Go through onboarding and click Import Projects.");
     expect(promptText).toContain("call the close tool exactly once");
     expect(promptText).toContain("First master the primary flow the developer asked for.");
-    expect(promptText).toContain("test 1-2 additional nearby flows");
+    expect(promptText).toContain("aim for 2-3 follow-ups");
     expect(promptText).toContain("Allowed failure categories: app-bug");
     expect(events.some((event) => event.type === "step-started")).toBe(true);
     expect(events.some((event) => event.type === "browser-log")).toBe(true);

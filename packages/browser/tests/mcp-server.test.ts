@@ -67,10 +67,17 @@ afterAll(async () => {
 });
 
 describe("MCP server tools", () => {
-  it("lists exactly 4 tools", async () => {
+  it("lists all tools", async () => {
     const tools = await mcpClient.listTools();
     const toolNames = tools.tools.map((tool) => tool.name).sort();
-    expect(toolNames).toEqual(["close", "open", "playwright", "screenshot"]);
+    expect(toolNames).toEqual([
+      "close",
+      "console_logs",
+      "network_requests",
+      "open",
+      "playwright",
+      "screenshot",
+    ]);
   });
 
   it("open → snapshot → playwright ref click → verify", async () => {

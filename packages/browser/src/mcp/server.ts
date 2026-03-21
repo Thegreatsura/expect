@@ -197,7 +197,9 @@ export const createBrowserMcpServer = <E>(
             ? sessionData.consoleMessages.filter((entry) => entry.type === type)
             : sessionData.consoleMessages;
           if (clear) sessionData.consoleMessages.length = 0;
-          return entries.length === 0 ? textResult("No console messages captured.") : jsonResult(entries);
+          return entries.length === 0
+            ? textResult("No console messages captured.")
+            : jsonResult(entries);
         }),
       ),
   );
