@@ -50,7 +50,10 @@ describe("loadSession", () => {
   it("fails with SessionLoadError for invalid JSON line", async () => {
     tempDir = mkdtempSync(join(tmpdir(), TEMP_DIR_PREFIX));
     const sessionPath = join(tempDir, "bad.ndjson");
-    writeFileSync(sessionPath, '{"type":2}\nnot-json\n{"type":3}\n');
+    writeFileSync(
+      sessionPath,
+      '{"type":2,"timestamp":1000}\nnot-json\n{"type":3,"timestamp":2000}\n',
+    );
 
     const result = await Effect.runPromiseExit(
       loadSession(sessionPath).pipe(Effect.provide(NodeFileSystem.layer)),

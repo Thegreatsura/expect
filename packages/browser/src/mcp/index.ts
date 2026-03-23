@@ -5,3 +5,4 @@ export {
 export { McpSession } from "./mcp-session";
 export { McpRuntime } from "./runtime";
 export { createBrowserMcpServer, startBrowserMcpServer } from "./server";
+export type { ViewerRunState, ViewerStepEvent } from "./viewer-events";

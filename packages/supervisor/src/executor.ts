@@ -2,6 +2,7 @@ import { Agent, AgentStreamOptions, ClaudeQueryError, CodexRunError } from "@bro
 import { Effect, Layer, Option, Schema, ServiceMap, Stream } from "effect";
 import { ExecutedTestPlan, RunStarted, type TestPlan } from "@browser-tester/shared/models";
 import { NodeServices } from "@effect/platform-node";
+import { Updates } from "./updates";
 
 export class ExecutionError extends Schema.ErrorClass<ExecutionError>("@supervisor/ExecutionError")(
   {
@@ -14,6 +15,8 @@ export class ExecutionError extends Schema.ErrorClass<ExecutionError>("@supervis
 
 export class Executor extends ServiceMap.Service<Executor>()("@supervisor/Executor", {
   make: Effect.gen(function* () {
+    const updates = yield* Updates;
+
     const executePlan = Effect.fn("Executor.executePlan")(function* (plan: TestPlan) {
       const agent = yield* Agent;
       const initial = new ExecutedTestPlan({
@@ -36,6 +39,13 @@ export class Executor extends ServiceMap.Service<Executor>()("@supervisor/Execut
             return [next, [next]] as const;
           },
         ),
+        Stream.tap((executed) => {
+          const lastEvent = executed.events.at(-1);
+          if (lastEvent && lastEvent._tag !== "AgentText") {
+            return updates.publish(lastEvent);
+          }
+          return Effect.void;
+        }),
         Stream.mapError((reason) => new ExecutionError({ reason })),
       );
     }, Stream.unwrap);
@@ -43,5 +53,8 @@ export class Executor extends ServiceMap.Service<Executor>()("@supervisor/Execut
     return { executePlan } as const;
   }),
 }) {
-  static layer = Layer.effect(this)(this.make).pipe(Layer.provide(NodeServices.layer));
+  static layer = Layer.effect(this)(this.make).pipe(
+    Layer.provide(NodeServices.layer),
+    Layer.provide(Updates.layer),
+  );
 }

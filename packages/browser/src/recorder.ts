@@ -1,6 +1,6 @@
 import type { Page } from "playwright";
 import type { eventWithTime } from "@rrweb/types";
-import { Effect } from "effect";
+import { Effect, Predicate } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { evaluateRuntime } from "./utils/evaluate-runtime";
 import { RecorderInjectionError, SessionLoadError } from "./errors";
@@ -23,6 +23,9 @@ export const collectAllEvents = Effect.fn("Recorder.collectAllEvents")(function*
   );
 });
 
+const isRrwebEvent = (value: unknown): value is eventWithTime =>
+  Predicate.isObject(value) && "type" in value && "timestamp" in value;
+
 export const loadSession = Effect.fn("Recorder.loadSession")(function* (sessionPath: string) {
   const fileSystem = yield* FileSystem;
   const content = yield* fileSystem
@@ -36,11 +39,17 @@ export const loadSession = Effect.fn("Recorder.loadSession")(function* (sessionP
   const lines = content.trim().split("\n");
   const events = yield* Effect.forEach(lines, (line, index) =>
     Effect.try({
-      try: () => JSON.parse(line) as eventWithTime,
+      try: () => {
+        const parsed: unknown = JSON.parse(line);
+        if (!isRrwebEvent(parsed)) {
+          throw new Error("Missing required 'type' and 'timestamp' fields");
+        }
+        return parsed;
+      },
       catch: (cause) =>
         new SessionLoadError({
           path: sessionPath,
-          cause: `Invalid JSON at line ${index + 1}: ${String(cause)}`,
+          cause: `Invalid rrweb event at line ${index + 1}: ${String(cause)}`,
         }),
     }),
   );
