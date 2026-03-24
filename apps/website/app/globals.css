@@ -144,6 +144,10 @@
     background-color: rgb(179, 179, 179);
     color: white;
   }
+  .dark ::selection {
+    background-color: rgb(80, 80, 80);
+    color: white;
+  }
 }
 
 @keyframes terminal-spinner-rotate {

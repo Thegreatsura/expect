@@ -1,7 +1,11 @@
 "use client";
 
-import { useRef, useEffect, useLayoutEffect, useState } from "react";
+import { useRef, useLayoutEffect, useState } from "react";
+// eslint-disable-next-line no-restricted-imports -- animation/DOM sync effects
+import { useEffect } from "react";
 import { useTheme } from "next-themes";
+import { useMountEffect } from "@/hooks/use-mount-effect";
+import { useDelayedFlag } from "@/hooks/use-delayed-flag";
 import { berkeleyMonoRegular, restartHardRegular, testSignifierRegular } from "@/app/fonts";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { motion, AnimatePresence } from "motion/react";
@@ -205,6 +209,7 @@ function TerminalSyncSpinner({
   loadingCircleFull = false,
   showLoading = true,
   animateInitialSuccess = false,
+  isDark = false,
 }: {
   phase: TerminalSpinnerPhase;
   className?: string;
@@ -213,6 +218,7 @@ function TerminalSyncSpinner({
   loadingCircleFull?: boolean;
   showLoading?: boolean;
   animateInitialSuccess?: boolean;
+  isDark?: boolean;
 }) {
   return (
     <div
@@ -240,7 +246,7 @@ function TerminalSyncSpinner({
                 fill="none"
                 strokeWidth={TERMINAL_SPINNER_STROKE}
                 style={{
-                  stroke: TERMINAL_SPINNER_TRACK,
+                  stroke: isDark ? "#3A3A3A" : TERMINAL_SPINNER_TRACK,
                   opacity: 0.95,
                 }}
               />
@@ -256,7 +262,7 @@ function TerminalSyncSpinner({
                   strokeDasharray: loadingCircleFull
                     ? `${SPINNER_CIRCUMFERENCE} 0`
                     : `${SPINNER_DASH} ${SPINNER_GAP}`,
-                  stroke: loadingCircleFull ? successColor : TERMINAL_SPINNER_ACTIVE,
+                  stroke: loadingCircleFull ? successColor : isDark ? "#707070" : TERMINAL_SPINNER_ACTIVE,
                 }}
                 transition={
                   loadingCircleFull
@@ -325,7 +331,7 @@ function TerminalSyncSpinner({
                 style={{
                   width: "18px",
                   height: "18px",
-                  backgroundColor: "#FFFFFF",
+                  backgroundColor: isDark ? "#1E1E1E" : "#FFFFFF",
                   flexShrink: 0,
                 }}
               >
@@ -364,7 +370,7 @@ function InputCaret({
 }) {
   return (
     <motion.div
-      className="ml-px h-[15px] w-px shrink-0 rounded-full bg-[color(display-p3_0.24_0.24_0.24/72%)]"
+      className="ml-px h-[15px] w-px shrink-0 rounded-full bg-[color(display-p3_0.24_0.24_0.24/72%)] dark:bg-[color(display-p3_0.82_0.82_0.82/72%)]"
       initial={false}
       animate={{ opacity: visible ? 1 : 0 }}
       transition={{
@@ -385,10 +391,12 @@ function TerminalStepCheck({
   phase,
   successColor = TERMINAL_SUCCESS_GREEN,
   successIcon = "check",
+  isDark = false,
 }: {
   phase: TerminalStepIndicatorPhase;
   successColor?: string;
   successIcon?: "check" | "close";
+  isDark?: boolean;
 }) {
   return (
     <div className={SHARED_TERMINAL_INDICATOR_CLASS} aria-hidden="true">
@@ -400,6 +408,7 @@ function TerminalStepCheck({
           successIcon={successIcon}
           showLoading={false}
           animateInitialSuccess
+          isDark={isDark}
         />
       ) : phase === "loading" || phase === "morph" ? (
         <TerminalSyncSpinner
@@ -408,6 +417,7 @@ function TerminalStepCheck({
           successColor={successColor}
           successIcon={successIcon}
           loadingCircleFull={phase === "morph"}
+          isDark={isDark}
         />
       ) : null}
     </div>
@@ -427,7 +437,7 @@ function TerminalStepLabel({
     <div
       className={cn(
         berkeleyMonoRegular.className,
-        "relative w-fit h-4.5 [letter-spacing:0em] text-[#696969] font-bold shrink-0 text-[13px]/4.5",
+        "relative w-fit h-4.5 [letter-spacing:0em] text-[#696969] dark:text-[#999999] font-bold shrink-0 text-[13px]/4.5",
       )}
     >
       {children}
@@ -463,10 +473,10 @@ function TerminalStepLabel({
 export default function Home() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => {
+  useMountEffect(() => {
     const frame = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(frame);
-  }, []);
+  });
   useEffect(() => {
     if (theme && theme !== "light" && theme !== "dark") {
       setTheme("light");
@@ -475,6 +485,13 @@ export default function Home() {
 
   const currentTheme = theme === "dark" ? "dark" : "light";
   const isDark = mounted && currentTheme === "dark";
+
+  const fieldIdleShadow = isDark
+    ? "color(display-p3 1 1 1 / 8%) 0px 0px 0px 0.5px"
+    : FIRST_FIELD_IDLE_SHADOW;
+  const fieldFocusShadow = isDark
+    ? "color(display-p3 1 1 1 / 12%) 0px 0px 0px 0.75px"
+    : FIRST_FIELD_FOCUS_SHADOW;
 
   const stagger = (i: number) => ({
     initial: { opacity: 0, y: 6 },
@@ -490,34 +507,14 @@ export default function Home() {
   const firstEditableInputRef = useRef<HTMLInputElement>(null);
   const secondEditableInputRef = useRef<HTMLInputElement>(null);
   const [cursorTravels, setCursorTravels] = useState<CursorTravels | null>(null);
-  const [cursorMoveStage, setCursorMoveStage] = useState<"first" | "second" | "third">("first");
   const [firstFieldBounds, setFirstFieldBounds] = useState<FieldBounds | null>(null);
   const [secondFieldBounds, setSecondFieldBounds] = useState<FieldBounds | null>(null);
   const [submitButtonBounds, setSubmitButtonBounds] = useState<FieldBounds | null>(null);
   const [firstFieldTouched, setFirstFieldTouched] = useState(false);
-  const [firstFieldFocused, setFirstFieldFocused] = useState(false);
-  const [firstFieldTypingReady, setFirstFieldTypingReady] = useState(false);
   const [typedFieldLength, setTypedFieldLength] = useState(0);
-  const [terminalIndicatorMorphReady, setTerminalIndicatorMorphReady] = useState(false);
-  const [terminalIndicatorSuccessReady, setTerminalIndicatorSuccessReady] = useState(false);
-  const [cursorIndicatorSuccessDismissed, setCursorIndicatorSuccessDismissed] = useState(false);
-  const [terminalRowIndicatorMorphReady, setTerminalRowIndicatorMorphReady] = useState(false);
-  const [terminalRowIndicatorSuccessReady, setTerminalRowIndicatorSuccessReady] = useState(false);
   const [secondFieldTouched, setSecondFieldTouched] = useState(false);
-  const [secondFieldFocused, setSecondFieldFocused] = useState(false);
-  const [secondFieldTypingReady, setSecondFieldTypingReady] = useState(false);
   const [secondTypedFieldLength, setSecondTypedFieldLength] = useState(0);
-  const [passwordCursorIndicatorMorphReady, setPasswordCursorIndicatorMorphReady] = useState(false);
-  const [passwordCursorIndicatorSuccessReady, setPasswordCursorIndicatorSuccessReady] = useState(false);
-  const [passwordTerminalIndicatorMorphReady, setPasswordTerminalIndicatorMorphReady] = useState(false);
-  const [passwordTerminalIndicatorSuccessReady, setPasswordTerminalIndicatorSuccessReady] = useState(false);
   const [submitButtonTouched, setSubmitButtonTouched] = useState(false);
-  const [submitButtonPressed, setSubmitButtonPressed] = useState(false);
-  const [submitButtonClicked, setSubmitButtonClicked] = useState(false);
-  const [submitTerminalIndicatorMorphReady, setSubmitTerminalIndicatorMorphReady] = useState(false);
-  const [submitTerminalIndicatorSuccessReady, setSubmitTerminalIndicatorSuccessReady] = useState(false);
-  const [redirectTerminalIndicatorMorphReady, setRedirectTerminalIndicatorMorphReady] = useState(false);
-  const [redirectTerminalIndicatorSuccessReady, setRedirectTerminalIndicatorSuccessReady] = useState(false);
   const [terminalLabelDismissed, setTerminalLabelDismissed] = useState(false);
   const [terminalDragging, setTerminalDragging] = useState(false);
   const [cursorFieldPressScale, setCursorFieldPressScale] = useState(1);
@@ -527,10 +524,35 @@ export default function Home() {
   const [editableFocusedField, setEditableFocusedField] = useState<"first" | "second" | null>(null);
   const [editableFirstFieldValue, setEditableFirstFieldValue] = useState("");
   const [editableSecondFieldValue, setEditableSecondFieldValue] = useState("");
+
+  const firstFieldFocused = useDelayedFlag(firstFieldTouched, FIRST_FIELD_FOCUS_DELAY_MS);
+  const firstFieldTypingReady = useDelayedFlag(firstFieldFocused, FIRST_FIELD_TYPE_AFTER_FOCUS_DELAY_MS);
+  const firstFieldTypingComplete = typedFieldLength >= FIRST_FIELD_VALUE.length;
+  const terminalIndicatorMorphReady = useDelayedFlag(firstFieldTouched && firstFieldTypingComplete, FIRST_FIELD_POST_TYPE_CHECK_DELAY_MS);
+  const terminalIndicatorSuccessReady = useDelayedFlag(terminalIndicatorMorphReady, LOAD_SEQUENCE_FADE_MS);
+  const terminalRowIndicatorMorphReady = useDelayedFlag(terminalIndicatorMorphReady, TERMINAL_ROW_INDICATOR_DELAY_MS);
+  const terminalRowIndicatorSuccessReady = useDelayedFlag(terminalIndicatorSuccessReady, TERMINAL_ROW_INDICATOR_DELAY_MS);
+  const cursorIndicatorSuccessDismissed = useDelayedFlag(terminalRowIndicatorSuccessReady, TERMINAL_NEXT_ROW_DELAY_MS + CURSOR_INDICATOR_SUCCESS_DISMISS_DELAY_MS);
+  const cursorStageIsSecond = useDelayedFlag(cursorIndicatorSuccessDismissed, SECOND_FIELD_MOVE_AFTER_DISMISS_DELAY_MS);
+  const secondFieldFocused = useDelayedFlag(secondFieldTouched, FIRST_FIELD_FOCUS_DELAY_MS);
+  const secondFieldTypingReady = useDelayedFlag(secondFieldFocused, FIRST_FIELD_TYPE_AFTER_FOCUS_DELAY_MS);
+  const secondFieldIndicatorVisible = useDelayedFlag(secondFieldFocused, INPUT_STATUS_APPEAR_DELAY_MS);
+  const secondFieldTypingComplete = secondTypedFieldLength >= SECOND_FIELD_VALUE.length;
+  const passwordCursorIndicatorMorphReady = useDelayedFlag(secondFieldTouched && secondFieldTypingComplete, FIRST_FIELD_POST_TYPE_CHECK_DELAY_MS);
+  const passwordCursorIndicatorSuccessReady = useDelayedFlag(passwordCursorIndicatorMorphReady, LOAD_SEQUENCE_FADE_MS);
+  const passwordTerminalIndicatorMorphReady = useDelayedFlag(passwordCursorIndicatorMorphReady, TERMINAL_ROW_INDICATOR_DELAY_MS);
+  const passwordTerminalIndicatorSuccessReady = useDelayedFlag(passwordCursorIndicatorSuccessReady, TERMINAL_ROW_INDICATOR_DELAY_MS);
+  const cursorStageIsThird = useDelayedFlag(passwordTerminalIndicatorSuccessReady && cursorStageIsSecond, SUBMIT_BUTTON_MOVE_AFTER_SUCCESS_DELAY_MS);
+  const submitPressStarted = useDelayedFlag(submitButtonTouched, SUBMIT_BUTTON_PRESS_AFTER_TOUCH_DELAY_MS);
+  const submitButtonClicked = useDelayedFlag(submitPressStarted, SUBMIT_BUTTON_PRESS_HOLD_MS);
+  const submitButtonPressed = submitPressStarted && !submitButtonClicked;
+  const submitTerminalIndicatorMorphReady = useDelayedFlag(submitButtonClicked, FIRST_FIELD_POST_TYPE_CHECK_DELAY_MS);
+  const submitTerminalIndicatorSuccessReady = useDelayedFlag(submitTerminalIndicatorMorphReady, SUBMIT_SEQUENCE_FADE_MS);
+  const redirectTerminalIndicatorMorphReady = useDelayedFlag(submitTerminalIndicatorSuccessReady, REDIRECT_STEP_MORPH_DELAY_MS);
+  const redirectTerminalIndicatorSuccessReady = useDelayedFlag(redirectTerminalIndicatorMorphReady, LOAD_SEQUENCE_FADE_MS);
+  const cursorMoveStage = cursorStageIsThird ? "third" : cursorStageIsSecond ? "second" : "first";
   const typedFieldValue = FIRST_FIELD_VALUE.slice(0, typedFieldLength);
   const secondTypedFieldValue = SECOND_FIELD_VALUE.slice(0, secondTypedFieldLength);
-  const firstFieldTypingComplete = typedFieldLength >= FIRST_FIELD_VALUE.length;
-  const secondFieldTypingComplete = secondTypedFieldLength >= SECOND_FIELD_VALUE.length;
   const firstFieldInputActive = firstFieldUnlocked || redirectTerminalIndicatorSuccessReady;
   const secondFieldInputActive = secondFieldUnlocked || redirectTerminalIndicatorSuccessReady;
   const submitPillReady = (secondFieldInputActive ? editableSecondFieldValue.length : secondTypedFieldLength) >= SECOND_FIELD_SUBMIT_READY_LENGTH;
@@ -554,7 +576,6 @@ export default function Home() {
         ? SECOND_FIELD_MOVE_DURATION_S
         : CURSOR_MOVE_DURATION_S;
   const cursorMoveDelayS = cursorMoveStage === "first" ? CURSOR_MOVE_DELAY_S : 0;
-  const [secondFieldIndicatorVisible, setSecondFieldIndicatorVisible] = useState(false);
   const showFirstFieldIndicator = !terminalIndicatorSuccessReady;
   const showSecondFieldIndicator = secondFieldIndicatorVisible && !passwordCursorIndicatorSuccessReady;
   const terminalEmailStepComplete = terminalRowIndicatorSuccessReady;
@@ -601,14 +622,11 @@ export default function Home() {
 
   useEffect(() => {
     if (!pendingEditableFocusField) return;
-
     const targetInput =
       pendingEditableFocusField === "first"
         ? firstEditableInputRef.current
         : secondEditableInputRef.current;
-
     if (!targetInput) return;
-
     targetInput.focus();
     if (["text", "search", "url", "tel", "password"].includes(targetInput.type)) {
       const cursorPosition = targetInput.value.length;
@@ -618,39 +636,13 @@ export default function Home() {
   }, [pendingEditableFocusField, firstFieldInputActive, secondFieldInputActive]);
 
   useEffect(() => {
-    if (!firstFieldTouched || firstFieldFocused) return;
-
-    const focusTimer = window.setTimeout(() => {
-      setFirstFieldFocused(true);
-    }, FIRST_FIELD_FOCUS_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(focusTimer);
-    };
-  }, [firstFieldTouched, firstFieldFocused]);
-
-  useEffect(() => {
-    if (!firstFieldFocused || firstFieldTypingReady) return;
-
-    const typingReadyTimer = window.setTimeout(() => {
-      setFirstFieldTypingReady(true);
-    }, FIRST_FIELD_TYPE_AFTER_FOCUS_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(typingReadyTimer);
-    };
-  }, [firstFieldFocused, firstFieldTypingReady]);
-
-  useEffect(() => {
     if (!firstFieldFocused) return;
-
     const pressTimer = window.setTimeout(() => {
       setCursorFieldPressScale(CURSOR_FIELD_PRESS_SCALE);
     }, 0);
     const releaseTimer = window.setTimeout(() => {
       setCursorFieldPressScale(1);
     }, CURSOR_FIELD_PRESS_RELEASE_DELAY_MS);
-
     return () => {
       window.clearTimeout(pressTimer);
       window.clearTimeout(releaseTimer);
@@ -659,128 +651,27 @@ export default function Home() {
 
   useEffect(() => {
     if (!firstFieldTypingReady || firstFieldTypingComplete) return;
-
     const previousCharacter = FIRST_FIELD_VALUE[typedFieldLength - 1];
     const nextDelay =
       typedFieldLength === 0
         ? 0
         : FIRST_FIELD_TYPE_STEP_MS + (previousCharacter === "@" || previousCharacter === "." ? 18 : 0);
-
     const typingTimer = window.setTimeout(() => {
       setTypedFieldLength((currentLength) => Math.min(currentLength + 1, FIRST_FIELD_VALUE.length));
     }, nextDelay);
-
     return () => {
       window.clearTimeout(typingTimer);
     };
   }, [firstFieldTypingReady, firstFieldTypingComplete, typedFieldLength]);
 
   useEffect(() => {
-    if (!firstFieldTouched || !firstFieldTypingComplete) return;
-
-    const morphTimer = window.setTimeout(() => {
-      setTerminalIndicatorMorphReady(true);
-    }, FIRST_FIELD_POST_TYPE_CHECK_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(morphTimer);
-    };
-  }, [firstFieldTouched, firstFieldTypingComplete]);
-
-  useEffect(() => {
-    if (!terminalIndicatorMorphReady || terminalIndicatorSuccessReady) return;
-
-    const successTimer = window.setTimeout(() => {
-      setTerminalIndicatorSuccessReady(true);
-    }, LOAD_SEQUENCE_FADE_MS);
-
-    return () => {
-      window.clearTimeout(successTimer);
-    };
-  }, [terminalIndicatorMorphReady, terminalIndicatorSuccessReady]);
-
-  useEffect(() => {
-    if (!terminalIndicatorMorphReady || terminalRowIndicatorMorphReady) return;
-
-    const rowMorphTimer = window.setTimeout(() => {
-      setTerminalRowIndicatorMorphReady(true);
-    }, TERMINAL_ROW_INDICATOR_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(rowMorphTimer);
-    };
-  }, [terminalIndicatorMorphReady, terminalRowIndicatorMorphReady]);
-
-  useEffect(() => {
-    if (!terminalIndicatorSuccessReady || terminalRowIndicatorSuccessReady) return;
-
-    const rowSuccessTimer = window.setTimeout(() => {
-      setTerminalRowIndicatorSuccessReady(true);
-    }, TERMINAL_ROW_INDICATOR_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(rowSuccessTimer);
-    };
-  }, [terminalIndicatorSuccessReady, terminalRowIndicatorSuccessReady]);
-
-  useEffect(() => {
-    if (!terminalRowIndicatorSuccessReady || cursorIndicatorSuccessDismissed) return;
-
-    const dismissTimer = window.setTimeout(() => {
-      setCursorIndicatorSuccessDismissed(true);
-    }, TERMINAL_NEXT_ROW_DELAY_MS + CURSOR_INDICATOR_SUCCESS_DISMISS_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(dismissTimer);
-    };
-  }, [terminalRowIndicatorSuccessReady, cursorIndicatorSuccessDismissed]);
-
-  useEffect(() => {
-    if (!cursorIndicatorSuccessDismissed || cursorMoveStage !== "first") return;
-
-    const secondMoveTimer = window.setTimeout(() => {
-      setCursorMoveStage("second");
-    }, SECOND_FIELD_MOVE_AFTER_DISMISS_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(secondMoveTimer);
-    };
-  }, [cursorIndicatorSuccessDismissed, cursorMoveStage]);
-
-  useEffect(() => {
-    if (!secondFieldTouched || secondFieldFocused) return;
-
-    const focusTimer = window.setTimeout(() => {
-      setSecondFieldFocused(true);
-    }, FIRST_FIELD_FOCUS_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(focusTimer);
-    };
-  }, [secondFieldTouched, secondFieldFocused]);
-
-  useEffect(() => {
-    if (!secondFieldFocused || secondFieldTypingReady) return;
-
-    const typingReadyTimer = window.setTimeout(() => {
-      setSecondFieldTypingReady(true);
-    }, FIRST_FIELD_TYPE_AFTER_FOCUS_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(typingReadyTimer);
-    };
-  }, [secondFieldFocused, secondFieldTypingReady]);
-
-  useEffect(() => {
     if (!secondFieldFocused) return;
-
     const pressTimer = window.setTimeout(() => {
       setCursorFieldPressScale(CURSOR_FIELD_PRESS_SCALE);
     }, 0);
     const releaseTimer = window.setTimeout(() => {
       setCursorFieldPressScale(1);
     }, CURSOR_FIELD_PRESS_RELEASE_DELAY_MS);
-
     return () => {
       window.clearTimeout(pressTimer);
       window.clearTimeout(releaseTimer);
@@ -788,162 +679,15 @@ export default function Home() {
   }, [secondFieldFocused]);
 
   useEffect(() => {
-    if (!secondFieldFocused || secondFieldIndicatorVisible) return;
-
-    const indicatorTimer = window.setTimeout(() => {
-      setSecondFieldIndicatorVisible(true);
-    }, INPUT_STATUS_APPEAR_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(indicatorTimer);
-    };
-  }, [secondFieldFocused, secondFieldIndicatorVisible]);
-
-  useEffect(() => {
     if (!secondFieldTypingReady || secondFieldTypingComplete) return;
-
     const nextDelay = secondTypedFieldLength === 0 ? 0 : FIRST_FIELD_TYPE_STEP_MS;
     const typingTimer = window.setTimeout(() => {
       setSecondTypedFieldLength((currentLength) => Math.min(currentLength + 1, SECOND_FIELD_VALUE.length));
     }, nextDelay);
-
     return () => {
       window.clearTimeout(typingTimer);
     };
   }, [secondFieldTypingReady, secondFieldTypingComplete, secondTypedFieldLength]);
-
-  useEffect(() => {
-    if (!secondFieldTouched || !secondFieldTypingComplete) return;
-
-    const morphTimer = window.setTimeout(() => {
-      setPasswordCursorIndicatorMorphReady(true);
-    }, FIRST_FIELD_POST_TYPE_CHECK_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(morphTimer);
-    };
-  }, [secondFieldTouched, secondFieldTypingComplete]);
-
-  useEffect(() => {
-    if (!passwordCursorIndicatorMorphReady || passwordCursorIndicatorSuccessReady) return;
-
-    const successTimer = window.setTimeout(() => {
-      setPasswordCursorIndicatorSuccessReady(true);
-    }, LOAD_SEQUENCE_FADE_MS);
-
-    return () => {
-      window.clearTimeout(successTimer);
-    };
-  }, [passwordCursorIndicatorMorphReady, passwordCursorIndicatorSuccessReady]);
-
-  useEffect(() => {
-    if (!passwordCursorIndicatorMorphReady || passwordTerminalIndicatorMorphReady) return;
-
-    const rowMorphTimer = window.setTimeout(() => {
-      setPasswordTerminalIndicatorMorphReady(true);
-    }, TERMINAL_ROW_INDICATOR_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(rowMorphTimer);
-    };
-  }, [passwordCursorIndicatorMorphReady, passwordTerminalIndicatorMorphReady]);
-
-  useEffect(() => {
-    if (!passwordCursorIndicatorSuccessReady || passwordTerminalIndicatorSuccessReady) return;
-
-    const rowSuccessTimer = window.setTimeout(() => {
-      setPasswordTerminalIndicatorSuccessReady(true);
-    }, TERMINAL_ROW_INDICATOR_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(rowSuccessTimer);
-    };
-  }, [passwordCursorIndicatorSuccessReady, passwordTerminalIndicatorSuccessReady]);
-
-  useEffect(() => {
-    if (!passwordTerminalIndicatorSuccessReady || cursorMoveStage !== "second") return;
-
-    const submitMoveTimer = window.setTimeout(() => {
-      setCursorMoveStage("third");
-    }, SUBMIT_BUTTON_MOVE_AFTER_SUCCESS_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(submitMoveTimer);
-    };
-  }, [passwordTerminalIndicatorSuccessReady, cursorMoveStage]);
-
-  useEffect(() => {
-    if (!submitButtonTouched || submitButtonPressed || submitButtonClicked) return;
-
-    const submitPressTimer = window.setTimeout(() => {
-      setSubmitButtonPressed(true);
-    }, SUBMIT_BUTTON_PRESS_AFTER_TOUCH_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(submitPressTimer);
-    };
-  }, [submitButtonTouched, submitButtonPressed, submitButtonClicked]);
-
-  useEffect(() => {
-    if (!submitButtonPressed || submitButtonClicked) return;
-
-    const submitClickTimer = window.setTimeout(() => {
-      setSubmitButtonPressed(false);
-      setSubmitButtonClicked(true);
-    }, SUBMIT_BUTTON_PRESS_HOLD_MS);
-
-    return () => {
-      window.clearTimeout(submitClickTimer);
-    };
-  }, [submitButtonPressed, submitButtonClicked]);
-
-  useEffect(() => {
-    if (!submitButtonClicked || submitTerminalIndicatorMorphReady) return;
-
-    const morphTimer = window.setTimeout(() => {
-      setSubmitTerminalIndicatorMorphReady(true);
-    }, FIRST_FIELD_POST_TYPE_CHECK_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(morphTimer);
-    };
-  }, [submitButtonClicked, submitTerminalIndicatorMorphReady]);
-
-  useEffect(() => {
-    if (!submitTerminalIndicatorMorphReady || submitTerminalIndicatorSuccessReady) return;
-
-    const successTimer = window.setTimeout(() => {
-      setSubmitTerminalIndicatorSuccessReady(true);
-    }, SUBMIT_SEQUENCE_FADE_MS);
-
-    return () => {
-      window.clearTimeout(successTimer);
-    };
-  }, [submitTerminalIndicatorMorphReady, submitTerminalIndicatorSuccessReady]);
-
-  useEffect(() => {
-    if (!submitTerminalIndicatorSuccessReady || redirectTerminalIndicatorMorphReady) return;
-
-    const morphTimer = window.setTimeout(() => {
-      setRedirectTerminalIndicatorMorphReady(true);
-    }, REDIRECT_STEP_MORPH_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(morphTimer);
-    };
-  }, [submitTerminalIndicatorSuccessReady, redirectTerminalIndicatorMorphReady]);
-
-  useEffect(() => {
-    if (!redirectTerminalIndicatorMorphReady || redirectTerminalIndicatorSuccessReady) return;
-
-    const successTimer = window.setTimeout(() => {
-      setRedirectTerminalIndicatorSuccessReady(true);
-    }, LOAD_SEQUENCE_FADE_MS);
-
-    return () => {
-      window.clearTimeout(successTimer);
-    };
-  }, [redirectTerminalIndicatorMorphReady, redirectTerminalIndicatorSuccessReady]);
 
   useLayoutEffect(() => {
     const stage = cursorStageRef.current;
@@ -1014,12 +758,12 @@ export default function Home() {
       <div
         ref={mainContainerRef}
         className="relative w-164.5 h-91.5 rounded-2xl flex items-center justify-center"
-        style={{ backgroundImage: "linear-gradient(in oklab 180deg, oklab(95.5% 0 0) 0%, oklab(100% 0 0 / 0%) 100%)" }}
+        style={{ backgroundImage: isDark ? "linear-gradient(in oklab 180deg, oklab(16% 0 0) 0%, oklab(6% 0 0 / 0%) 100%)" : "linear-gradient(in oklab 180deg, oklab(95.5% 0 0) 0%, oklab(100% 0 0 / 0%) 100%)" }}
       >
         <div
           className="pointer-events-none absolute inset-0 rounded-2xl"
           style={{
-            boxShadow: "inset 0 0 0 0.5px color(display-p3 0 0 0 / 16%)",
+            boxShadow: isDark ? "inset 0 0 0 0.5px color(display-p3 1 1 1 / 8%)" : "inset 0 0 0 0.5px color(display-p3 0 0 0 / 16%)",
             WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 100%)",
             maskImage: "linear-gradient(to bottom, black 0%, transparent 100%)",
           }}
@@ -1028,24 +772,24 @@ export default function Home() {
         <div className="relative w-[31.03125rem] h-76.75 translate-y-5">
           <div className="relative w-93.25 h-76.75">
             <div
-              className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl [box-shadow:color(display-p3_1_1_1)_0px_0px_9px_inset]"
+              className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl [box-shadow:color(display-p3_1_1_1)_0px_0px_9px_inset] dark:[box-shadow:color(display-p3_0.08_0.08_0.08)_0px_0px_9px_inset]"
               style={{
-                backgroundImage: "linear-gradient(in oklab 180deg, oklab(100% 0 0 / 65%) 0%, oklab(99% 0 0) 82.16%, oklab(100% 0 0) 100%)",
+                backgroundImage: isDark ? "linear-gradient(in oklab 180deg, oklab(14% 0 0 / 70%) 0%, oklab(12% 0 0) 82.16%, oklab(10% 0 0) 100%)" : "linear-gradient(in oklab 180deg, oklab(100% 0 0 / 65%) 0%, oklab(99% 0 0) 82.16%, oklab(100% 0 0) 100%)",
                 WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 68%, transparent 100%)",
                 maskImage: "linear-gradient(to bottom, black 0%, black 68%, transparent 100%)",
               }}
             />
             <div className="absolute top-3.5 left-3.5 flex items-start gap-[5.5px] p-0 size-fit">
-              <div className="rounded-full bg-[#D8D8D8] shrink-0 size-2.5" />
-              <div className="rounded-full bg-[#D8D8D8] shrink-0 size-2.5" />
-              <div className="rounded-full bg-[#D8D8D8] shrink-0 size-2.5" />
+              <div className="rounded-full bg-[#D8D8D8] dark:bg-[#444444] shrink-0 size-2.5" />
+              <div className="rounded-full bg-[#D8D8D8] dark:bg-[#444444] shrink-0 size-2.5" />
+              <div className="rounded-full bg-[#D8D8D8] dark:bg-[#444444] shrink-0 size-2.5" />
             </div>
             {/* from Paper — https://app.paper.design/file/01KKVJZGYDH7NE03PKQE86N5EK?page=01KMAQWMFAADNQS52G7NJNERWY&node=J0T-0 (Mar 23, 2026) */}
             <div
               className="absolute left-[29px] flex flex-col items-start"
               style={{ top: "calc(0.875rem + 0.625rem + 76px)" }}
             >
-              <div className="tracking-[-0.01em] text-black font-['IvarTextTRIAL-Italic','Ivar_Text_TRIAL',system-ui,sans-serif] italic text-[17.5px]/6.25 size-fit">
+              <div className="tracking-[-0.01em] text-black dark:text-[color(display-p3_0.92_0.92_0.92)] font-['IvarTextTRIAL-Italic','Ivar_Text_TRIAL',system-ui,sans-serif] italic text-[17.5px]/6.25 size-fit">
                 Sign up
               </div>
               <div className="mt-[17px] flex flex-col items-start gap-[9px]">
@@ -1065,11 +809,11 @@ export default function Home() {
                     firstFieldVisuallyFocused
                       ? {
                           scale: [1, FIRST_FIELD_FOCUS_PULSE_SCALE, 1],
-                          boxShadow: [FIRST_FIELD_IDLE_SHADOW, FIRST_FIELD_FOCUS_SHADOW, FIRST_FIELD_FOCUS_SHADOW],
+                          boxShadow: [fieldIdleShadow, fieldFocusShadow, fieldFocusShadow],
                         }
                       : {
                           scale: 1,
-                          boxShadow: FIRST_FIELD_IDLE_SHADOW,
+                          boxShadow: fieldIdleShadow,
                         }
                   }
                   transition={{
@@ -1078,7 +822,7 @@ export default function Home() {
                     ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
                   }}
                   style={{
-                    backgroundColor: firstFieldTouched ? "color(display-p3 1 1 1)" : undefined,
+                    backgroundColor: firstFieldTouched ? (isDark ? "color(display-p3 0.13 0.13 0.13)" : "color(display-p3 1 1 1)") : undefined,
                     transformOrigin: "center center",
                   }}
                 >
@@ -1101,12 +845,12 @@ export default function Home() {
                         }}
                         autoComplete="email"
                         spellCheck={false}
-                        className={`${restartHardRegular.className} block w-full min-w-0 border-0 bg-transparent p-0 [letter-spacing:0em] text-[color(display-p3_0.317_0.317_0.317)] text-sm/4.5 outline-none`}
+                        className={`${restartHardRegular.className} block w-full min-w-0 border-0 bg-transparent p-0 [letter-spacing:0em] text-[color(display-p3_0.317_0.317_0.317)] dark:text-[color(display-p3_0.75_0.75_0.75)] text-sm/4.5 outline-none`}
                       />
                     ) : typedFieldLength > 0 || showFirstFieldCaret ? (
                       <div className="flex min-w-0 items-center">
                         <div
-                          className={`${restartHardRegular.className} min-w-0 max-w-full h-4.5 overflow-hidden text-ellipsis [letter-spacing:0em] text-[color(display-p3_0.317_0.317_0.317)] text-sm/4.5 whitespace-nowrap`}
+                          className={`${restartHardRegular.className} min-w-0 max-w-full h-4.5 overflow-hidden text-ellipsis [letter-spacing:0em] text-[color(display-p3_0.317_0.317_0.317)] dark:text-[color(display-p3_0.75_0.75_0.75)] text-sm/4.5 whitespace-nowrap`}
                         >
                           {typedFieldValue}
                         </div>
@@ -1131,11 +875,11 @@ export default function Home() {
                     secondFieldVisuallyFocused
                       ? {
                           scale: [1, FIRST_FIELD_FOCUS_PULSE_SCALE, 1],
-                          boxShadow: [FIRST_FIELD_IDLE_SHADOW, FIRST_FIELD_FOCUS_SHADOW, FIRST_FIELD_FOCUS_SHADOW],
+                          boxShadow: [fieldIdleShadow, fieldFocusShadow, fieldFocusShadow],
                         }
                       : {
                           scale: 1,
-                          boxShadow: FIRST_FIELD_IDLE_SHADOW,
+                          boxShadow: fieldIdleShadow,
                         }
                   }
                   transition={{
@@ -1144,7 +888,7 @@ export default function Home() {
                     ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
                   }}
                   style={{
-                    backgroundColor: secondFieldTouched ? "color(display-p3 1 1 1)" : undefined,
+                    backgroundColor: secondFieldTouched ? (isDark ? "color(display-p3 0.13 0.13 0.13)" : "color(display-p3 1 1 1)") : undefined,
                     transformOrigin: "center center",
                   }}
                 >
@@ -1167,12 +911,12 @@ export default function Home() {
                         }}
                         autoComplete="off"
                         spellCheck={false}
-                        className={`${restartHardRegular.className} block w-full min-w-0 border-0 bg-transparent p-0 [letter-spacing:0em] text-[color(display-p3_0.317_0.317_0.317)] text-sm/4.5 outline-none`}
+                        className={`${restartHardRegular.className} block w-full min-w-0 border-0 bg-transparent p-0 [letter-spacing:0em] text-[color(display-p3_0.317_0.317_0.317)] dark:text-[color(display-p3_0.75_0.75_0.75)] text-sm/4.5 outline-none`}
                       />
                     ) : secondTypedFieldLength > 0 || showSecondFieldCaret ? (
                       <div className="flex min-w-0 items-center">
                         <div
-                          className={`${restartHardRegular.className} min-w-0 max-w-full h-4.5 overflow-hidden text-ellipsis [letter-spacing:0em] text-[color(display-p3_0.317_0.317_0.317)] text-sm/4.5 whitespace-nowrap`}
+                          className={`${restartHardRegular.className} min-w-0 max-w-full h-4.5 overflow-hidden text-ellipsis [letter-spacing:0em] text-[color(display-p3_0.317_0.317_0.317)] dark:text-[color(display-p3_0.75_0.75_0.75)] text-sm/4.5 whitespace-nowrap`}
                         >
                           {secondTypedFieldValue}
                         </div>
@@ -1190,7 +934,7 @@ export default function Home() {
                     "w-fit h-6.25 rounded-full flex items-center px-3 py-1.25 transition-[background-color] duration-150",
                     submitPillReady
                       ? "bg-[color(display-p3_0.267_0.503_0.967)]"
-                      : "bg-[color(display-p3_0.910_0.910_0.910)]",
+                      : "bg-[color(display-p3_0.910_0.910_0.910)] dark:bg-[color(display-p3_0.22_0.22_0.22)]",
                   )}
                   initial={false}
                   animate={{
@@ -1473,7 +1217,7 @@ export default function Home() {
               animate={{
                 scale: terminalDragging ? 0.992 : 1,
                 filter: terminalDragging
-                  ? "drop-shadow(0px 6px 10px rgba(0, 0, 0, 0.045))"
+                  ? isDark ? "drop-shadow(0px 6px 14px rgba(0, 0, 0, 0.3))" : "drop-shadow(0px 6px 10px rgba(0, 0, 0, 0.045))"
                   : "drop-shadow(0px 0px 0px rgba(0, 0, 0, 0))",
               }}
               transition={{
@@ -1493,9 +1237,9 @@ export default function Home() {
               style={{ willChange: "transform, filter" }}
               className="cursor-grab touch-none active:cursor-grabbing"
             >
-            <div className="relative w-61.75 h-54.75 rounded-2xl [box-shadow:color(display-p3_1_1_1)_0px_0px_9px_inset,color(display-p3_0_0_0/5%)_0px_0px_0px_1px,color(display-p3_0_0_0/5%)_0px_0px_26px]">
+            <div className="relative w-61.75 h-54.75 rounded-2xl [box-shadow:color(display-p3_1_1_1)_0px_0px_9px_inset,color(display-p3_0_0_0/5%)_0px_0px_0px_1px,color(display-p3_0_0_0/5%)_0px_0px_26px] dark:[box-shadow:color(display-p3_0.08_0.08_0.08)_0px_0px_9px_inset,color(display-p3_1_1_1/6%)_0px_0px_0px_1px,color(display-p3_0_0_0/20%)_0px_0px_26px]">
               <motion.div
-                className="pointer-events-none absolute inset-0 rounded-2xl bg-[color(display-p3_1_1_1)]"
+                className="pointer-events-none absolute inset-0 rounded-2xl bg-[color(display-p3_1_1_1)] dark:bg-[color(display-p3_0.1_0.1_0.1)]"
                 initial={false}
                 animate={{ opacity: terminalDragging ? 0.94 : 1 }}
                 transition={{
@@ -1506,25 +1250,25 @@ export default function Home() {
                 aria-hidden="true"
               />
               <div className="absolute top-3.5 left-3.5 flex items-start gap-[5.5px] p-0 size-fit">
-                <div className="rounded-full shrink-0 size-2.5" style={{ backgroundImage: "linear-gradient(in oklab 180deg, oklab(89.8% 0 0) 0%, oklab(89.8% 0 0) 100%)" }} />
-                <div className="rounded-full bg-[#DDDDDD] shrink-0 size-2.5" />
-                <div className="rounded-full bg-[#DDDDDD] shrink-0 size-2.5" />
+                <div className="rounded-full shrink-0 size-2.5" style={{ backgroundImage: isDark ? "linear-gradient(in oklab 180deg, oklab(25% 0 0) 0%, oklab(25% 0 0) 100%)" : "linear-gradient(in oklab 180deg, oklab(89.8% 0 0) 0%, oklab(89.8% 0 0) 100%)" }} />
+                <div className="rounded-full bg-[#DDDDDD] dark:bg-[#3A3A3A] shrink-0 size-2.5" />
+                <div className="rounded-full bg-[#DDDDDD] dark:bg-[#3A3A3A] shrink-0 size-2.5" />
               </div>
               <div className="absolute top-11 left-3.5 relative flex flex-col items-start">
                 <div className="flex items-center gap-[4px]">
-                  <TerminalStepCheck phase={firstTerminalStepPhase} />
+                  <TerminalStepCheck phase={firstTerminalStepPhase} isDark={isDark} />
                   <TerminalStepLabel complete={terminalEmailStepComplete}>
                     Fill email
                   </TerminalStepLabel>
                 </div>
                 <div className="mt-[6px] flex items-center gap-[4px]">
-                  <TerminalStepCheck phase={secondTerminalStepPhase} />
+                  <TerminalStepCheck phase={secondTerminalStepPhase} isDark={isDark} />
                   <TerminalStepLabel complete={terminalPasswordStepComplete}>
                     Fill password
                   </TerminalStepLabel>
                 </div>
                 <div className="mt-[6px] flex items-center gap-[4px]">
-                  <TerminalStepCheck phase={submitTerminalStepPhase} />
+                  <TerminalStepCheck phase={submitTerminalStepPhase} isDark={isDark} />
                   <TerminalStepLabel complete={terminalSubmitStepComplete}>
                     Submit form
                   </TerminalStepLabel>
@@ -1534,6 +1278,7 @@ export default function Home() {
                     phase={redirectTerminalStepPhase}
                     successColor={TERMINAL_FAILURE_RED}
                     successIcon="close"
+                    isDark={isDark}
                   />
                   <TerminalStepLabel complete={terminalRedirectStepComplete} showStrikeThrough={false}>
                     Redirect page
@@ -1544,7 +1289,7 @@ export default function Home() {
                 {!terminalLabelDismissed ? (
                   <motion.div
                     key="terminal-label"
-                    className={`${restartHardRegular.className} absolute left-1/2 top-[calc(100%+6px)] [letter-spacing:0em] text-center text-[color(display-p3_0.469_0.469_0.469)] text-[11px]/4.5 size-fit`}
+                    className={`${restartHardRegular.className} absolute left-1/2 top-[calc(100%+6px)] [letter-spacing:0em] text-center text-[color(display-p3_0.469_0.469_0.469)] dark:text-[color(display-p3_0.55_0.55_0.55)] text-[11px]/4.5 size-fit`}
                     style={{
                       x: "-50%",
                       fontVariationSettings: '"CONN" 50, "wght" 400, "ital" 0',
@@ -1593,7 +1338,7 @@ export default function Home() {
       </motion.div>
       <motion.div {...stagger(3)} className="w-82.75 flex justify-start">
         <div
-          className={`${testSignifierRegular.className} mt-12 w-66.75 h-fit tracking-[-0.02em] text-black text-[17.5px]/6.25`}
+          className={`${testSignifierRegular.className} mt-12 w-66.75 h-fit tracking-[-0.02em] text-black dark:text-[color(display-p3_0.92_0.92_0.92)] text-[17.5px]/6.25`}
         >
           Installation
         </div>
@@ -1811,13 +1556,13 @@ function ThemeToggle({ theme, setTheme }: { theme: string | undefined; setTheme:
 function InstallCommands() {
   return (
     <div className="flex flex-col gap-1.5 w-full">
-      <CommandRow command="npx difficult@latest" />
+      <CommandRow command="npx expect-cli@latest" />
       <div className="[font-synthesis:none] antialiased w-full mt-4">
         <div className="w-fit h-5 tracking-[-0.01em] text-[color(display-p3_0.361_0.361_0.361)] dark:text-[color(display-p3_0.55_0.55_0.55)] font-['ABC_Diatype',system-ui,sans-serif] shrink-0 text-[15px]/5 sm:text-[13px]/4.5">
           Add skill
         </div>
       </div>
-      <CommandRow command="npx skills add https://github.com/millionco/browser-tester --skill difficult" fade />
+      <CommandRow command="npx skills add https://github.com/millionco/expect --skill expect-cli" fade />
     </div>
   );
 }

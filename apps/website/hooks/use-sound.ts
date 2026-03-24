@@ -1,7 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+// eslint-disable-next-line no-restricted-imports -- external Web Audio API sync
+import { useEffect } from "react";
 import { getAudioContext, decodeAudioData } from "@/lib/sound-engine";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import type {
   SoundAsset,
   UseSoundOptions,
@@ -106,7 +109,7 @@ export function useSound(
     }
   }, [volume]);
 
-  useEffect(() => {
+  useMountEffect(() => {
     return () => {
       if (sourceRef.current) {
         try {
@@ -116,7 +119,7 @@ export function useSound(
         }
       }
     };
-  }, []);
+  });
 
   return [play, { stop, pause, isPlaying, duration, sound }] as const;
 }
