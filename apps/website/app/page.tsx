@@ -27,7 +27,6 @@ const SPINNER_CIRCUMFERENCE = 2 * Math.PI * SPINNER_R;
 const FIRST_FIELD_POST_TYPE_CHECK_DELAY_MS = 150;
 const LOAD_SEQUENCE_FADE_MS = 220;
 const TERMINAL_ROW_INDICATOR_DELAY_MS = 45;
-const INPUT_STATUS_APPEAR_DELAY_MS = 45;
 const INPUT_STATUS_EXIT_RING_GROW_DURATION_S = 0.5;
 
 /** Same green as the Paper checkmark — used in the late spinner morph + final success state. */
@@ -530,13 +529,11 @@ export default function Home() {
   const firstFieldTypingComplete = typedFieldLength >= FIRST_FIELD_VALUE.length;
   const terminalIndicatorMorphReady = useDelayedFlag(firstFieldTouched && firstFieldTypingComplete, FIRST_FIELD_POST_TYPE_CHECK_DELAY_MS);
   const terminalIndicatorSuccessReady = useDelayedFlag(terminalIndicatorMorphReady, LOAD_SEQUENCE_FADE_MS);
-  const terminalRowIndicatorMorphReady = useDelayedFlag(terminalIndicatorMorphReady, TERMINAL_ROW_INDICATOR_DELAY_MS);
   const terminalRowIndicatorSuccessReady = useDelayedFlag(terminalIndicatorSuccessReady, TERMINAL_ROW_INDICATOR_DELAY_MS);
   const cursorIndicatorSuccessDismissed = useDelayedFlag(terminalRowIndicatorSuccessReady, TERMINAL_NEXT_ROW_DELAY_MS + CURSOR_INDICATOR_SUCCESS_DISMISS_DELAY_MS);
   const cursorStageIsSecond = useDelayedFlag(cursorIndicatorSuccessDismissed, SECOND_FIELD_MOVE_AFTER_DISMISS_DELAY_MS);
   const secondFieldFocused = useDelayedFlag(secondFieldTouched, FIRST_FIELD_FOCUS_DELAY_MS);
   const secondFieldTypingReady = useDelayedFlag(secondFieldFocused, FIRST_FIELD_TYPE_AFTER_FOCUS_DELAY_MS);
-  const secondFieldIndicatorVisible = useDelayedFlag(secondFieldFocused, INPUT_STATUS_APPEAR_DELAY_MS);
   const secondFieldTypingComplete = secondTypedFieldLength >= SECOND_FIELD_VALUE.length;
   const passwordCursorIndicatorMorphReady = useDelayedFlag(secondFieldTouched && secondFieldTypingComplete, FIRST_FIELD_POST_TYPE_CHECK_DELAY_MS);
   const passwordCursorIndicatorSuccessReady = useDelayedFlag(passwordCursorIndicatorMorphReady, LOAD_SEQUENCE_FADE_MS);
@@ -576,10 +573,7 @@ export default function Home() {
         ? SECOND_FIELD_MOVE_DURATION_S
         : CURSOR_MOVE_DURATION_S;
   const cursorMoveDelayS = cursorMoveStage === "first" ? CURSOR_MOVE_DELAY_S : 0;
-  const showFirstFieldIndicator = !terminalIndicatorSuccessReady;
-  const showSecondFieldIndicator = secondFieldIndicatorVisible && !passwordCursorIndicatorSuccessReady;
-  const terminalEmailStepComplete = terminalRowIndicatorSuccessReady;
-  const terminalPasswordStepComplete = passwordTerminalIndicatorSuccessReady;
+  const terminalFormStepComplete = passwordTerminalIndicatorSuccessReady;
   const terminalSubmitStepComplete = submitTerminalIndicatorSuccessReady;
   const terminalRedirectStepComplete = redirectTerminalIndicatorSuccessReady;
   const showTextCursor = firstFieldTouched && cursorMoveStage !== "third";
@@ -589,15 +583,11 @@ export default function Home() {
   const showFirstFieldCaret = !firstFieldInputActive && firstFieldVisuallyFocused;
   const showSecondFieldCaret = !secondFieldInputActive && secondFieldVisuallyFocused;
   const showButtonCursor = cursorMoveStage === "third";
-  const firstTerminalStepPhase = getTerminalStepPhase({
-    showLoading: showFirstFieldIndicator,
-    morphReady: terminalRowIndicatorMorphReady,
-    successReady: terminalEmailStepComplete,
-  });
-  const secondTerminalStepPhase = getTerminalStepPhase({
-    showLoading: showSecondFieldIndicator,
+  const formTerminalStepPhase = getTerminalStepPhase({
+    showLoading:
+      !passwordTerminalIndicatorMorphReady && !passwordTerminalIndicatorSuccessReady,
     morphReady: passwordTerminalIndicatorMorphReady,
-    successReady: terminalPasswordStepComplete,
+    successReady: passwordTerminalIndicatorSuccessReady,
   });
   const submitTerminalStepPhase = getTerminalStepPhase({
     showLoading: showSubmitButtonIndicator,
@@ -1254,17 +1244,17 @@ export default function Home() {
                 <div className="rounded-full bg-[#DDDDDD] dark:bg-[#3A3A3A] shrink-0 size-2.5" />
                 <div className="rounded-full bg-[#DDDDDD] dark:bg-[#3A3A3A] shrink-0 size-2.5" />
               </div>
-              <div className="absolute top-11 left-3.5 relative flex flex-col items-start">
-                <div className="flex items-center gap-[4px]">
-                  <TerminalStepCheck phase={firstTerminalStepPhase} isDark={isDark} />
-                  <TerminalStepLabel complete={terminalEmailStepComplete}>
-                    Fill email
-                  </TerminalStepLabel>
+              <div className="absolute top-11 left-3.5 flex flex-col items-start">
+                <div
+                  className={`${berkeleyMonoRegular.className} mb-3 flex flex-col gap-0.5 [letter-spacing:0em] font-bold text-[13px]/4.5 text-[#696969] dark:text-[#999999]`}
+                >
+                  <div>Last login: Mar 24</div>
+                  <div>Expect@Mac $</div>
                 </div>
-                <div className="mt-[6px] flex items-center gap-[4px]">
-                  <TerminalStepCheck phase={secondTerminalStepPhase} isDark={isDark} />
-                  <TerminalStepLabel complete={terminalPasswordStepComplete}>
-                    Fill password
+                <div className="flex items-center gap-[4px]">
+                  <TerminalStepCheck phase={formTerminalStepPhase} isDark={isDark} />
+                  <TerminalStepLabel complete={terminalFormStepComplete}>
+                    Fill form
                   </TerminalStepLabel>
                 </div>
                 <div className="mt-[6px] flex items-center gap-[4px]">
