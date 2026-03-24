@@ -2,7 +2,7 @@ import { Layer, References } from "effect";
 import { DevTools } from "effect/unstable/devtools";
 import { Executor, Git, Planner, Reporter, Updates } from "@expect/supervisor";
 import { Agent, AgentBackend } from "@expect/agent";
-import { DebugFileLoggerLayer } from "@expect/shared/observability";
+import { Analytics, DebugFileLoggerLayer } from "@expect/shared/observability";
 
 export const layerCli = ({ verbose, agent }: { verbose: boolean; agent: AgentBackend }) =>
   Layer.mergeAll(
@@ -12,6 +12,7 @@ export const layerCli = ({ verbose, agent }: { verbose: boolean; agent: AgentBac
     Updates.layer,
     DevTools.layer(),
     Git.withRepoRoot(process.cwd()),
+    Analytics.layerPostHog,
   ).pipe(
     Layer.provide(Agent.layerFor(agent ?? "claude")),
     Layer.provide(DebugFileLoggerLayer),

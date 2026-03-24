@@ -1,0 +1,23 @@
+import { Effect, ManagedRuntime } from "effect";
+import { Analytics } from "@expect/shared/observability";
+
+const analyticsRuntime = ManagedRuntime.make(Analytics.layerPostHog);
+
+export const trackSessionStarted = () =>
+  analyticsRuntime.runPromise(
+    Effect.gen(function* () {
+      const analytics = yield* Analytics;
+      yield* analytics.capture("session:started");
+    }),
+  );
+
+export const flushSession = (sessionStartedAt: number) =>
+  analyticsRuntime.runPromise(
+    Effect.gen(function* () {
+      const analytics = yield* Analytics;
+      yield* analytics.capture("session:ended", {
+        session_ms: Date.now() - sessionStartedAt,
+      });
+      yield* analytics.flush;
+    }),
+  );

@@ -10,6 +10,7 @@ import {
   Reporter,
   TestPlanDraft,
 } from "@expect/supervisor";
+import { Analytics } from "@expect/shared/observability";
 import type { AgentBackend } from "@expect/agent";
 import figures from "figures";
 import { VERSION } from "../constants.js";
@@ -28,6 +29,10 @@ export const runHeadless = (options: HeadlessRunOptions) =>
     const git = yield* Git;
     const executor = yield* Executor;
     const reporter = yield* Reporter;
+    const analytics = yield* Analytics;
+
+    const sessionStartedAt = Date.now();
+    yield* analytics.capture("session:started");
 
     console.log(`expect v${VERSION}`);
     console.log(`Testing ${changesForDisplayName(options.changesFor)}`);
@@ -50,8 +55,13 @@ export const runHeadless = (options: HeadlessRunOptions) =>
     });
 
     const testPlan = yield* Channel.runDrain(planner.plan(draft));
+    yield* analytics.capture("plan:generated", {
+      plan_id: testPlan.id,
+      step_count: testPlan.steps.length,
+    });
     yield* Effect.logInfo(`Plan: ${testPlan.title} (${testPlan.steps.length} steps)`);
 
+    const runStartedAt = Date.now();
     const seenEvents = new Set<string>();
     const finalExecuted = yield* executor.executePlan(testPlan).pipe(
       Stream.tap((executed) =>
@@ -83,6 +93,27 @@ export const runHeadless = (options: HeadlessRunOptions) =>
     );
 
     const report = yield* reporter.report(finalExecuted);
+
+    const passedCount = report.steps.filter(
+      (step) => report.stepStatuses.get(step.id)?.status === "passed",
+    ).length;
+    const failedCount = report.steps.filter(
+      (step) => report.stepStatuses.get(step.id)?.status === "failed",
+    ).length;
+
+    yield* analytics.capture("run:completed", {
+      plan_id: testPlan.id,
+      passed: passedCount,
+      failed: failedCount,
+      step_count: testPlan.steps.length,
+      file_count: fileStats.length,
+      duration_ms: Date.now() - runStartedAt,
+    });
+
+    yield* analytics.capture("session:ended", {
+      session_ms: Date.now() - sessionStartedAt,
+    });
+    yield* analytics.flush;
 
     console.error(`\n${report.toPlainText}`);
     process.exit(report.status === "passed" ? 0 : 1);

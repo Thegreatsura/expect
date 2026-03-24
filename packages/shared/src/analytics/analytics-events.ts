@@ -1,5 +1,6 @@
 export interface CommonProperties {
   readonly timestamp: string;
+  readonly projectId: string;
 }
 
 export interface EventMap {
@@ -15,6 +16,8 @@ export interface EventMap {
     readonly plan_id: string;
     readonly passed: number;
     readonly failed: number;
+    readonly step_count: number;
+    readonly file_count: number;
     readonly duration_ms: number;
   };
   "run:failed": { readonly plan_id: string; readonly error_tag: string };
@@ -39,5 +42,9 @@ export interface EventMap {
 
   // Session
   "session:started": undefined;
-  "session:ended": { readonly session_ms: number; readonly session_length: string };
+  "session:ended": { readonly session_ms: number };
+
+  // Flows
+  "flow:saved": { readonly step_count: number };
+  "flow:reused": { readonly slug: string; readonly step_count: number };
 }

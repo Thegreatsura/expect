@@ -1,6 +1,7 @@
 import { Effect, Stream } from "effect";
 import * as Atom from "effect/unstable/reactivity/Atom";
 import { ExecutedTestPlan, Executor, Git, Reporter } from "@expect/supervisor";
+import { Analytics } from "@expect/shared/observability";
 import type { AgentBackend } from "@expect/agent";
 import type { TestPlan, TestReport } from "@expect/shared/models";
 import { cliAtomRuntime } from "./runtime.js";
@@ -23,6 +24,9 @@ export const executePlanFn = cliAtomRuntime.fn(
     function* (input: ExecutePlanInput, _ctx: Atom.FnContext) {
       const reporter = yield* Reporter;
       const executor = yield* Executor;
+      const analytics = yield* Analytics;
+
+      const runStartedAt = Date.now();
 
       const finalExecuted = yield* executor.executePlan(input.testPlan).pipe(
         Stream.tap((executed) => Effect.sync(() => input.onUpdate(executed))),
@@ -35,6 +39,22 @@ export const executePlanFn = cliAtomRuntime.fn(
       );
 
       const report = yield* reporter.report(finalExecuted);
+
+      const passedCount = report.steps.filter(
+        (step) => report.stepStatuses.get(step.id)?.status === "passed",
+      ).length;
+      const failedCount = report.steps.filter(
+        (step) => report.stepStatuses.get(step.id)?.status === "failed",
+      ).length;
+
+      yield* analytics.capture("run:completed", {
+        plan_id: input.testPlan.id,
+        passed: passedCount,
+        failed: failedCount,
+        step_count: input.testPlan.steps.length,
+        file_count: input.testPlan.fileStats.length,
+        duration_ms: Date.now() - runStartedAt,
+      });
 
       if (report.status === "passed") {
         const git = yield* Git;

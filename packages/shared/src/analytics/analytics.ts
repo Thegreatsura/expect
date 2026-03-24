@@ -1,10 +1,14 @@
-import * as crypto from "node:crypto";
-
-import { Config, Effect, Layer, ServiceMap } from "effect";
-import { KeyValueStore } from "effect/unstable/persistence";
+import { Effect, Layer, ServiceMap } from "effect";
+import { machineId } from "node-machine-id";
+import { hash } from "ohash";
 import { PostHog } from "posthog-node";
 
 import type { EventMap } from "./analytics-events";
+
+const POSTHOG_API_KEY = "phc_t5FKk9mlc4pKbbBimiIlrM5Acq9meRp1FSuNjmwxjAX";
+const POSTHOG_DEFAULT_HOST = "https://us.i.posthog.com";
+
+const posthogClient = new PostHog(POSTHOG_API_KEY, { host: POSTHOG_DEFAULT_HOST });
 
 // ---------------------------------------------------------------------------
 // AnalyticsProvider — abstract provider that Analytics delegates to
@@ -22,64 +26,46 @@ export interface AnalyticsProviderShape {
 export class AnalyticsProvider extends ServiceMap.Service<
   AnalyticsProvider,
   AnalyticsProviderShape
->()("@expect/AnalyticsProvider") {}
+>()("@expect/AnalyticsProvider") {
+  static layerPostHog = Layer.succeed(this)({
+    capture: (event) =>
+      Effect.sync(() => {
+        posthogClient.captureImmediate({
+          event: event.eventName,
+          properties: event.properties,
+          distinctId: event.distinctId,
+        });
+      }),
+    flush: Effect.tryPromise({
+      try: () => posthogClient.flush(),
+      catch: (cause) => cause,
+    }).pipe(Effect.ignore),
+  });
 
-// ---------------------------------------------------------------------------
-// Provider layers
-// ---------------------------------------------------------------------------
-
-const layerPostHog = Layer.effect(
-  AnalyticsProvider,
-  Effect.gen(function* () {
-    const host = yield* Config.withDefault(
-      Config.string("POSTHOG_HOST"),
-      "https://us.i.posthog.com",
-    );
-    const posthog = new PostHog("phc_t7GoTouuuoDvdybpuD701POQERJs9r2uXrsLQ2LPTfQ", { host });
-
-    return {
-      capture: (event: Parameters<AnalyticsProviderShape["capture"]>[0]) =>
-        Effect.sync(() => {
-          posthog.capture({
-            event: event.eventName,
-            properties: event.properties,
-            distinctId: event.distinctId,
-          });
-        }),
-      flush: Effect.tryPromise({
-        try: () => posthog.flush(),
-        catch: (cause) => cause,
-      }).pipe(Effect.ignore),
-    } as const;
-  }),
-);
-
-const layerDev = Layer.succeed(AnalyticsProvider)({
-  capture: (event) =>
-    Effect.logInfo("Tracked event", {
-      eventName: event.eventName,
-      distinctId: event.distinctId,
-      ...event.properties,
-    }).pipe(Effect.annotateLogs({ module: "Analytics" })),
-  flush: Effect.void,
-});
+  static layerDev = Layer.succeed(this)({
+    capture: (event) =>
+      Effect.logInfo("Tracked event", {
+        eventName: event.eventName,
+        distinctId: event.distinctId,
+        ...event.properties,
+      }).pipe(Effect.annotateLogs({ module: "Analytics" })),
+    flush: Effect.void,
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Analytics — public service
 // ---------------------------------------------------------------------------
 
-const DISTINCT_ID_KEY = "analytics:distinct_id";
-
 export class Analytics extends ServiceMap.Service<Analytics>()("@expect/Analytics", {
   make: Effect.gen(function* () {
     const provider = yield* AnalyticsProvider;
-    const keyValueStore = yield* KeyValueStore.KeyValueStore;
 
-    const existing = yield* keyValueStore.get(DISTINCT_ID_KEY);
-    const distinctId = existing ?? crypto.randomUUID();
-    if (existing === undefined) {
-      yield* keyValueStore.set(DISTINCT_ID_KEY, distinctId);
-    }
+    const distinctId = yield* Effect.tryPromise({
+      try: () => machineId(),
+      catch: () => "unknown",
+    });
+    const projectId = hash(process.cwd());
 
     const capture = <K extends keyof EventMap>(
       eventName: K,
@@ -88,6 +74,7 @@ export class Analytics extends ServiceMap.Service<Analytics>()("@expect/Analytic
       Effect.gen(function* () {
         const commonProperties = {
           timestamp: new Date().toISOString(),
+          projectId,
         };
 
         yield* provider.capture({
@@ -130,6 +117,10 @@ export class Analytics extends ServiceMap.Service<Analytics>()("@expect/Analytic
     return { capture, track, flush: provider.flush } as const;
   }),
 }) {
-  static layerPostHog = Layer.effect(this)(this.make).pipe(Layer.provide(layerPostHog));
-  static layerDev = Layer.effect(this)(this.make).pipe(Layer.provide(layerDev));
+  static layerPostHog = Layer.effect(this)(this.make).pipe(
+    Layer.provide(AnalyticsProvider.layerPostHog),
+  );
+  static layerDev = Layer.effect(this)(this.make).pipe(
+    Layer.provide(AnalyticsProvider.layerDev),
+  );
 }

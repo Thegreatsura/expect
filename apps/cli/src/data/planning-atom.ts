@@ -1,6 +1,7 @@
 import { Channel, Effect, Option } from "effect";
 import * as Atom from "effect/unstable/reactivity/Atom";
 import { Git, Planner, TestPlanDraft, DraftId } from "@expect/supervisor";
+import { Analytics } from "@expect/shared/observability";
 import { AcpSessionUpdate, ChangesFor } from "@expect/shared/models";
 import { cliAtomRuntime } from "./runtime.js";
 
@@ -15,6 +16,7 @@ export const createPlanFn = cliAtomRuntime.fn(
     function* (input: CreatePlanInput, _ctx: Atom.FnContext) {
       const git = yield* Git;
       const planner = yield* Planner;
+      const analytics = yield* Analytics;
 
       const currentBranch = yield* git.getCurrentBranch;
       const fileStats = yield* git.getFileStats(input.changesFor);
@@ -32,10 +34,17 @@ export const createPlanFn = cliAtomRuntime.fn(
         requiresCookies: false,
       });
 
-      return yield* planner.plan(draft).pipe(
+      const testPlan = yield* planner.plan(draft).pipe(
         Channel.runForEach((updates) => Effect.sync(() => input.onUpdate(updates))),
         Effect.retry({ times: 3 }),
       );
+
+      yield* analytics.capture("plan:generated", {
+        plan_id: testPlan.id,
+        step_count: testPlan.steps.length,
+      });
+
+      return testPlan;
     },
     Effect.annotateLogs({ fn: "createPlanFn" }),
   ),

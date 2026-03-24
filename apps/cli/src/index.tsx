@@ -16,6 +16,7 @@ import { queryClient } from "./query-client.js";
 import { setInkInstance } from "./utils/clear-ink-display.js";
 import { RegistryProvider } from "@effect/atom-react";
 import { agentProviderAtom } from "./data/runtime.js";
+import { flushSession, trackSessionStarted } from "./utils/session-analytics";
 
 const DEFAULT_SKIP_PLANNING = true;
 
@@ -51,6 +52,9 @@ Examples:
 const isHeadless = () => !process.stdin.isTTY;
 
 const renderApp = async (agent: AgentBackend) => {
+  const sessionStartedAt = Date.now();
+  await trackSessionStarted();
+
   const initialTheme = loadThemeName() ?? undefined;
   process.stdout.write(ALT_SCREEN_ON);
   process.on("exit", () => process.stdout.write(ALT_SCREEN_OFF));
@@ -65,6 +69,7 @@ const renderApp = async (agent: AgentBackend) => {
   );
   setInkInstance(instance);
   await instance.waitUntilExit();
+  await flushSession(sessionStartedAt);
   process.exit(0);
 };
 
