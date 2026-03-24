@@ -62,40 +62,63 @@ export function useSound(
 
   const play = useCallback(
     (overrides?: { volume?: number; playbackRate?: number }) => {
-      if (!soundEnabled || !bufferRef.current) return;
+      if (!soundEnabled) return;
 
       const ctx = getAudioContext();
+      void ctx.resume();
 
-      if (ctx.state === "suspended") {
-        ctx.resume();
-      }
+      const startPlaybackWithBuffer = (buffer: AudioBuffer) => {
+        if (!soundEnabled) return;
 
-      if (interrupt && sourceRef.current) {
-        stop();
-      }
+        if (interrupt && sourceRef.current) {
+          stop();
+        }
 
-      const source = ctx.createBufferSource();
-      const gain = ctx.createGain();
+        const source = ctx.createBufferSource();
+        const gain = ctx.createGain();
 
-      source.buffer = bufferRef.current;
-      source.playbackRate.value = overrides?.playbackRate ?? playbackRate;
-      gain.gain.value = overrides?.volume ?? volume;
+        source.buffer = buffer;
+        source.playbackRate.value = overrides?.playbackRate ?? playbackRate;
+        gain.gain.value = overrides?.volume ?? volume;
 
-      source.connect(gain);
-      gain.connect(ctx.destination);
+        source.connect(gain);
+        gain.connect(ctx.destination);
 
-      source.onended = () => {
-        setIsPlaying(false);
-        onEnd?.();
+        source.onended = () => {
+          setIsPlaying(false);
+          onEnd?.();
+        };
+
+        source.start(0);
+        sourceRef.current = source;
+        gainRef.current = gain;
+        setIsPlaying(true);
+        onPlay?.();
       };
 
-      source.start(0);
-      sourceRef.current = source;
-      gainRef.current = gain;
-      setIsPlaying(true);
-      onPlay?.();
+      const run = (buffer: AudioBuffer) => {
+        if (ctx.state === "suspended") {
+          void ctx.resume().then(() => {
+            startPlaybackWithBuffer(buffer);
+          });
+        } else {
+          startPlaybackWithBuffer(buffer);
+        }
+      };
+
+      if (bufferRef.current) {
+        run(bufferRef.current);
+        return;
+      }
+
+      void decodeAudioData(sound.dataUri).then((buffer) => {
+        bufferRef.current = buffer;
+        setDuration(buffer.duration);
+        if (!soundEnabled) return;
+        run(buffer);
+      });
     },
-    [soundEnabled, playbackRate, volume, interrupt, stop, onPlay, onEnd]
+    [sound, soundEnabled, playbackRate, volume, interrupt, stop, onPlay, onEnd]
   );
 
   const pause = useCallback(() => {

@@ -11,6 +11,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { motion, AnimatePresence } from "motion/react";
 import { useSound } from "@/hooks/use-sound";
 import { clickSoftSound } from "@/lib/click-soft";
+import { drawKnife1Sound } from "@/lib/draw-knife-1";
 import { switchOffSound } from "@/lib/switch-off";
 import { switchOnSound } from "@/lib/switch-on";
 import { useWebHaptics } from "web-haptics/react";
@@ -32,6 +33,7 @@ const INPUT_STATUS_EXIT_RING_GROW_DURATION_S = 0.5;
 /** Same green as the Paper checkmark — used in the late spinner morph + final success state. */
 const TERMINAL_SUCCESS_GREEN = "#27C840";
 const TERMINAL_FAILURE_RED = "#FC272F";
+const TERMINAL_FAILURE_RED_DARK = "color(display-p3 1 0.447 0.369)";
 const TERMINAL_SPINNER_TRACK = "#E3E3E3";
 const TERMINAL_SPINNER_ACTIVE = "#8E8E8E";
 /** Stroke width for the terminal loading ring (viewBox units). */
@@ -59,6 +61,7 @@ const CURSOR_ARC_LIFT_Y = 38;
 const CURSOR_PATH_SAMPLE_COUNT = 17;
 const CURSOR_START_ROTATE = -7;
 const SHARED_TERMINAL_INDICATOR_CLASS = "relative flex size-6 shrink-0 items-center justify-center";
+const TERMINAL_KNIFE_SOUND_VOLUME = 0.45;
 const FIRST_FIELD_VALUE = "foo@bar.xyz";
 const SECOND_FIELD_VALUE = "••••••••";
 const SECOND_FIELD_SUBMIT_READY_LENGTH = 4;
@@ -325,18 +328,17 @@ function TerminalSyncSpinner({
                 viewBox="0 0 24 24"
                 width="24"
                 height="24"
-                color={TERMINAL_FAILURE_RED}
+                color={isDark ? TERMINAL_FAILURE_RED_DARK : TERMINAL_FAILURE_RED}
                 fill="none"
                 style={{
                   width: "18px",
                   height: "18px",
-                  backgroundColor: isDark ? "#1E1E1E" : "#FFFFFF",
                   flexShrink: 0,
                 }}
               >
                 <path
                   d="M12 1.25C17.937 1.25 22.75 6.063 22.75 12C22.75 17.937 17.937 22.75 12 22.75C6.063 22.75 1.25 17.937 1.25 12C1.25 6.063 6.063 1.25 12 1.25ZM9.631 8.225C9.238 7.904 8.659 7.927 8.293 8.293C7.927 8.659 7.904 9.238 8.225 9.631L8.293 9.707L10.586 12L8.294 14.293C7.904 14.684 7.903 15.317 8.294 15.707C8.684 16.097 9.318 16.097 9.708 15.707L12 13.414L14.292 15.707L14.368 15.775C14.761 16.096 15.34 16.073 15.706 15.707C16.072 15.341 16.095 14.762 15.775 14.369L15.706 14.293L13.413 12L15.707 9.707L15.775 9.631C16.096 9.238 16.073 8.659 15.707 8.293C15.341 7.927 14.762 7.904 14.369 8.225L14.293 8.293L12 10.586L9.707 8.293L9.631 8.225Z"
-                  fill={TERMINAL_FAILURE_RED}
+                  fill={isDark ? TERMINAL_FAILURE_RED_DARK : TERMINAL_FAILURE_RED}
                 />
               </svg>
             ) : (
@@ -499,6 +501,8 @@ export default function Home() {
   });
 
   const mainContainerRef = useRef<HTMLDivElement>(null);
+  const terminalKnifeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const terminalKnifeSoundLastPlayAtRef = useRef(0);
   const cursorStageRef = useRef<HTMLDivElement>(null);
   const firstFieldRef = useRef<HTMLDivElement>(null);
   const secondFieldRef = useRef<HTMLDivElement>(null);
@@ -523,6 +527,28 @@ export default function Home() {
   const [editableFocusedField, setEditableFocusedField] = useState<"first" | "second" | null>(null);
   const [editableFirstFieldValue, setEditableFirstFieldValue] = useState("");
   const [editableSecondFieldValue, setEditableSecondFieldValue] = useState("");
+
+  useMountEffect(() => {
+    const element = new Audio(drawKnife1Sound.dataUri);
+    element.preload = "auto";
+    element.volume = TERMINAL_KNIFE_SOUND_VOLUME;
+    terminalKnifeAudioRef.current = element;
+    return () => {
+      element.pause();
+      terminalKnifeAudioRef.current = null;
+    };
+  });
+
+  const playTerminalDrawKnife = () => {
+    const now = Date.now();
+    if (now - terminalKnifeSoundLastPlayAtRef.current < 150) return;
+    terminalKnifeSoundLastPlayAtRef.current = now;
+    const element = terminalKnifeAudioRef.current;
+    if (!element) return;
+    element.volume = TERMINAL_KNIFE_SOUND_VOLUME;
+    element.currentTime = 0;
+    void element.play().catch(() => {});
+  };
 
   const firstFieldFocused = useDelayedFlag(firstFieldTouched, FIRST_FIELD_FOCUS_DELAY_MS);
   const firstFieldTypingReady = useDelayedFlag(firstFieldFocused, FIRST_FIELD_TYPE_AFTER_FOCUS_DELAY_MS);
@@ -1225,11 +1251,27 @@ export default function Home() {
               onDragEnd={() => {
                 setTerminalDragging(false);
               }}
+              onClick={() => {
+                playTerminalDrawKnife();
+              }}
+              onTap={() => {
+                playTerminalDrawKnife();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  playTerminalDrawKnife();
+                }
+              }}
+              role="button"
+              tabIndex={0}
               whileDrag={{ cursor: "grabbing" }}
               style={{ willChange: "transform, filter" }}
               className="cursor-grab touch-none active:cursor-grabbing"
             >
-            <div className="relative w-61.75 h-54.75 rounded-2xl [box-shadow:color(display-p3_1_1_1)_0px_0px_9px_inset,color(display-p3_0_0_0/5%)_0px_0px_0px_1px,color(display-p3_0_0_0/5%)_0px_0px_26px] dark:[box-shadow:color(display-p3_0.08_0.08_0.08)_0px_0px_9px_inset,color(display-p3_1_1_1/6%)_0px_0px_0px_1px,color(display-p3_0_0_0/20%)_0px_0px_26px]">
+            <motion.div
+              className="relative w-61.75 h-54.75 rounded-2xl [box-shadow:color(display-p3_1_1_1)_0px_0px_9px_inset,color(display-p3_0_0_0/5%)_0px_0px_0px_1px,color(display-p3_0_0_0/5%)_0px_0px_26px] dark:[box-shadow:color(display-p3_0.08_0.08_0.08)_0px_0px_9px_inset,color(display-p3_1_1_1/6%)_0px_0px_0px_1px,color(display-p3_0_0_0/20%)_0px_0px_26px]"
+            >
               <motion.div
                 className="pointer-events-none absolute inset-0 rounded-2xl bg-[color(display-p3_1_1_1)] dark:bg-[color(display-p3_0.1_0.1_0.1)]"
                 initial={false}
@@ -1242,7 +1284,7 @@ export default function Home() {
                 aria-hidden="true"
               />
               <div className="absolute top-3.5 left-3.5 flex items-start gap-[5.5px] p-0 size-fit">
-                <div className="rounded-full shrink-0 size-2.5" style={{ backgroundImage: isDark ? "linear-gradient(in oklab 180deg, oklab(25% 0 0) 0%, oklab(25% 0 0) 100%)" : "linear-gradient(in oklab 180deg, oklab(89.8% 0 0) 0%, oklab(89.8% 0 0) 100%)" }} />
+                <div className="rounded-full bg-[#DDDDDD] dark:bg-[#3A3A3A] shrink-0 size-2.5" />
                 <div className="rounded-full bg-[#DDDDDD] dark:bg-[#3A3A3A] shrink-0 size-2.5" />
                 <div className="rounded-full bg-[#DDDDDD] dark:bg-[#3A3A3A] shrink-0 size-2.5" />
               </div>
@@ -1315,7 +1357,7 @@ export default function Home() {
                   </motion.div>
                 ) : null}
               </AnimatePresence>
-            </div>
+            </motion.div>
             </motion.div>
           </div>
         </div>
