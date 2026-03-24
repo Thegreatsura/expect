@@ -12,7 +12,7 @@ export const evaluateRuntime = <K extends keyof ExpectRuntime>(
     () =>
       page.evaluate(
         ({ method, args }: { method: string; args: unknown[] }) => {
-          const runtime = Reflect.get(globalThis, "__expectRuntime");
+          const runtime = Reflect.get(globalThis, "__EXPECT_RUNTIME__");
           if (!runtime || typeof runtime !== "object") {
             throw new Error("Browser runtime is not initialized");
           }

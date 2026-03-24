@@ -33,7 +33,7 @@ const emitPlugin = {
     build.onEnd((result) => {
       if (result.errors.length > 0) return;
       const runtimeCode =
-        `${result.outputFiles[0].text}\n` + "globalThis.__expectRuntime = __expectRuntime;\n";
+        `${result.outputFiles[0].text}\n` + "globalThis.__EXPECT_RUNTIME__ = __EXPECT_RUNTIME__;\n";
       fs.mkdirSync("src/generated", { recursive: true });
       fs.writeFileSync(
         "src/generated/runtime-script.ts",
@@ -51,7 +51,7 @@ const ctx = await context({
   entryPoints: ["src/runtime/index.ts"],
   bundle: true,
   format: "iife",
-  globalName: "__expectRuntime",
+  globalName: "__EXPECT_RUNTIME__",
   write: false,
   minify: true,
   target: "es2020",

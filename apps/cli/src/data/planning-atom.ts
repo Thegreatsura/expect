@@ -1,6 +1,5 @@
 import { Effect, Option } from "effect";
 import * as Atom from "effect/unstable/reactivity/Atom";
-import { Agent } from "@expect/agent";
 import { Git, Planner, TestPlanDraft, DraftId } from "@expect/supervisor";
 import type { ChangesFor } from "@expect/shared/models";
 import { cliAtomRuntime } from "./runtime.js";

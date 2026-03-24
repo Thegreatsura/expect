@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Box, Static, Text, useInput } from "ink";
 import figures from "figures";
 import { DateTime, Option } from "effect";
@@ -7,7 +7,6 @@ import { useAtom, useAtomValue } from "@effect/atom-react";
 import {
   ChangesFor,
   changesForDisplayName,
-  PlanId,
   TestPlan,
   type ExecutedTestPlan,
   type TestPlanStep,
