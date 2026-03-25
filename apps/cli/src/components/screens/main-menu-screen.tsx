@@ -12,6 +12,7 @@ import { Input } from "../ui/input";
 import { ErrorMessage } from "../ui/error-message";
 import { RuledBox } from "../ui/ruled-box";
 import { Spinner } from "../ui/spinner";
+import { Logo } from "../ui/logo";
 import { ContextPicker } from "../ui/context-picker";
 import { useContextPicker } from "../../hooks/use-context-picker";
 import { useStdoutDimensions } from "../../hooks/use-stdout-dimensions";
@@ -92,10 +93,7 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
         setErrorMessage("Describe what you want the browser agent to test.");
         return;
       }
-      if (!gitState) {
-        setErrorMessage("Still loading git state...");
-        return;
-      }
+      if (!gitState) return;
 
       const mainBranch = gitState.mainBranch ?? "main";
       let changesFor: ChangesFor;
@@ -210,14 +208,7 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
   return (
     <Box flexDirection="column" width="100%" paddingY={1}>
       <Box flexDirection="column" marginBottom={1} paddingX={1}>
-        <Text color={COLORS.BORDER}>
-          <Text color="red">{figures.cross}</Text>
-          <Text color="green">{figures.tick}</Text>
-          <Text bold color={COLORS.PRIMARY}>
-            {" Expect"}
-          </Text>
-          <Text color={COLORS.DIM}>{" v0.0.2"}</Text>
-        </Text>
+        <Logo />
       </Box>
 
       <Box flexDirection="column" width="100%">

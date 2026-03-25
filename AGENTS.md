@@ -451,7 +451,7 @@ yield *
 
 ## Backend Logging Requirements
 
-**When writing or modifying backend service code, always add appropriate logging.** 
+**When writing or modifying backend service code, always add appropriate logging.**
 
 Rules:
 
@@ -464,9 +464,7 @@ Rules:
 
 ```ts
 // Example: proper logging in a service function
-const commitBlock = Effect.fn("Blocks.commitBlock")(function* (
-  blockId: BlockId,
-) {
+const commitBlock = Effect.fn("Blocks.commitBlock")(function* (blockId: BlockId) {
   yield* Effect.annotateCurrentSpan({ blockId });
   const block = yield* blockRepo.findById(blockId);
   // ... business logic ...
@@ -672,14 +670,20 @@ This codebase uses React Compiler. **Never use `useCallback`, `useMemo`, or `Rea
 **BAD — ternary in JSX:**
 
 ```tsx
-{items.length === 0 ? <EmptyState /> : <ItemList items={items} />}
+{
+  items.length === 0 ? <EmptyState /> : <ItemList items={items} />;
+}
 ```
 
 **GOOD — simple conditionals:**
 
 ```tsx
-{items.length === 0 && <EmptyState />}
-{items.length > 0 && <ItemList items={items} />}
+{
+  items.length === 0 && <EmptyState />;
+}
+{
+  items.length > 0 && <ItemList items={items} />;
+}
 ```
 
 Early returns inside callback bodies are acceptable since they read like normal control flow.

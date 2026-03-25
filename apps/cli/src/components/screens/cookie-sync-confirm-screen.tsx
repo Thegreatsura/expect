@@ -4,8 +4,7 @@ import figures from "figures";
 import type { ChangesFor, SavedFlow } from "@expect/shared/models";
 import { useColors } from "../theme-context";
 import { Clickable } from "../ui/clickable";
-import { RuledBox } from "../ui/ruled-box";
-import { ScreenHeading } from "../ui/screen-heading";
+import { Logo } from "../ui/logo";
 import { useNavigationStore, Screen } from "../../stores/use-navigation";
 
 interface ConfirmOption {
@@ -17,13 +16,13 @@ interface ConfirmOption {
 const CONFIRM_OPTIONS: ConfirmOption[] = [
   {
     id: "enable-sync",
-    label: "Enable cookie sync and start testing",
-    detail: "Recommended for authenticated flows and much more reliable results.",
+    label: "Use existing cookies",
+    detail: "Recommended. Uses your browser session as-is.",
   },
   {
     id: "run-without-sync",
-    label: "Run anyway without cookie sync",
-    detail: "More likely to fail because the browser will not inherit your signed-in session.",
+    label: "Skip cookies",
+    detail: "Not recommended. Tests requiring login will fail.",
   },
 ];
 
@@ -76,25 +75,30 @@ export const CookieSyncConfirmScreen = ({
   });
 
   return (
-    <Box flexDirection="column" width="100%" paddingY={1}>
-      <Box paddingX={1}>
-        <ScreenHeading title="Cookie sync is off" subtitle={instruction} />
+    <Box flexDirection="column" width="100%" paddingY={1} paddingX={1}>
+      <Box>
+        <Logo />
+        <Text wrap="truncate">
+          {" "}
+          <Text color={COLORS.DIM}>{figures.pointerSmall}</Text>{" "}
+          <Text color={COLORS.TEXT}>{instruction}</Text>
+        </Text>
       </Box>
 
-      <RuledBox color={COLORS.RED} marginTop={1}>
-        <Text color={COLORS.RED} bold>
-          This test may need cookie sync.
-        </Text>
-        <Text color={COLORS.DIM}>
-          Running without synced cookies will make browser testing less reliable and more likely to
-          fail.
-        </Text>
-        <Text color={COLORS.DIM}>
-          If this flow needs an authenticated session, the browser may start in the wrong state.
-        </Text>
-      </RuledBox>
+      <Box marginTop={1}>
+        {selectedIndex === 0 ? (
+          <Text color={COLORS.GREEN}>
+            {figures.tick} Your signed-in session will be synced to the browser. Cookies stay on
+            device.
+          </Text>
+        ) : (
+          <Text color={COLORS.YELLOW}>
+            {figures.warning} The browser won{"'"}t inherit your signed-in session without cookies.
+          </Text>
+        )}
+      </Box>
 
-      <Box flexDirection="column" marginTop={1} paddingX={1}>
+      <Box flexDirection="column" marginTop={1}>
         {CONFIRM_OPTIONS.map((option, index) => {
           const isSelected = index === selectedIndex;
           return (
@@ -119,14 +123,6 @@ export const CookieSyncConfirmScreen = ({
             </Clickable>
           );
         })}
-      </Box>
-
-      <Box marginTop={1} paddingX={1}>
-        <Text color={COLORS.DIM}>
-          Press <Text color={COLORS.PRIMARY}>c</Text> to enable cookie sync,{" "}
-          <Text color={COLORS.PRIMARY}>a</Text> to approve anyway, or{" "}
-          <Text color={COLORS.PRIMARY}>Esc</Text> to go back.
-        </Text>
       </Box>
     </Box>
   );

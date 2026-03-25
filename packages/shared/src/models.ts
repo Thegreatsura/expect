@@ -484,6 +484,15 @@ export class ToolCall extends Schema.TaggedClass<ToolCall>()("ToolCall", {
   }
 }
 
+export class ToolProgress extends Schema.TaggedClass<ToolProgress>()("ToolProgress", {
+  toolName: Schema.String,
+  outputSize: Schema.Number,
+}) {
+  get id(): string {
+    return `tool-progress-${this.toolName}-${this.outputSize}`;
+  }
+}
+
 export class ToolResult extends Schema.TaggedClass<ToolResult>()("ToolResult", {
   toolName: Schema.String,
   result: Schema.String,
@@ -574,6 +583,7 @@ export const ExecutionEvent = Schema.Union([
   StepCompleted,
   StepFailed,
   ToolCall,
+  ToolProgress,
   ToolResult,
   AgentThinking,
   AgentText,
@@ -744,6 +754,22 @@ export class ExecutedTestPlan extends TestPlan.extend<ExecutedTestPlan>(
               toolName: update.title ?? "",
               result: serializeToolResult(update.rawOutput),
               isError: update.status === "failed",
+            }),
+          ],
+        });
+      }
+      if (update.rawOutput !== undefined) {
+        const outputSize = serializeToolResult(update.rawOutput).length;
+        return new ExecutedTestPlan({
+          ...this,
+          events: [
+            ...this.events.filter(
+              (event) =>
+                !(event._tag === "ToolProgress" && event.toolName === (update.title ?? "")),
+            ),
+            new ToolProgress({
+              toolName: update.title ?? "",
+              outputSize,
             }),
           ],
         });

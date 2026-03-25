@@ -409,10 +409,7 @@ export default function CraftingTable() {
     });
   }
 
-  const itemIcons = useMemo(
-    () => ({ ...FLAT_ITEM_PATHS, ...blockIcons }),
-    [blockIcons],
-  );
+  const itemIcons = useMemo(() => ({ ...FLAT_ITEM_PATHS, ...blockIcons }), [blockIcons]);
   const ready = Object.keys(blockIcons).length === Object.keys(BLOCK_TEXTURE_PATHS).length;
 
   // Inventory: 36 slots (0-26 = main, 27-35 = hotbar)

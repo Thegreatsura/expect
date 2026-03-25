@@ -18,8 +18,8 @@
     "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
-    "@typescript/native-preview": "7.0.0-dev.20260319.1",
     "@changesets/cli": "^2.27.0",
+    "@typescript/native-preview": "7.0.0-dev.20260319.1",
     "@voidzero-dev/vite-plus-core": "^0.1.12",
     "turbo": "^2.8.17",
     "typescript": "^5.7.0",

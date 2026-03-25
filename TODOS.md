@@ -1,6 +1,5 @@
-
-
 Rasmus:
+
 - Unauthenticated case.
 - Out of usage case
 - cleanup rrweb PR

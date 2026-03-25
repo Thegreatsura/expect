@@ -1,38 +1,51 @@
 import { useState } from "react";
 import { Box, Text, useInput } from "ink";
-import { Option } from "effect";
+import figures from "figures";
+import { DateTime, Option } from "effect";
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import { useAtom } from "@effect/atom-react";
 import type { TestReport } from "@expect/supervisor";
+import type { TestPlanStep } from "@expect/shared/models";
 import { copyToClipboard } from "../../utils/copy-to-clipboard";
 import { useColors } from "../theme-context";
-import { RuledBox } from "../ui/ruled-box";
-import { ScreenHeading } from "../ui/screen-heading";
+import { Logo } from "../ui/logo";
 import { Image } from "../ui/image";
-import { Clickable } from "../ui/clickable";
 import { usePostPrComment } from "../../data/github-mutations";
 import { useNavigationStore, Screen } from "../../stores/use-navigation";
 import { usePlanExecutionStore } from "../../stores/use-plan-execution-store";
 import { saveFlowFn } from "../../data/flow-storage-atom";
+import { formatElapsedTime } from "../../utils/format-elapsed-time";
 
 interface ResultsScreenProps {
   report: TestReport;
   replayUrl?: string;
 }
 
+const getStepElapsedMs = (step: TestPlanStep): number | undefined => {
+  if (Option.isNone(step.startedAt) || Option.isNone(step.endedAt)) return undefined;
+  return DateTime.toEpochMillis(step.endedAt.value) - DateTime.toEpochMillis(step.startedAt.value);
+};
+
+const getTotalElapsedMs = (steps: readonly TestPlanStep[]): number => {
+  let totalMs = 0;
+  for (const step of steps) {
+    const elapsed = getStepElapsedMs(step);
+    if (elapsed !== undefined) totalMs += elapsed;
+  }
+  return totalMs;
+};
+
 export const ResultsScreen = ({ report, replayUrl }: ResultsScreenProps) => {
   const COLORS = useColors();
   const setScreen = useNavigationStore((state) => state.setScreen);
-  const [clipboardStatusMessage, setClipboardStatusMessage] = useState<string | undefined>(
+  const [statusMessage, setStatusMessage] = useState<{ text: string; color: string } | undefined>(
     undefined,
   );
-  const [clipboardError, setClipboardError] = useState<string | undefined>(undefined);
   const commentMutation = usePostPrComment();
   const [saveResult, triggerSave] = useAtom(saveFlowFn, { mode: "promiseExit" });
 
   const savePending = saveResult.waiting;
   const saveSucceeded = AsyncResult.isSuccess(saveResult);
-  const saveFailed = AsyncResult.isFailure(saveResult);
 
   const handlePostPullRequestComment = () => {
     if (!Option.isSome(report.pullRequest)) return;
@@ -43,16 +56,12 @@ export const ResultsScreen = ({ report, replayUrl }: ResultsScreenProps) => {
   };
 
   const handleCopyToClipboard = () => {
-    setClipboardError(undefined);
-    setClipboardStatusMessage(undefined);
-
     const didCopy = copyToClipboard(report.toPlainText);
     if (didCopy) {
-      setClipboardStatusMessage("Copied share details to the clipboard.");
-      return;
+      setStatusMessage({ text: `${figures.tick} Copied to clipboard`, color: COLORS.GREEN });
+    } else {
+      setStatusMessage({ text: `${figures.cross} Failed to copy to clipboard`, color: COLORS.RED });
     }
-
-    setClipboardError("Failed to copy share details to the clipboard.");
   };
 
   const handleSaveFlow = async () => {
@@ -87,98 +96,111 @@ export const ResultsScreen = ({ report, replayUrl }: ResultsScreenProps) => {
     }
   });
 
+  const isPassed = report.status === "passed";
+  const statusColor = isPassed ? COLORS.GREEN : COLORS.RED;
+  const statusIcon = isPassed ? figures.tick : figures.cross;
+  const statusLabel = isPassed ? "Passed" : "Failed";
+  const totalElapsedMs = getTotalElapsedMs(report.steps);
+
   return (
-    <Box flexDirection="column" width="100%" paddingY={1}>
-      <Box paddingX={1}>
-        <ScreenHeading
-          title="Run results"
-          subtitle={`${report.title} │ ${report.status.toUpperCase()}`}
-        />
-      </Box>
-
-      <RuledBox color={report.status === "passed" ? COLORS.GREEN : COLORS.RED} marginTop={1}>
-        <Text color={report.status === "passed" ? COLORS.GREEN : COLORS.RED} bold>
-          {report.status === "passed" ? "Test completed" : "Issues found"}
+    <Box flexDirection="column" width="100%" paddingY={1} paddingX={1}>
+      <Box>
+        <Logo />
+        <Text wrap="truncate">
+          {" "}
+          <Text color={COLORS.DIM}>{figures.pointerSmall}</Text>{" "}
+          <Text color={COLORS.TEXT}>{report.instruction}</Text>
         </Text>
-        <Text color={COLORS.TEXT}>{report.summary}</Text>
-        {Option.isSome(report.pullRequest) ? (
-          <Text color={COLORS.DIM}>
-            PR: {report.pullRequest.value.title} (#
-            {report.pullRequest.value.number})
-          </Text>
-        ) : null}
-      </RuledBox>
+      </Box>
 
-      <Box flexDirection="column" marginTop={1} paddingX={1}>
-        <Text color={COLORS.DIM} bold>
-          STEP SUMMARY
+      <Box marginTop={1}>
+        <Text color={statusColor} bold>
+          {statusIcon} {statusLabel}
         </Text>
-        {report.steps.map((step) => (
-          <Text
-            key={step.id}
-            color={
-              step.status === "passed"
-                ? COLORS.GREEN
-                : step.status === "failed"
-                  ? COLORS.RED
-                  : COLORS.YELLOW
-            }
-          >
-            {"• "}
-            {step.title}
-            {": "}
-            <Text color={COLORS.TEXT}>
-              {Option.getOrElse(step.summary, () => "no summary found")}
-            </Text>
-          </Text>
-        ))}
+        <Text color={COLORS.DIM}>
+          {"  "}
+          {report.steps.length} step{report.steps.length === 1 ? "" : "s"}
+        </Text>
       </Box>
 
-      <Box flexDirection="column" paddingX={1} marginTop={1}>
-        <Clickable onClick={handleCopyToClipboard}>
-          <Text color={COLORS.DIM}>
-            Press <Text color={COLORS.PRIMARY}>y</Text> to copy share details to the clipboard.
-          </Text>
-        </Clickable>
-        {clipboardStatusMessage ? <Text color={COLORS.GREEN}>{clipboardStatusMessage}</Text> : null}
-        {clipboardError ? <Text color={COLORS.RED}>{clipboardError}</Text> : null}
+      <Box flexDirection="column" marginTop={1}>
+        {report.steps.map((step: TestPlanStep, stepIndex: number) => {
+          const stepElapsedMs = getStepElapsedMs(step);
+          const stepElapsedLabel =
+            stepElapsedMs !== undefined ? formatElapsedTime(stepElapsedMs) : undefined;
+          const stepStatus = report.stepStatuses.get(step.id);
+          const isFailed = stepStatus?.status === "failed";
+          const stepColor = isFailed ? COLORS.RED : COLORS.GREEN;
+          const stepIcon = isFailed ? figures.cross : figures.tick;
+          const num = `${stepIndex + 1}.`;
+
+          return (
+            <Box key={step.id} flexDirection="column">
+              <Text>
+                <Text color={COLORS.DIM}>
+                  {"  "}
+                  {num}
+                </Text>
+                <Text color={stepColor}>
+                  {" "}
+                  {stepIcon} {step.title}
+                </Text>
+                {stepElapsedLabel && <Text color={COLORS.DIM}> {stepElapsedLabel}</Text>}
+              </Text>
+              {isFailed && stepStatus.summary && (
+                <Text color={COLORS.DIM}>
+                  {"     "}
+                  {stepStatus.summary}
+                </Text>
+              )}
+            </Box>
+          );
+        })}
       </Box>
 
-      {Option.isSome(report.pullRequest) ? (
-        <Box flexDirection="column" paddingX={1}>
-          <Clickable onClick={handlePostPullRequestComment}>
-            <Text color={COLORS.DIM}>
-              Press <Text color={COLORS.PRIMARY}>p</Text> to post this summary to the PR.
-            </Text>
-          </Clickable>
-          {commentMutation.isPending ? <Text color={COLORS.DIM}>Posting PR comment...</Text> : null}
-          {commentMutation.isSuccess ? (
-            <Text color={COLORS.GREEN}>Comment posted to PR.</Text>
-          ) : null}
-          {commentMutation.isError ? (
-            <Text color={COLORS.RED}>Failed to post PR comment.</Text>
-          ) : null}
+      {totalElapsedMs > 0 && (
+        <Box marginTop={1}>
+          <Text color={COLORS.DIM}>Worked for {formatElapsedTime(totalElapsedMs)}</Text>
         </Box>
-      ) : null}
+      )}
 
-      <Box flexDirection="column" paddingX={1} marginTop={1}>
-        <Clickable onClick={handleSaveFlow}>
-          <Text color={COLORS.DIM}>
-            Press <Text color={COLORS.PRIMARY}>s</Text> to save this flow for re-use.
-          </Text>
-        </Clickable>
-        {savePending && <Text color={COLORS.DIM}>Saving flow...</Text>}
-        {saveSucceeded && <Text color={COLORS.GREEN}>Flow saved.</Text>}
-        {saveFailed && <Text color={COLORS.RED}>Failed to save flow.</Text>}
-      </Box>
+      {statusMessage && (
+        <Box marginTop={1}>
+          <Text color={statusMessage.color}>{statusMessage.text}</Text>
+        </Box>
+      )}
 
-      <Box flexDirection="column" paddingX={1} marginTop={1}>
-        <Clickable onClick={handleRestartFlow}>
-          <Text color={COLORS.DIM}>
-            Press <Text color={COLORS.PRIMARY}>r</Text> to restart this flow.
-          </Text>
-        </Clickable>
-      </Box>
+      {commentMutation.isPending && (
+        <Box marginTop={1}>
+          <Text color={COLORS.DIM}>Posting to PR{figures.ellipsis}</Text>
+        </Box>
+      )}
+      {commentMutation.isSuccess && (
+        <Box marginTop={1}>
+          <Text color={COLORS.GREEN}>{figures.tick} Posted to PR</Text>
+        </Box>
+      )}
+      {commentMutation.isError && (
+        <Box marginTop={1}>
+          <Text color={COLORS.RED}>{figures.cross} Failed to post to PR</Text>
+        </Box>
+      )}
+
+      {savePending && (
+        <Box marginTop={1}>
+          <Text color={COLORS.DIM}>Saving flow{figures.ellipsis}</Text>
+        </Box>
+      )}
+      {saveSucceeded && (
+        <Box marginTop={1}>
+          <Text color={COLORS.GREEN}>{figures.tick} Flow saved</Text>
+        </Box>
+      )}
+      {AsyncResult.isFailure(saveResult) && (
+        <Box marginTop={1}>
+          <Text color={COLORS.RED}>{figures.cross} Failed to save flow</Text>
+        </Box>
+      )}
 
       {replayUrl && (
         <Box flexDirection="column" paddingX={1} marginTop={1}>
@@ -192,7 +214,7 @@ export const ResultsScreen = ({ report, replayUrl }: ResultsScreenProps) => {
       )}
 
       {report.screenshotPaths.map((screenshotPath) => (
-        <Box key={screenshotPath} paddingX={1}>
+        <Box key={screenshotPath} marginTop={1}>
           <Image src={screenshotPath} alt={`Screenshot: ${screenshotPath}`} />
         </Box>
       ))}

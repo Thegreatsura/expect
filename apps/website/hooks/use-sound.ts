@@ -3,16 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getAudioContext, decodeAudioData } from "@/lib/sound-engine";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import type {
-  SoundAsset,
-  UseSoundOptions,
-  UseSoundReturn,
-} from "@/lib/sound-types";
+import type { SoundAsset, UseSoundOptions, UseSoundReturn } from "@/lib/sound-types";
 
-export function useSound(
-  sound: SoundAsset,
-  options: UseSoundOptions = {}
-): UseSoundReturn {
+export function useSound(sound: SoundAsset, options: UseSoundOptions = {}): UseSoundReturn {
   const {
     volume = 1,
     playbackRate = 1,
@@ -25,9 +18,7 @@ export function useSound(
   } = options;
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState<number | null>(
-    sound.duration ?? null
-  );
+  const [duration, setDuration] = useState<number | null>(sound.duration ?? null);
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
   const bufferRef = useRef<AudioBuffer | null>(null);
@@ -116,7 +107,7 @@ export function useSound(
         run(buffer);
       });
     },
-    [sound, soundEnabled, playbackRate, volume, interrupt, stop, onPlay, onEnd]
+    [sound, soundEnabled, playbackRate, volume, interrupt, stop, onPlay, onEnd],
   );
 
   const pause = useCallback(() => {
