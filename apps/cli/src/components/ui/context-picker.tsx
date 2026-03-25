@@ -1,22 +1,15 @@
-import { Box, Text, useInput } from "ink";
+import { Box, Text } from "ink";
 import { useColors } from "../theme-context";
-import { RuledBox } from "./ruled-box";
 import { testContextId, type GitState, type TestContext } from "@expect/shared/models";
 import { getContextLabel, getContextDescription } from "../../utils/context-options";
 import { CONTEXT_PICKER_VISIBLE_COUNT } from "../../constants";
-import { stripMouseSequences } from "../../hooks/mouse-context";
 import figures from "figures";
 
 interface ContextPickerProps {
   readonly options: TestContext[];
   readonly selectedIndex: number;
   readonly isLoading: boolean;
-  readonly query: string;
   readonly gitState: GitState | null;
-  readonly onQueryChange: (query: string) => void;
-  readonly onSelect: (option: TestContext) => void;
-  readonly onNavigate: (index: number) => void;
-  readonly onDismiss: () => void;
 }
 
 const StatusDot = ({ status }: { readonly status?: string | null }) => {
@@ -31,51 +24,9 @@ export const ContextPicker = ({
   options,
   selectedIndex,
   isLoading,
-  onSelect,
-  onNavigate,
-  query,
-  onQueryChange,
-  onDismiss,
   gitState,
 }: ContextPickerProps) => {
   const COLORS = useColors();
-
-  useInput((input, key) => {
-    if (key.escape) {
-      onDismiss();
-      return;
-    }
-
-    if (key.downArrow || (key.ctrl && input === "n")) {
-      onNavigate(Math.min(options.length - 1, selectedIndex + 1));
-      return;
-    }
-
-    if (key.upArrow || (key.ctrl && input === "p")) {
-      onNavigate(Math.max(0, selectedIndex - 1));
-      return;
-    }
-
-    if (key.return || key.tab) {
-      const selected = options[selectedIndex];
-      if (selected) onSelect(selected);
-      return;
-    }
-
-    if (key.backspace || key.delete) {
-      if (query.length === 0) {
-        onDismiss();
-      } else {
-        onQueryChange(query.slice(0, -1));
-      }
-      return;
-    }
-
-    if (input && !key.ctrl && !key.meta) {
-      const cleaned = stripMouseSequences(input);
-      if (cleaned) onQueryChange(query + cleaned);
-    }
-  });
 
   const scrollOffset = (() => {
     if (options.length <= CONTEXT_PICKER_VISIBLE_COUNT) return 0;
@@ -88,14 +39,14 @@ export const ContextPicker = ({
 
   if (options.length === 0 && !isLoading) {
     return (
-      <RuledBox color={COLORS.BORDER}>
+      <Box flexDirection="column">
         <Text color={COLORS.DIM}>No matching results</Text>
-      </RuledBox>
+      </Box>
     );
   }
 
   return (
-    <RuledBox color={COLORS.PRIMARY}>
+    <Box flexDirection="column">
       {visibleOptions.map((option, index) => {
         const actualIndex = index + scrollOffset;
         const isSelected = actualIndex === selectedIndex;
@@ -107,7 +58,7 @@ export const ContextPicker = ({
           option._tag === "PullRequest" || option._tag === "Branch" ? option.branch.prStatus : null;
 
         return (
-          <Box key={testContextId(option)}>
+          <Text key={testContextId(option)} wrap="truncate">
             <Text color={isSelected ? COLORS.PRIMARY : COLORS.DIM}>
               {isSelected ? `${figures.pointer} ` : "  "}
             </Text>
@@ -136,7 +87,7 @@ export const ContextPicker = ({
               </Text>
             ) : null}
             {description && !prNumber ? <Text color={COLORS.DIM}> {description}</Text> : null}
-          </Box>
+          </Text>
         );
       })}
       {isLoading ? (
@@ -153,6 +104,6 @@ export const ContextPicker = ({
           </Text>
         </Box>
       ) : null}
-    </RuledBox>
+    </Box>
   );
 };

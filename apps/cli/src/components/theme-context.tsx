@@ -10,10 +10,11 @@ export interface Colors {
   YELLOW: string;
   PURPLE: string;
   CYAN: string;
+  INPUT_BG: string;
 }
 
 export const theme = {
-  primary: "white",
+  primary: "whiteBright",
   secondary: "gray",
   accent: "white",
   error: "red",
@@ -27,6 +28,7 @@ export const theme = {
   borderSubtle: "blackBright",
   shimmerBase: "#555555",
   shimmerHighlight: "#ffffff",
+  inputBg: "#1e1e1e",
 };
 
 export const COLORS: Colors = {
@@ -41,6 +43,7 @@ export const COLORS: Colors = {
   YELLOW: theme.warning,
   PURPLE: theme.secondary,
   CYAN: theme.info,
+  INPUT_BG: theme.inputBg,
 };
 
 export const useColors = (): Colors => COLORS;

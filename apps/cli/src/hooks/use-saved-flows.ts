@@ -16,6 +16,7 @@ export const useSavedFlows = () =>
       }).pipe(
         Effect.provide(savedFlowsLayer),
         Effect.provide(NodeServices.layer),
+        Effect.catchTag("FindRepoRootError", () => Effect.succeed([] as SavedFlowFileData[])),
         Effect.runPromise,
       ),
   });

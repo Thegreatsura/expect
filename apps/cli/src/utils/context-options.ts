@@ -79,16 +79,23 @@ export const getContextDescription = (
 ): string => {
   if (context._tag === "WorkingTree" && gitState) {
     const parts: string[] = [];
+    if (gitState.fileStats.length > 0) {
+      const totalAdded = gitState.fileStats.reduce((sum, stat) => sum + stat.added, 0);
+      const totalRemoved = gitState.fileStats.reduce((sum, stat) => sum + stat.removed, 0);
+      const fileCount = gitState.fileStats.length;
+      const changeParts: string[] = [];
+      if (totalAdded > 0) changeParts.push(`+${totalAdded}`);
+      if (totalRemoved > 0) changeParts.push(`-${totalRemoved}`);
+      if (changeParts.length > 0) {
+        parts.push(`${changeParts.join(" ")} in ${fileCount} file${fileCount === 1 ? "" : "s"}`);
+      } else {
+        parts.push(`${fileCount} file${fileCount === 1 ? "" : "s"}`);
+      }
+    }
     if (gitState.branchCommitCount > 0) {
       parts.push(
         `${gitState.branchCommitCount} commit${gitState.branchCommitCount === 1 ? "" : "s"}`,
       );
-    }
-    if (gitState.fileStats.length > 0) {
-      parts.push(`${gitState.fileStats.length} file${gitState.fileStats.length === 1 ? "" : "s"}`);
-    }
-    if (gitState.hasUnstagedChanges) {
-      parts.push("uncommitted changes");
     }
     if (parts.length > 0) return parts.join(", ");
   }

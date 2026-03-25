@@ -161,7 +161,7 @@ program.action(async () => {
 
   if (isRunningInAgent() || isHeadless()) return runHeadlessForTarget(target, opts);
 
-  const hasDirectOptions = Boolean(opts.message || opts.flow || opts.yes || opts.target);
+  const hasDirectOptions = Boolean(opts.message || opts.flow || opts.yes);
 
   if (hasDirectOptions) {
     await runInteractiveForTarget(target, opts);

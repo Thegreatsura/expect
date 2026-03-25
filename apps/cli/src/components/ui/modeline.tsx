@@ -6,30 +6,42 @@ import { HintBar, HINT_SEPARATOR, type HintSegment } from "./hint-bar";
 import { Option } from "effect";
 import { useNavigationStore, Screen } from "../../stores/use-navigation";
 import { usePlanExecutionStore } from "../../stores/use-plan-execution-store";
-import { useGitState } from "../../hooks/use-git-state";
+import { useGitState, type GitState } from "../../hooks/use-git-state";
+import { useProjectPreferencesStore } from "../../stores/use-project-preferences";
 import { Clickable } from "./clickable";
 import { TextShimmer } from "./text-shimmer";
 
-const useHintSegments = (screen: Screen): HintSegment[] => {
+const useHintSegments = (screen: Screen, gitState: GitState | undefined): HintSegment[] => {
   const COLORS = useColors();
   const setScreen = useNavigationStore((state) => state.setScreen);
+  const cookiesEnabled = useProjectPreferencesStore((state) => state.cookiesEnabled);
+  const toggleCookies = useProjectPreferencesStore((state) => state.toggleCookies);
 
   switch (screen._tag) {
     case "Main": {
-      return [
+      const segments: HintSegment[] = [
+        {
+          key: "ctrl+k",
+          label: cookiesEnabled ? "cookies on" : "cookies off",
+          cta: true,
+          onClick: toggleCookies,
+        },
         {
           key: "ctrl+r",
           label: "saved flows",
           cta: true,
           onClick: () => setScreen(Screen.SavedFlowPicker()),
         },
-        {
+      ];
+      if (gitState?.isGitRepo) {
+        segments.push({
           key: "ctrl+p",
           label: "pick pr",
           cta: true,
           onClick: () => setScreen(Screen.SelectPr()),
-        },
-      ];
+        });
+      }
+      return segments;
     }
     case "SelectPr":
       return [
@@ -134,21 +146,26 @@ export const Modeline = () => {
   const [columns] = useStdoutDimensions();
   const { data: gitState } = useGitState();
   const screen = useNavigationStore((state) => state.screen);
-  const segments = useHintSegments(screen);
+  const allSegments = useHintSegments(screen, gitState);
 
-  if (!gitState) return null;
+  const keybinds = allSegments.filter((segment) => !segment.cta);
+  const rightWidth = stringWidth(getHintText(keybinds));
 
-  const keybinds = segments.filter((segment) => !segment.cta);
-  const actions = segments.filter((segment) => segment.cta);
+  const measureActions = (actions: HintSegment[]) => {
+    const text = actions
+      .map((action) =>
+        action.color ? ` ${action.label} [${action.key}] ` : `${action.label} [${action.key}]`,
+      )
+      .join("   ");
+    return stringWidth(text);
+  };
 
-  const keybindText = getHintText(keybinds);
-  const actionPills = actions
-    .map((action) =>
-      action.color ? ` ${action.label} [${action.key}] ` : `${action.label} [${action.key}]`,
-    )
-    .join("   ");
-  const actionWidth = actions.length > 0 ? stringWidth(actionPills) : 0;
-  const rightWidth = stringWidth(keybindText);
+  const allActions = allSegments.filter((segment) => segment.cta);
+  const totalWidth = measureActions(allActions) + rightWidth + 2;
+  const actions =
+    totalWidth > columns ? allActions.filter((segment) => segment.key !== "ctrl+p") : allActions;
+
+  const actionWidth = measureActions(actions);
   const gap = Math.max(0, columns - actionWidth - rightWidth - 2);
 
   return (

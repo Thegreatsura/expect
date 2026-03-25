@@ -9,12 +9,12 @@ import { useNavigationStore, Screen } from "../../stores/use-navigation";
 import { useColors } from "../theme-context";
 import { Clickable } from "../ui/clickable";
 import { Input } from "../ui/input";
-import { RuledBox } from "../ui/ruled-box";
 import { ErrorMessage } from "../ui/error-message";
+import { RuledBox } from "../ui/ruled-box";
 import { Spinner } from "../ui/spinner";
 import { ContextPicker } from "../ui/context-picker";
-import { useStdoutDimensions } from "../../hooks/use-stdout-dimensions";
 import { useContextPicker } from "../../hooks/use-context-picker";
+import { useStdoutDimensions } from "../../hooks/use-stdout-dimensions";
 import { getFlowSuggestions } from "../../utils/get-flow-suggestions";
 import { getContextDisplayLabel, getContextDescription } from "../../utils/context-options";
 import { queryClient } from "../../query-client";
@@ -22,6 +22,8 @@ import { queryClient } from "../../query-client";
 interface MainMenuProps {
   gitState: GitState | undefined;
 }
+
+const MIN_COLUMNS_FOR_CYCLE_HINT = 80;
 
 export const MainMenu = ({ gitState }: MainMenuProps) => {
   const COLORS = useColors();
@@ -67,8 +69,6 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
     gitState: gitState ?? null,
     onSelect: setSelectedContext,
   });
-
-  const inputFocused = !picker.pickerOpen;
 
   const defaultContext = useMemo(() => {
     return picker.localOptions.find((option) => option._tag === "WorkingTree") ?? undefined;
@@ -140,12 +140,44 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
   );
 
   const showSuggestion = value === "" && !picker.pickerOpen && suggestions.length > 0;
-  const showCycleHint = showSuggestion && !hasCycled;
+  const showCycleHint = showSuggestion && !hasCycled && columns >= MIN_COLUMNS_FOR_CYCLE_HINT;
   const currentSuggestion = suggestions[suggestionIndex % suggestions.length];
 
   useInput(
     (input, key) => {
-      if (picker.pickerOpen) return;
+      if (picker.pickerOpen) {
+        if (key.escape) {
+          picker.closePicker();
+          return;
+        }
+        if (key.downArrow || (key.ctrl && input === "n")) {
+          picker.setPickerIndex(
+            Math.min(picker.filteredOptions.length - 1, picker.pickerIndex + 1),
+          );
+          return;
+        }
+        if (key.upArrow || (key.ctrl && input === "p")) {
+          picker.setPickerIndex(Math.max(0, picker.pickerIndex - 1));
+          return;
+        }
+        if (key.return || key.tab) {
+          const selected = picker.filteredOptions[picker.pickerIndex];
+          if (selected) picker.handleContextSelect(selected);
+          return;
+        }
+        if (key.backspace || key.delete) {
+          if (picker.pickerQuery.length === 0) {
+            picker.closePicker();
+          } else {
+            picker.setPickerQuery(picker.pickerQuery.slice(0, -1));
+          }
+          return;
+        }
+        if (input && !key.ctrl && !key.meta) {
+          picker.setPickerQuery(picker.pickerQuery + input);
+        }
+        return;
+      }
 
       if (key.ctrl && input === "k") {
         toggleCookies();
@@ -179,19 +211,19 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
     <Box flexDirection="column" width="100%" paddingY={1}>
       <Box flexDirection="column" marginBottom={1} paddingX={1}>
         <Text color={COLORS.BORDER}>
-          <Text bold color={COLORS.TEXT}>
-            {"Expect"}
+          <Text color="red">{figures.cross}</Text>
+          <Text color="green">{figures.tick}</Text>
+          <Text bold color={COLORS.PRIMARY}>
+            {" Expect"}
           </Text>
           <Text color={COLORS.DIM}>{" v0.0.2"}</Text>
         </Text>
-        <Text color={COLORS.BORDER}>{"─".repeat(Math.max(0, columns - 2))}</Text>
       </Box>
 
       <Box flexDirection="column" width="100%">
-        <Box justifyContent="space-between" paddingX={1}>
-          {!gitState ? (
-            <Spinner message="loading context" />
-          ) : (
+        <Box paddingX={1}>
+          {!gitState && <Spinner message="loading context" />}
+          {gitState && gitState.isGitRepo && activeContext && (
             <Clickable
               fullWidth={false}
               onClick={() => {
@@ -199,31 +231,29 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
                 else picker.openPicker();
               }}
             >
-              {activeContext ? (
-                <Text color={COLORS.DIM}>
-                  Testing{" "}
-                  <Text color={COLORS.PRIMARY}>
-                    @{getContextDisplayLabel(activeContext, gitState)}
-                  </Text>{" "}
-                  {getContextDescription(activeContext, gitState)}
+              <Text color={COLORS.DIM}>
+                {figures.bullet}{" "}
+                <Text color={COLORS.PRIMARY}>
+                  @{getContextDisplayLabel(activeContext, gitState)}
                 </Text>
-              ) : (
-                <Text color={COLORS.DIM}>
-                  <Text color={COLORS.PRIMARY}>@</Text> no context
-                </Text>
-              )}
+                {getContextDescription(activeContext, gitState) &&
+                  ` (${getContextDescription(activeContext, gitState)})`}
+              </Text>
             </Clickable>
           )}
         </Box>
         <Clickable>
-          <RuledBox
-            color={inputFocused ? COLORS.PRIMARY : COLORS.BORDER}
+          <Box
+            flexDirection="column"
             marginTop={1}
-            paddingX={0}
+            backgroundColor={COLORS.INPUT_BG}
+            width="100%"
+            paddingX={1}
+            paddingY={1}
           >
-            <Box justifyContent="space-between">
-              <Box>
-                <Text color={COLORS.PRIMARY}>{"❯ "}</Text>
+            <Box>
+              <Text color={COLORS.PRIMARY}>{"❯ "}</Text>
+              <Box flexGrow={1}>
                 <Input
                   key={inputKey}
                   focus={!picker.pickerOpen}
@@ -237,45 +267,14 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
                 />
               </Box>
               {showCycleHint ? (
-                <Text color={COLORS.DIM}>{"←→ cycle test suggestions "}</Text>
+                <Text color={COLORS.DIM}>{"  ←→ cycle test suggestions"}</Text>
               ) : null}
             </Box>
-          </RuledBox>
+          </Box>
         </Clickable>
-        <Box marginTop={1} paddingX={1}>
-          <Clickable fullWidth={false} onClick={toggleCookies}>
-            <Box>
-              <Text backgroundColor="#b45309" color="white" bold>
-                {" IMPORT COOKIES "}
-              </Text>
-              <Text> </Text>
-              <Text
-                backgroundColor={cookiesEnabled ? undefined : "black"}
-                color={cookiesEnabled ? COLORS.DIM : "white"}
-                bold={!cookiesEnabled}
-              >
-                {" OFF "}
-              </Text>
-              <Text
-                backgroundColor={cookiesEnabled ? "#16a34a" : undefined}
-                color={cookiesEnabled ? "white" : COLORS.DIM}
-                bold={cookiesEnabled}
-              >
-                {" ON "}
-              </Text>
-              <Text color={COLORS.DIM}> [ctrl+k]</Text>
-            </Box>
-          </Clickable>
-          {cookiesEnabled && (
-            <Text color={COLORS.YELLOW}>
-              {" "}
-              {figures.warning} Your keychain password will be requested to import browser cookies
-            </Text>
-          )}
-        </Box>
-        {picker.pickerOpen && gitState ? (
-          <Box flexDirection="column">
-            <Box marginBottom={0} paddingX={1}>
+        {gitState?.isGitRepo && picker.pickerOpen && (
+          <RuledBox color={COLORS.BORDER}>
+            <Box marginBottom={0}>
               <Text color={COLORS.DIM}>@ </Text>
               <Text color={COLORS.PRIMARY}>{picker.pickerQuery}</Text>
               <Text color={COLORS.DIM}>{picker.pickerQuery ? "" : "type to filter"}</Text>
@@ -284,18 +283,14 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
               options={picker.filteredOptions}
               selectedIndex={picker.pickerIndex}
               isLoading={picker.remoteLoading}
-              query={picker.pickerQuery}
               gitState={gitState}
-              onQueryChange={picker.setPickerQuery}
-              onSelect={picker.handleContextSelect}
-              onNavigate={picker.setPickerIndex}
-              onDismiss={picker.closePicker}
             />
-          </Box>
-        ) : (
+          </RuledBox>
+        )}
+        {gitState?.isGitRepo && !picker.pickerOpen && (
           <Box marginTop={1} paddingX={1}>
             <Text color={COLORS.DIM}>
-              type <Text color={COLORS.PRIMARY}>@</Text> to set context (PRs, branches, commits)
+              <Text color={COLORS.PRIMARY}>@</Text> add context
             </Text>
           </Box>
         )}
