@@ -5,11 +5,11 @@ import { type TestPlan, changesForDisplayName } from "@expect/shared/models";
 import { formatSavedFlowFile, parseSavedFlowFile } from "./saved-flow-file";
 import type { SavedFlowFileData } from "./types";
 import {
-  EXPECT_STATE_DIR,
   FLOW_DIRECTORY_NAME,
   FLOW_DESCRIPTION_CHAR_LIMIT,
   SAVED_FLOW_FORMAT_VERSION,
 } from "./constants";
+import { ensureStateDir } from "./utils/ensure-state-dir";
 import { GitRepoRoot } from "./git/git";
 
 const slugify = (text: string): string =>
@@ -52,7 +52,8 @@ export class FlowStorage extends ServiceMap.Service<FlowStorage>()("@supervisor/
 
     const getFlowsDirectory = Effect.gen(function* () {
       const repoRoot = yield* GitRepoRoot;
-      return path.join(repoRoot, EXPECT_STATE_DIR, FLOW_DIRECTORY_NAME);
+      const stateDir = yield* ensureStateDir(repoRoot);
+      return path.join(stateDir, FLOW_DIRECTORY_NAME);
     });
 
     const save = Effect.fn("FlowStorage.save")(function* (plan: TestPlan) {

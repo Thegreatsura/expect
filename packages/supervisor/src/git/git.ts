@@ -14,7 +14,8 @@ import {
   FileStat,
   GitState,
 } from "@expect/shared/models";
-import { TESTED_FINGERPRINT_FILE, EXPECT_STATE_DIR } from "../constants";
+import { TESTED_FINGERPRINT_FILE } from "../constants";
+import { ensureStateDir } from "../utils/ensure-state-dir";
 import { GitError, FindRepoRootError } from "./errors";
 
 // ── GitRepoRoot context service ──────────────────────────────────────
@@ -298,7 +299,8 @@ export class Git extends ServiceMap.Service<Git>()("@supervisor/Git", {
 
     const getFingerprintPath = Effect.gen(function* () {
       const repoRoot = yield* GitRepoRoot;
-      return path.join(repoRoot, EXPECT_STATE_DIR, TESTED_FINGERPRINT_FILE);
+      const stateDir = yield* ensureStateDir(repoRoot);
+      return path.join(stateDir, TESTED_FINGERPRINT_FILE);
     });
 
     const loadSavedFingerprint = Effect.fn("Git.loadSavedFingerprint")(function* () {
@@ -314,11 +316,6 @@ export class Git extends ServiceMap.Service<Git>()("@supervisor/Git", {
       if (!fingerprint) return;
 
       const fingerprintPath = yield* getFingerprintPath;
-      const directory = path.dirname(fingerprintPath);
-
-      yield* fileSystem
-        .makeDirectory(directory, { recursive: true })
-        .pipe(Effect.catchTag("PlatformError", () => Effect.void));
       yield* fileSystem.writeFileString(fingerprintPath, fingerprint);
     });
 
