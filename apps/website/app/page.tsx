@@ -34,8 +34,6 @@ const INPUT_STATUS_EXIT_RING_GROW_DURATION_S = 0.5;
 const TERMINAL_SUCCESS_GREEN = "#27C840";
 const TERMINAL_FAILURE_RED = "#FC272F";
 const TERMINAL_FAILURE_RED_DARK = "color(display-p3 1 0.447 0.369)";
-const REPLAY_ICON_COLOR = "#B9B9B9";
-const REPLAY_ICON_COLOR_DARK = "#444444";
 const TERMINAL_SPINNER_TRACK = "#E3E3E3";
 const TERMINAL_SPINNER_ACTIVE = "#8E8E8E";
 /** Stroke width for the terminal loading ring (viewBox units). */
@@ -93,7 +91,7 @@ const SUBMIT_BUTTON_PRESS_SCALE = 0.965;
 const SUBMIT_SEQUENCE_FADE_MS = LOAD_SEQUENCE_FADE_MS + 40;
 const REDIRECT_STEP_START_DELAY_MS = 320;
 const REDIRECT_FAILURE_MORPH_HOLD_MS = 280;
-const REPLAY_ICON_APPEAR_DELAY_MS = 280;
+const AUTO_REPLAY_DELAY_MS = 1200;
 const FIRST_FIELD_IDLE_SHADOW =
   "color(display-p3 0 0 0 / 16%) 0px 0px 0px 0.5px, color(display-p3 0 0 0 / 3%) 0px 1px 5px";
 const FIRST_FIELD_FOCUS_SHADOW =
@@ -511,32 +509,6 @@ function SignUpErrorCallout({
   );
 }
 
-function ReplayIcon({
-  isDark = false,
-}: {
-  isDark?: boolean;
-}) {
-  const iconColor = isDark ? REPLAY_ICON_COLOR_DARK : REPLAY_ICON_COLOR;
-
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      width="24"
-      height="24"
-      color={iconColor}
-      fill="none"
-      style={{ width: "16px", height: "16px" }}
-      aria-hidden="true"
-    >
-      <path
-        d="M2.25 12C2.25 6.615 6.615 2.25 12 2.25C15.191 2.25 18.021 3.784 19.799 6.151L19.8 6.15V3.225C19.8 2.687 20.236 2.25 20.775 2.25C21.314 2.25 21.75 2.687 21.75 3.225V6.15C21.75 6.812 21.752 7.406 21.688 7.885C21.62 8.391 21.461 8.91 21.036 9.336C20.61 9.761 20.091 9.92 19.585 9.988C19.107 10.052 18.512 10.05 17.85 10.05H14.925C14.386 10.05 13.95 9.613 13.95 9.075C13.95 8.537 14.386 8.1 14.925 8.1H17.85C18.215 8.1 18.509 8.099 18.751 8.092C17.4 5.764 14.882 4.2 12 4.2C7.692 4.2 4.2 7.692 4.2 12C4.2 16.308 7.692 19.8 12 19.8C15.395 19.8 18.285 17.631 19.356 14.6C19.536 14.093 20.093 13.827 20.601 14.006C21.108 14.186 21.374 14.742 21.195 15.25C19.857 19.035 16.247 21.75 12 21.75C6.615 21.75 2.25 17.385 2.25 12Z"
-        fill={iconColor}
-      />
-    </svg>
-  );
-}
-
 export default function Home() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -746,7 +718,7 @@ export default function Home() {
   const showSubmitButtonIndicator = cursorMoveStage === "third" && !submitTerminalIndicatorSuccessReady;
   const showRedirectStepIndicator = redirectStepStarted && !redirectTerminalIndicatorSuccessReady;
   const showSignUpErrorCallout = redirectStepStarted;
-  const showReplayIcon = useDelayedFlag(redirectTerminalIndicatorSuccessReady, REPLAY_ICON_APPEAR_DELAY_MS, animationRunId);
+  const autoReplayReady = useDelayedFlag(redirectTerminalIndicatorSuccessReady, AUTO_REPLAY_DELAY_MS, animationRunId);
   const cursorInteractionScale = submitButtonPressed ? CURSOR_BUTTON_PRESS_SCALE : cursorFieldPressScale;
   const showFirstFieldCaret = !firstFieldInputActive && firstFieldVisuallyFocused;
   const showSecondFieldCaret = !secondFieldInputActive && secondFieldVisuallyFocused;
@@ -792,6 +764,16 @@ export default function Home() {
     }
     setPendingEditableFocusField(null);
   }, [pendingEditableFocusField, firstFieldInputActive, secondFieldInputActive]);
+
+  useEffect(() => {
+    if (!autoReplayReady) return;
+    const replayTimer = window.setTimeout(() => {
+      resetAnimation();
+    }, 0);
+    return () => {
+      window.clearTimeout(replayTimer);
+    };
+  }, [autoReplayReady, resetAnimation]);
 
   useEffect(() => {
     if (!firstFieldFocused) return;
@@ -960,33 +942,6 @@ export default function Home() {
           style={{ backgroundImage: isDark ? "linear-gradient(in oklab 180deg, oklab(16% 0 0) 0%, oklab(6% 0 0 / 0%) 100%)" : "linear-gradient(in oklab 180deg, oklab(95.5% 0 0) 0%, oklab(100% 0 0 / 0%) 100%)" }}
           aria-hidden="true"
         />
-        <AnimatePresence>
-          {showReplayIcon ? (
-            <motion.button
-              key="replay-icon"
-              type="button"
-              aria-label="Restart animation"
-              onClick={resetAnimation}
-              className="absolute left-4 top-4 z-20 cursor-pointer appearance-none border-0 bg-transparent p-0 text-inherit"
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.985 }}
-              transition={{
-                opacity: {
-                  duration: 0.38,
-                  ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
-                },
-                scale: {
-                  duration: 0.46,
-                  ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
-                },
-              }}
-              style={{ willChange: "transform, opacity" }}
-            >
-              <ReplayIcon isDark={isDark} />
-            </motion.button>
-          ) : null}
-        </AnimatePresence>
         <div
           className="pointer-events-none absolute inset-0 rounded-none sm:hidden"
           style={{
