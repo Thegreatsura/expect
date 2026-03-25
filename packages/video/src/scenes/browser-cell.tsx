@@ -105,10 +105,10 @@ const FAQ_PILL_CENTER_Y = FAQ_PILL_TOPS_PX.map(
 );
 const FAQ_CURSOR_WAYPOINT_FRAMES = [0, 12, 35, 42, 65, 72, 85, 95];
 const FAQ_CURSOR_SEGMENT_CURVE_PX = [55, -45, 50, -38, 35, -32, 28];
-const FAQ_CURSOR_WOBBLE_X_AMPLITUDE_PX = 6;
-const FAQ_CURSOR_WOBBLE_X_AMPLITUDE_PX_2 = 9;
-const FAQ_CURSOR_WOBBLE_Y_AMPLITUDE_PX = 5;
-const FAQ_CURSOR_WOBBLE_Y_AMPLITUDE_PX_2 = 7;
+const FAQ_CURSOR_WOBBLE_X_AMPLITUDE_PX = 0;
+const FAQ_CURSOR_WOBBLE_X_AMPLITUDE_PX_2 = 0;
+const FAQ_CURSOR_WOBBLE_Y_AMPLITUDE_PX = 0;
+const FAQ_CURSOR_WOBBLE_Y_AMPLITUDE_PX_2 = 0;
 const POINTER_CURSOR_RENDER_WIDTH_PX = 37;
 const POINTER_CURSOR_RENDER_HEIGHT_PX = 41;
 const POINTER_CURSOR_HOTSPOT_X_PX = 19;
@@ -409,6 +409,11 @@ const CHECKOUT_PAPER_CONTROL_RADIUS_PX = 12;
 const CHECKOUT_PAPER_TITLE_LEFT_PX = 184;
 const CHECKOUT_PAPER_TITLE_TOP_PX = 63;
 const CHECKOUT_PAPER_WHITE_FIELD_TOPS_PX = [125, 177, 289];
+const CHECKOUT_FIELD_1_TEXT = "john@email.com";
+const CHECKOUT_FIELD_2_TEXT = "••••••••••";
+const CHECKOUT_FIELD_PLACEHOLDER_LABELS = ["Email", "Password", "Confirm"];
+const CHECKOUT_FIELD_SKELETON_LEFT_PX = 94;
+const CHECKOUT_FIELD_SKELETON_WIDTH_PX = 101;
 const CHECKOUT_PAPER_BUTTON_TOP_PX = 337;
 const CHECKOUT_PAPER_BLUE = "color(display-p3 0.267 0.503 0.967)";
 const CHECKOUT_PAPER_SKELETONS: {
@@ -483,7 +488,7 @@ const CHECKOUT_CURSOR_COMPOSITE_WIDTH_PX = 258;
 const CHECKOUT_CURSOR_COMPOSITE_HEIGHT_PX = 97.9375;
 const CHECKOUT_CURSOR_BADGE_LEFT_PX = 45;
 const CHECKOUT_CURSOR_BADGE_TOP_PX = 40;
-const CHECKOUT_COMPOSITE_BADGE_BACKGROUND = "color(display-p3 0.122 0.682 0.260)";
+const CHECKOUT_COMPOSITE_BADGE_BACKGROUND = NEWSLETTER_COMPOSITE_BADGE_BACKGROUND;
 const CHECKOUT_COMPOSITE_BADGE_OUTLINE = NEWSLETTER_COMPOSITE_BADGE_OUTLINE;
 const CHECKOUT_COMPOSITE_BADGE_SHADOW = NEWSLETTER_COMPOSITE_BADGE_SHADOW;
 const CHECKOUT_CURSOR_MIN_X_PX = FAQ_COMPOSITE_HOTSPOT_X_PX;
@@ -810,25 +815,149 @@ const getFormAnimationState = (frame: number) => {
   };
 };
 
-const renderSignupContent = () => (
-  <div
-    style={{
-      position: "absolute",
-      inset: 0,
-      backgroundColor: "#ffffff",
-      backgroundImage: FAQ_PAGE_BACKGROUND,
-      fontSynthesis: "none",
-    }}
-  >
+const getActivePillIndex = (frame: number): number => {
+  if (frame >= 72) return 3;
+  if (frame >= 42) return 2;
+  if (frame >= 12) return 1;
+  return 0;
+};
+
+const renderSignupContent = (frame: number) => {
+  const activePill = getActivePillIndex(frame);
+
+  return (
     <div
       style={{
         position: "absolute",
-        left: FAQ_ARTBOARD_LAYOUT_OFFSET_X_PX,
-        top: 0,
-        width: FAQ_ARTBOARD_WIDTH_PX,
-        height: FAQ_ARTBOARD_HEIGHT_PX,
-        transform: `scale(${FAQ_ARTBOARD_SCALE})`,
+        inset: 0,
+        backgroundColor: "#ffffff",
+        backgroundImage: FAQ_PAGE_BACKGROUND,
+        fontSynthesis: "none",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: FAQ_ARTBOARD_LAYOUT_OFFSET_X_PX,
+          top: 0,
+          width: FAQ_ARTBOARD_WIDTH_PX,
+          height: FAQ_ARTBOARD_HEIGHT_PX,
+          transform: `scale(${FAQ_ARTBOARD_SCALE})`,
+          transformOrigin: "top left",
+          WebkitFontSmoothing: "antialiased",
+          MozOsxFontSmoothing: "grayscale",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: FAQ_TITLE_LEFT_PX,
+            top: FAQ_TITLE_TOP_PX,
+            width: FAQ_TITLE_WIDTH_PX,
+            fontSize: 27,
+            lineHeight: "41px",
+            letterSpacing: "-1.08px",
+            textAlign: "center",
+            color: "#111111",
+            fontFamily: FAQ_SIGNUP_TITLE_FONT_FAMILY,
+            fontWeight: 700,
+          }}
+        >
+          Questions? Our FAQ:
+        </div>
+
+        <div
+          style={{
+            position: "absolute",
+            left: FAQ_SIDEBAR_LEFT_PX,
+            top: FAQ_SIDEBAR_TOP_PX,
+            width: FAQ_SIDEBAR_WIDTH_PX,
+            height: FAQ_SIDEBAR_HEIGHT_PX,
+            borderRadius: 15,
+            boxShadow: FAQ_FIELD_SHADOW,
+          }}
+        />
+
+        {FAQ_PILL_TOPS_PX.map((topPx, index) => (
+          <div
+            key={topPx}
+            style={{
+              position: "absolute",
+              left: FAQ_PILL_LEFT_PX,
+              top: topPx,
+              width: FAQ_PILL_WIDTH_PX,
+              height: FAQ_PILL_HEIGHT_PX,
+              borderRadius: 999,
+              backgroundColor: index === activePill ? "#f0f4ff" : "#ffffff",
+              boxShadow:
+                index === activePill
+                  ? "color(display-p3 0.267 0.503 0.967 / 40%) 0px 0px 0px 1.5px, color(display-p3 0 0 0 / 3%) 0px 1px 5px"
+                  : FAQ_FIELD_SHADOW,
+            }}
+          />
+        ))}
+
+        {FAQ_MUTED_TOPS_PX.map((topPx, index) => (
+          <div
+            key={`muted-${topPx}`}
+            style={{
+              position: "absolute",
+              left: FAQ_MUTED_LEFT_PX,
+              top: topPx,
+              width: FAQ_MUTED_WIDTHS_PX[index],
+              height: FAQ_BAR_HEIGHT_PX,
+              borderRadius: 999,
+              backgroundColor: FAQ_BAR_MUTED,
+            }}
+          />
+        ))}
+
+        {FAQ_MUTED_TOPS_PX.map((topPx) => (
+          <div
+            key={`light-${topPx}`}
+            style={{
+              position: "absolute",
+              left: FAQ_LIGHT_LEFT_PX,
+              top: topPx,
+              width: FAQ_LIGHT_WIDTH_PX,
+              height: FAQ_BAR_HEIGHT_PX,
+              borderRadius: 999,
+              backgroundColor: FAQ_BAR_LIGHT,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const NEWSLETTER_EMAIL_TEXT = "user@example.com";
+
+const renderNewsletterContent = (frame: number) => {
+  const inputActive = frame >= FIELD_1_START_FRAME && frame < FIELD_1_END_FRAME;
+  const typedChars = Math.min(
+    NEWSLETTER_EMAIL_TEXT.length,
+    Math.max(0, Math.floor((frame - FIELD_1_START_FRAME) * CHARS_PER_FRAME)),
+  );
+  const hasText = typedChars > 0 || frame >= FIELD_1_END_FRAME;
+  const typedDisplay = hasText
+    ? typedChars > 0
+      ? NEWSLETTER_EMAIL_TEXT.slice(0, typedChars)
+      : NEWSLETTER_EMAIL_TEXT
+    : undefined;
+  const btnPressed = frame >= BUTTON_PRESS_FRAME && frame < SUCCESS_FRAME;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: NEWSLETTER_ARTBOARD_LAYOUT_OFFSET_X_PX,
+        top: NEWSLETTER_ARTBOARD_TOP_PX,
+        width: NEWSLETTER_ARTBOARD_WIDTH_PX,
+        height: NEWSLETTER_ARTBOARD_HEIGHT_PX,
+        transform: `scale(${NEWSLETTER_ARTBOARD_SCALE})`,
         transformOrigin: "top left",
+        fontSynthesis: "none",
         WebkitFontSmoothing: "antialiased",
         MozOsxFontSmoothing: "grayscale",
       }}
@@ -836,404 +965,409 @@ const renderSignupContent = () => (
       <div
         style={{
           position: "absolute",
-          left: FAQ_TITLE_LEFT_PX,
-          top: FAQ_TITLE_TOP_PX,
-          width: FAQ_TITLE_WIDTH_PX,
+          left: 0,
+          top: 0,
+          width: NEWSLETTER_ARTBOARD_WIDTH_PX,
+          height: NEWSLETTER_ARTBOARD_HEIGHT_PX,
+          borderRadius: 31,
+          backgroundImage: FAQ_PAGE_BACKGROUND,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: NEWSLETTER_TITLE_LEFT_PX,
+          top: NEWSLETTER_TITLE_TOP_PX,
           fontSize: 27,
           lineHeight: "41px",
-          letterSpacing: "-1.08px",
-          textAlign: "center",
+          letterSpacing: "-0.03em",
           color: "#111111",
           fontFamily: FAQ_SIGNUP_TITLE_FONT_FAMILY,
           fontWeight: 700,
         }}
       >
-        Questions? Our FAQ:
+        Subscribe to Newsletter
       </div>
-
       <div
         style={{
           position: "absolute",
-          left: FAQ_SIDEBAR_LEFT_PX,
-          top: FAQ_SIDEBAR_TOP_PX,
-          width: FAQ_SIDEBAR_WIDTH_PX,
-          height: FAQ_SIDEBAR_HEIGHT_PX,
-          borderRadius: 15,
-          boxShadow: FAQ_FIELD_SHADOW,
+          left: NEWSLETTER_SUBTITLE_LINE_LEFT_PX,
+          top: NEWSLETTER_SUBTITLE_LINE_TOP_PX,
+          width: NEWSLETTER_SUBTITLE_LINE_WIDTH_PX,
+          height: NEWSLETTER_SUBTITLE_LINE_HEIGHT_PX,
+          borderRadius: 999,
+          backgroundColor: "color(display-p3 0.899 0.899 0.899)",
         }}
       />
-
-      {FAQ_PILL_TOPS_PX.map((topPx) => (
-        <div
-          key={topPx}
-          style={{
-            position: "absolute",
-            left: FAQ_PILL_LEFT_PX,
-            top: topPx,
-            width: FAQ_PILL_WIDTH_PX,
-            height: FAQ_PILL_HEIGHT_PX,
-            borderRadius: 999,
-            backgroundColor: "#ffffff",
-            boxShadow: FAQ_FIELD_SHADOW,
-          }}
-        />
-      ))}
-
-      {FAQ_MUTED_TOPS_PX.map((topPx, index) => (
-        <div
-          key={`muted-${topPx}`}
-          style={{
-            position: "absolute",
-            left: FAQ_MUTED_LEFT_PX,
-            top: topPx,
-            width: FAQ_MUTED_WIDTHS_PX[index],
-            height: FAQ_BAR_HEIGHT_PX,
-            borderRadius: 999,
-            backgroundColor: FAQ_BAR_MUTED,
-          }}
-        />
-      ))}
-
-      {FAQ_MUTED_TOPS_PX.map((topPx) => (
-        <div
-          key={`light-${topPx}`}
-          style={{
-            position: "absolute",
-            left: FAQ_LIGHT_LEFT_PX,
-            top: topPx,
-            width: FAQ_LIGHT_WIDTH_PX,
-            height: FAQ_BAR_HEIGHT_PX,
-            borderRadius: 999,
-            backgroundColor: FAQ_BAR_LIGHT,
-          }}
-        />
-      ))}
-    </div>
-  </div>
-);
-
-const renderNewsletterContent = () => (
-  <div
-    style={{
-      position: "absolute",
-      left: NEWSLETTER_ARTBOARD_LAYOUT_OFFSET_X_PX,
-      top: NEWSLETTER_ARTBOARD_TOP_PX,
-      width: NEWSLETTER_ARTBOARD_WIDTH_PX,
-      height: NEWSLETTER_ARTBOARD_HEIGHT_PX,
-      transform: `scale(${NEWSLETTER_ARTBOARD_SCALE})`,
-      transformOrigin: "top left",
-      fontSynthesis: "none",
-      WebkitFontSmoothing: "antialiased",
-      MozOsxFontSmoothing: "grayscale",
-    }}
-  >
-    <div
-      style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
-        width: NEWSLETTER_ARTBOARD_WIDTH_PX,
-        height: NEWSLETTER_ARTBOARD_HEIGHT_PX,
-        borderRadius: 31,
-        backgroundImage: FAQ_PAGE_BACKGROUND,
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        left: NEWSLETTER_TITLE_LEFT_PX,
-        top: NEWSLETTER_TITLE_TOP_PX,
-        fontSize: 27,
-        lineHeight: "41px",
-        letterSpacing: "-0.03em",
-        color: "#111111",
-        fontFamily: FAQ_SIGNUP_TITLE_FONT_FAMILY,
-        fontWeight: 700,
-      }}
-    >
-      Subscribe to Newsletter
-    </div>
-    <div
-      style={{
-        position: "absolute",
-        left: NEWSLETTER_SUBTITLE_LINE_LEFT_PX,
-        top: NEWSLETTER_SUBTITLE_LINE_TOP_PX,
-        width: NEWSLETTER_SUBTITLE_LINE_WIDTH_PX,
-        height: NEWSLETTER_SUBTITLE_LINE_HEIGHT_PX,
-        borderRadius: 999,
-        backgroundColor: "color(display-p3 0.899 0.899 0.899)",
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        left: NEWSLETTER_CARD_LEFT_PX,
-        top: NEWSLETTER_CARD_TOP_PX,
-        width: NEWSLETTER_CARD_WIDTH_PX,
-        height: NEWSLETTER_CARD_HEIGHT_PX,
-        borderRadius: 15,
-        backgroundColor: "color(display-p3 1 1 1)",
-        boxShadow: NEWSLETTER_FIELD_SHADOW,
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        left: NEWSLETTER_BUTTON_LEFT_PX,
-        top: NEWSLETTER_BUTTON_TOP_PX,
-        width: NEWSLETTER_BUTTON_WIDTH_PX,
-        height: NEWSLETTER_BUTTON_HEIGHT_PX,
-        borderRadius: NEWSLETTER_CONTROL_RADIUS_PX,
-        backgroundColor: "color(display-p3 0.267 0.503 0.967)",
-        boxShadow: NEWSLETTER_FIELD_SHADOW,
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        left: NEWSLETTER_INPUT_LEFT_PX,
-        top: NEWSLETTER_INPUT_TOP_PX,
-        width: NEWSLETTER_INPUT_WIDTH_PX,
-        height: NEWSLETTER_INPUT_HEIGHT_PX,
-        borderRadius: NEWSLETTER_CONTROL_RADIUS_PX,
-        backgroundColor: "color(display-p3 1 1 1)",
-        boxShadow: NEWSLETTER_FIELD_SHADOW,
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        left: NEWSLETTER_INPUT_SKELETON_LEFT_PX,
-        top: NEWSLETTER_INPUT_SKELETON_TOP_PX,
-        width: NEWSLETTER_INPUT_SKELETON_WIDTH_PX,
-        height: NEWSLETTER_INPUT_SKELETON_HEIGHT_PX,
-        borderRadius: 999,
-        backgroundColor: "color(display-p3 0.881 0.881 0.881)",
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        left: NEWSLETTER_BUTTON_SKELETON_LEFT_PX,
-        top: NEWSLETTER_BUTTON_SKELETON_TOP_PX,
-        width: NEWSLETTER_BUTTON_SKELETON_WIDTH_PX,
-        height: NEWSLETTER_BUTTON_SKELETON_HEIGHT_PX,
-        borderRadius: 999,
-        backgroundColor: "color(display-p3 1 1 1 / 30%)",
-      }}
-    />
-  </div>
-);
-
-const renderDashboardPaperContent = () => (
-  <div
-    style={{
-      position: "absolute",
-      left: DASHBOARD_RT_ARTBOARD_LAYOUT_OFFSET_X_PX,
-      top: DASHBOARD_RT_ARTBOARD_TOP_PX,
-      width: DASHBOARD_RT_ARTBOARD_WIDTH_PX,
-      height: DASHBOARD_RT_ARTBOARD_HEIGHT_PX,
-      transform: `scale(${DASHBOARD_RT_ARTBOARD_SCALE})`,
-      transformOrigin: "top left",
-      fontSynthesis: "none",
-      WebkitFontSmoothing: "antialiased",
-      MozOsxFontSmoothing: "grayscale",
-    }}
-  >
-    <div
-      style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
-        width: DASHBOARD_RT_ARTBOARD_WIDTH_PX,
-        height: DASHBOARD_RT_ARTBOARD_HEIGHT_PX,
-        borderRadius: 31,
-        backgroundImage: FAQ_PAGE_BACKGROUND,
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        left: DASHBOARD_RT_CHART_LEFT_PX,
-        top: DASHBOARD_RT_CHART_TOP_PX,
-        width: DASHBOARD_RT_CHART_WIDTH_PX,
-        height: DASHBOARD_RT_CHART_HEIGHT_PX,
-        borderRadius: 15,
-        backgroundColor: "color(display-p3 1 1 1)",
-        boxShadow: DASHBOARD_RT_CARD_SHADOW,
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        left: DASHBOARD_RT_TITLE_LEFT_PX,
-        top: DASHBOARD_RT_TITLE_TOP_PX,
-        fontSize: 27,
-        lineHeight: "41px",
-        letterSpacing: "-0.03em",
-        color: "#111111",
-        fontFamily: DASHBOARD_RT_TITLE_FONT_FAMILY,
-        fontWeight: 700,
-      }}
-    >
-      Real-time dashboard
-    </div>
-    <div
-      style={{
-        position: "absolute",
-        left: DASHBOARD_RT_LINE_LEFT_PX,
-        top: DASHBOARD_RT_LINE_TOP_PX,
-        width: DASHBOARD_RT_LINE_WIDTH_PX,
-        height: DASHBOARD_RT_LINE_HEIGHT_PX,
-        borderRadius: 999,
-        backgroundColor: "color(display-p3 0.899 0.899 0.899)",
-      }}
-    />
-    {DASHBOARD_RT_CARD_LEFTS_PX.map((leftPx) => (
       <div
-        key={leftPx}
         style={{
           position: "absolute",
-          left: leftPx,
-          top: DASHBOARD_RT_CARD_TOP_PX,
-          width: DASHBOARD_RT_CARD_WIDTH_PX,
-          height: DASHBOARD_RT_CARD_HEIGHT_PX,
+          left: NEWSLETTER_CARD_LEFT_PX,
+          top: NEWSLETTER_CARD_TOP_PX,
+          width: NEWSLETTER_CARD_WIDTH_PX,
+          height: NEWSLETTER_CARD_HEIGHT_PX,
+          borderRadius: 15,
+          backgroundColor: "color(display-p3 1 1 1)",
+          boxShadow: NEWSLETTER_FIELD_SHADOW,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: NEWSLETTER_BUTTON_LEFT_PX,
+          top: NEWSLETTER_BUTTON_TOP_PX,
+          width: NEWSLETTER_BUTTON_WIDTH_PX,
+          height: NEWSLETTER_BUTTON_HEIGHT_PX,
+          borderRadius: NEWSLETTER_CONTROL_RADIUS_PX,
+          backgroundColor: "color(display-p3 0.267 0.503 0.967)",
+          boxShadow: NEWSLETTER_FIELD_SHADOW,
+          transform: btnPressed ? "scale(0.96)" : "scale(1)",
+          transformOrigin: "center center",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: NEWSLETTER_INPUT_LEFT_PX,
+          top: NEWSLETTER_INPUT_TOP_PX,
+          width: NEWSLETTER_INPUT_WIDTH_PX,
+          height: NEWSLETTER_INPUT_HEIGHT_PX,
+          borderRadius: NEWSLETTER_CONTROL_RADIUS_PX,
+          backgroundColor: inputActive ? "#eff6ff" : "color(display-p3 1 1 1)",
+          boxShadow: inputActive
+            ? "color(display-p3 0.267 0.503 0.967 / 50%) 0px 0px 0px 1.5px"
+            : NEWSLETTER_FIELD_SHADOW,
+          display: "flex",
+          alignItems: "center",
+          padding: "0 12px",
+        }}
+      >
+        {typedDisplay ? (
+          <span
+            style={{
+              fontSize: 13,
+              color: "#333",
+              fontFamily: "system-ui, sans-serif",
+              letterSpacing: "0em",
+            }}
+          >
+            {typedDisplay}
+          </span>
+        ) : (
+          !inputActive && (
+            <div
+              style={{
+                width: NEWSLETTER_INPUT_SKELETON_WIDTH_PX,
+                height: 9,
+                borderRadius: 999,
+                backgroundColor: "color(display-p3 0.881 0.881 0.881)",
+              }}
+            />
+          )
+        )}
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: NEWSLETTER_BUTTON_SKELETON_LEFT_PX,
+          top: NEWSLETTER_BUTTON_SKELETON_TOP_PX,
+          width: NEWSLETTER_BUTTON_SKELETON_WIDTH_PX,
+          height: NEWSLETTER_BUTTON_SKELETON_HEIGHT_PX,
+          borderRadius: 999,
+          backgroundColor: "color(display-p3 1 1 1 / 30%)",
+        }}
+      />
+    </div>
+  );
+};
+
+const getActiveCardIndex = (frame: number): number => {
+  if (frame >= 65) return 2;
+  if (frame >= 42) return 1;
+  if (frame >= 12) return 0;
+  return -1;
+};
+
+const renderDashboardPaperContent = (frame: number) => {
+  const activeCard = getActiveCardIndex(frame);
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: DASHBOARD_RT_ARTBOARD_LAYOUT_OFFSET_X_PX,
+        top: DASHBOARD_RT_ARTBOARD_TOP_PX,
+        width: DASHBOARD_RT_ARTBOARD_WIDTH_PX,
+        height: DASHBOARD_RT_ARTBOARD_HEIGHT_PX,
+        transform: `scale(${DASHBOARD_RT_ARTBOARD_SCALE})`,
+        transformOrigin: "top left",
+        fontSynthesis: "none",
+        WebkitFontSmoothing: "antialiased",
+        MozOsxFontSmoothing: "grayscale",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: DASHBOARD_RT_ARTBOARD_WIDTH_PX,
+          height: DASHBOARD_RT_ARTBOARD_HEIGHT_PX,
+          borderRadius: 31,
+          backgroundImage: FAQ_PAGE_BACKGROUND,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: DASHBOARD_RT_CHART_LEFT_PX,
+          top: DASHBOARD_RT_CHART_TOP_PX,
+          width: DASHBOARD_RT_CHART_WIDTH_PX,
+          height: DASHBOARD_RT_CHART_HEIGHT_PX,
           borderRadius: 15,
           backgroundColor: "color(display-p3 1 1 1)",
           boxShadow: DASHBOARD_RT_CARD_SHADOW,
         }}
       />
-    ))}
-    {DASHBOARD_RT_METRIC_LEFTS_PX.map((leftPx, index) => (
       <div
-        key={`metric-${leftPx}`}
         style={{
           position: "absolute",
-          left: leftPx,
-          top: DASHBOARD_RT_METRIC_TOP_PX,
+          left: DASHBOARD_RT_TITLE_LEFT_PX,
+          top: DASHBOARD_RT_TITLE_TOP_PX,
           fontSize: 27,
           lineHeight: "41px",
           letterSpacing: "-0.03em",
           color: "#111111",
-          fontFamily: DASHBOARD_RT_METRIC_FONT_FAMILY,
-          fontWeight: 600,
+          fontFamily: DASHBOARD_RT_TITLE_FONT_FAMILY,
+          fontWeight: 700,
         }}
       >
-        {DASHBOARD_RT_METRIC_VALUES[index]}
+        Real-time dashboard
       </div>
-    ))}
-    {DASHBOARD_RT_METRIC_LEFTS_PX.map((leftPx) => (
       <div
-        key={`sk-${leftPx}`}
         style={{
           position: "absolute",
-          left: leftPx,
-          top: DASHBOARD_RT_SKELETON_TOP_PX,
-          width: DASHBOARD_RT_SKELETON_WIDTH_PX,
-          height: DASHBOARD_RT_SKELETON_HEIGHT_PX,
+          left: DASHBOARD_RT_LINE_LEFT_PX,
+          top: DASHBOARD_RT_LINE_TOP_PX,
+          width: DASHBOARD_RT_LINE_WIDTH_PX,
+          height: DASHBOARD_RT_LINE_HEIGHT_PX,
           borderRadius: 999,
-          backgroundColor: "color(display-p3 0.872 0.872 0.872)",
+          backgroundColor: "color(display-p3 0.899 0.899 0.899)",
         }}
       />
-    ))}
-  </div>
-);
+      {DASHBOARD_RT_CARD_LEFTS_PX.map((leftPx, index) => (
+        <div
+          key={leftPx}
+          style={{
+            position: "absolute",
+            left: leftPx,
+            top: DASHBOARD_RT_CARD_TOP_PX,
+            width: DASHBOARD_RT_CARD_WIDTH_PX,
+            height: DASHBOARD_RT_CARD_HEIGHT_PX,
+            borderRadius: 15,
+            backgroundColor: index === activeCard ? "#f0f4ff" : "color(display-p3 1 1 1)",
+            boxShadow:
+              index === activeCard
+                ? "color(display-p3 0.267 0.503 0.967 / 40%) 0px 0px 0px 1.5px, color(display-p3 0 0 0 / 3%) 0px 1px 5px"
+                : DASHBOARD_RT_CARD_SHADOW,
+          }}
+        />
+      ))}
+      {DASHBOARD_RT_METRIC_LEFTS_PX.map((leftPx, index) => (
+        <div
+          key={`metric-${leftPx}`}
+          style={{
+            position: "absolute",
+            left: leftPx,
+            top: DASHBOARD_RT_METRIC_TOP_PX,
+            fontSize: 27,
+            lineHeight: "41px",
+            letterSpacing: "-0.03em",
+            color: "#111111",
+            fontFamily: DASHBOARD_RT_METRIC_FONT_FAMILY,
+            fontWeight: 600,
+          }}
+        >
+          {DASHBOARD_RT_METRIC_VALUES[index]}
+        </div>
+      ))}
+      {DASHBOARD_RT_METRIC_LEFTS_PX.map((leftPx) => (
+        <div
+          key={`sk-${leftPx}`}
+          style={{
+            position: "absolute",
+            left: leftPx,
+            top: DASHBOARD_RT_SKELETON_TOP_PX,
+            width: DASHBOARD_RT_SKELETON_WIDTH_PX,
+            height: DASHBOARD_RT_SKELETON_HEIGHT_PX,
+            borderRadius: 999,
+            backgroundColor: "color(display-p3 0.872 0.872 0.872)",
+          }}
+        />
+      ))}
+    </div>
+  );
+};
 
-const renderCheckoutPaperContent = () => (
-  <div
-    style={{
-      position: "absolute",
-      left: CHECKOUT_PAPER_ARTBOARD_LAYOUT_OFFSET_X_PX,
-      top: CHECKOUT_PAPER_ARTBOARD_TOP_PX,
-      width: CHECKOUT_PAPER_ARTBOARD_WIDTH_PX,
-      height: CHECKOUT_PAPER_ARTBOARD_HEIGHT_PX,
-      transform: `scale(${CHECKOUT_PAPER_ARTBOARD_SCALE})`,
-      transformOrigin: "top left",
-      fontSynthesis: "none",
-      WebkitFontSmoothing: "antialiased",
-      MozOsxFontSmoothing: "grayscale",
-    }}
-  >
+const renderCheckoutPaperContent = (frame: number) => {
+  const field1Active = frame >= FIELD_1_START_FRAME && frame < FIELD_1_END_FRAME;
+  const field1Chars = Math.min(
+    CHECKOUT_FIELD_1_TEXT.length,
+    Math.max(0, Math.floor((frame - FIELD_1_START_FRAME) * CHARS_PER_FRAME)),
+  );
+  const field1HasText = field1Chars > 0 || frame >= FIELD_1_END_FRAME;
+  const field1Display = field1HasText
+    ? field1Chars > 0
+      ? CHECKOUT_FIELD_1_TEXT.slice(0, field1Chars)
+      : CHECKOUT_FIELD_1_TEXT
+    : undefined;
+
+  const field2Active = frame >= FIELD_2_START_FRAME && frame < FIELD_2_END_FRAME;
+  const field2Chars = Math.min(
+    CHECKOUT_FIELD_2_TEXT.length,
+    Math.max(0, Math.floor((frame - FIELD_2_START_FRAME) * CHARS_PER_FRAME)),
+  );
+  const field2HasText = field2Chars > 0 || frame >= FIELD_2_END_FRAME;
+  const field2Display = field2HasText
+    ? field2Chars > 0
+      ? CHECKOUT_FIELD_2_TEXT.slice(0, field2Chars)
+      : CHECKOUT_FIELD_2_TEXT
+    : undefined;
+
+  const btnPressed = frame >= BUTTON_PRESS_FRAME && frame < SUCCESS_FRAME;
+  const activeFieldIndex = field2Active ? 1 : field1Active ? 0 : -1;
+
+  return (
     <div
       style={{
         position: "absolute",
-        left: 0,
-        top: 0,
+        left: CHECKOUT_PAPER_ARTBOARD_LAYOUT_OFFSET_X_PX,
+        top: CHECKOUT_PAPER_ARTBOARD_TOP_PX,
         width: CHECKOUT_PAPER_ARTBOARD_WIDTH_PX,
         height: CHECKOUT_PAPER_ARTBOARD_HEIGHT_PX,
-        borderRadius: 31,
-        backgroundImage: FAQ_PAGE_BACKGROUND,
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        left: CHECKOUT_PAPER_TITLE_LEFT_PX,
-        top: CHECKOUT_PAPER_TITLE_TOP_PX,
-        fontSize: 27,
-        lineHeight: "41px",
-        letterSpacing: "-0.03em",
-        color: "#111111",
-        fontFamily: FAQ_SIGNUP_TITLE_FONT_FAMILY,
-        fontWeight: 700,
+        transform: `scale(${CHECKOUT_PAPER_ARTBOARD_SCALE})`,
+        transformOrigin: "top left",
+        fontSynthesis: "none",
+        WebkitFontSmoothing: "antialiased",
+        MozOsxFontSmoothing: "grayscale",
       }}
     >
-      Create account
-    </div>
-    {CHECKOUT_PAPER_WHITE_FIELD_TOPS_PX.map((topPx) => (
       <div
-        key={topPx}
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: CHECKOUT_PAPER_ARTBOARD_WIDTH_PX,
+          height: CHECKOUT_PAPER_ARTBOARD_HEIGHT_PX,
+          borderRadius: 31,
+          backgroundImage: FAQ_PAGE_BACKGROUND,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: CHECKOUT_PAPER_TITLE_LEFT_PX,
+          top: CHECKOUT_PAPER_TITLE_TOP_PX,
+          fontSize: 27,
+          lineHeight: "41px",
+          letterSpacing: "-0.03em",
+          color: "#111111",
+          fontFamily: FAQ_SIGNUP_TITLE_FONT_FAMILY,
+          fontWeight: 700,
+        }}
+      >
+        Create account
+      </div>
+      {CHECKOUT_PAPER_WHITE_FIELD_TOPS_PX.map((topPx, index) => {
+        const isActive = index === activeFieldIndex;
+        const displayText = index === 0 ? field1Display : index === 1 ? field2Display : undefined;
+
+        return (
+          <div
+            key={topPx}
+            style={{
+              position: "absolute",
+              left: CHECKOUT_PAPER_FIELD_LEFT_PX,
+              top: topPx,
+              width: CHECKOUT_PAPER_FIELD_WIDTH_PX,
+              height: CHECKOUT_PAPER_FIELD_HEIGHT_PX,
+              borderRadius: CHECKOUT_PAPER_CONTROL_RADIUS_PX,
+              backgroundColor: isActive ? "#eff6ff" : "color(display-p3 1 1 1)",
+              boxShadow: isActive
+                ? "color(display-p3 0.267 0.503 0.967 / 50%) 0px 0px 0px 1.5px"
+                : CHECKOUT_PAPER_FIELD_SHADOW,
+              display: "flex",
+              alignItems: "center",
+              padding: "0 14px",
+            }}
+          >
+            {displayText ? (
+              <span
+                style={{
+                  fontSize: 13,
+                  color: "#333",
+                  fontFamily: "system-ui, sans-serif",
+                }}
+              >
+                {displayText}
+              </span>
+            ) : (
+              !isActive && (
+                <div
+                  style={{
+                    width: CHECKOUT_FIELD_SKELETON_WIDTH_PX,
+                    height: 9,
+                    borderRadius: 999,
+                    backgroundColor: "color(display-p3 0.881 0.881 0.881)",
+                  }}
+                />
+              )
+            )}
+          </div>
+        );
+      })}
+      <div
         style={{
           position: "absolute",
           left: CHECKOUT_PAPER_FIELD_LEFT_PX,
-          top: topPx,
+          top: CHECKOUT_PAPER_BUTTON_TOP_PX,
           width: CHECKOUT_PAPER_FIELD_WIDTH_PX,
           height: CHECKOUT_PAPER_FIELD_HEIGHT_PX,
           borderRadius: CHECKOUT_PAPER_CONTROL_RADIUS_PX,
-          backgroundColor: "color(display-p3 1 1 1)",
+          backgroundColor: CHECKOUT_PAPER_BLUE,
           boxShadow: CHECKOUT_PAPER_FIELD_SHADOW,
+          transform: btnPressed ? "scale(0.96)" : "scale(1)",
+          transformOrigin: "center center",
         }}
       />
-    ))}
-    <div
-      style={{
-        position: "absolute",
-        left: CHECKOUT_PAPER_FIELD_LEFT_PX,
-        top: CHECKOUT_PAPER_BUTTON_TOP_PX,
-        width: CHECKOUT_PAPER_FIELD_WIDTH_PX,
-        height: CHECKOUT_PAPER_FIELD_HEIGHT_PX,
-        borderRadius: CHECKOUT_PAPER_CONTROL_RADIUS_PX,
-        backgroundColor: CHECKOUT_PAPER_BLUE,
-        boxShadow: CHECKOUT_PAPER_FIELD_SHADOW,
-      }}
-    />
-    {CHECKOUT_PAPER_SKELETONS.map((skeleton, index) => (
-      <div
-        key={index}
-        style={{
-          position: "absolute",
-          left: skeleton.left,
-          top: skeleton.top,
-          width: skeleton.width,
-          height: skeleton.height,
-          borderRadius: 999,
-          backgroundColor: skeleton.backgroundColor,
-        }}
-      />
-    ))}
-  </div>
-);
+      {CHECKOUT_PAPER_SKELETONS.map((skeleton, index) => (
+        <div
+          key={index}
+          style={{
+            position: "absolute",
+            left: skeleton.left,
+            top: skeleton.top,
+            width: skeleton.width,
+            height: skeleton.height,
+            borderRadius: 999,
+            backgroundColor: skeleton.backgroundColor,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
 
 const renderVariantContent = (variant: PageVariant, frame: number) => {
   switch (variant) {
     case "signup":
-      return renderSignupContent();
+      return renderSignupContent(frame);
 
     case "login":
       return renderFormContent(variant, frame);
 
     case "dashboard":
-      return renderDashboardPaperContent();
+      return renderDashboardPaperContent(frame);
 
     case "profile":
       return (
@@ -1284,7 +1418,7 @@ const renderVariantContent = (variant: PageVariant, frame: number) => {
       );
 
     case "checkout":
-      return renderCheckoutPaperContent();
+      return renderCheckoutPaperContent(frame);
 
     case "inbox":
       return (
@@ -1375,7 +1509,7 @@ const renderVariantContent = (variant: PageVariant, frame: number) => {
       );
 
     case "analytics":
-      return renderNewsletterContent();
+      return renderNewsletterContent(frame);
   }
 };
 
@@ -1707,8 +1841,11 @@ export const BrowserCell = ({ frameOffset = 0, variant = "signup" }: BrowserCell
                 extrapolateRight: "clamp",
               });
 
+  const CLICK_DURATION = 3;
+  const isClickFrame = (clickFrame: number) =>
+    frame >= clickFrame && frame < clickFrame + CLICK_DURATION;
   const buttonPressed =
-    variant !== "signup" && frame >= BUTTON_PRESS_FRAME && frame < SUCCESS_FRAME;
+    isClickFrame(12) || isClickFrame(42) || isClickFrame(65) || isClickFrame(BUTTON_PRESS_FRAME);
 
   return (
     <div
@@ -2170,9 +2307,7 @@ export const BrowserCell = ({ frameOffset = 0, variant = "signup" }: BrowserCell
               style={{ flexShrink: 0, color: "#FFFFFF" }}
             >
               <path
-                fillRule="evenodd"
-                clipRule="evenodd"
-                d="M12 22.75C6.063 22.75 1.25 17.937 1.25 12C1.25 6.063 6.063 1.25 12 1.25C17.937 1.25 22.75 6.063 22.75 12C22.75 17.937 17.937 22.75 12 22.75ZM16.48 9.378C16.965 9.113 17.142 8.505 16.878 8.02C16.613 7.536 16.005 7.358 15.52 7.623C13.692 8.623 12.18 10.553 11.163 12.11C10.787 12.685 10.466 13.23 10.209 13.691C9.97 13.459 9.733 13.257 9.52 13.089C9.243 12.87 8.993 12.697 8.811 12.577L8.496 12.382C8.016 12.108 7.405 12.275 7.132 12.755C6.858 13.234 7.025 13.845 7.504 14.119L7.715 14.25C7.858 14.344 8.058 14.482 8.28 14.658C8.738 15.02 9.231 15.494 9.542 16.014C9.733 16.332 10.084 16.519 10.455 16.499C10.826 16.478 11.155 16.254 11.31 15.916L11.408 15.71C11.476 15.572 11.577 15.37 11.709 15.12C11.973 14.621 12.358 13.937 12.837 13.203C13.821 11.697 15.109 10.127 16.48 9.378Z"
+                d="M13.998 21.75C16.253 21.75 18.033 21.75 19.352 21.554C20.69 21.354 21.776 20.922 22.376 19.863L22.48 19.664C22.951 18.661 22.758 17.571 22.276 16.395C21.893 15.457 21.277 14.348 20.499 13.02L19.669 11.616L17.744 8.371L17.698 8.293C16.596 6.434 15.723 4.963 14.911 3.965C14.083 2.946 13.184 2.25 12 2.25C10.816 2.25 9.917 2.946 9.089 3.965C8.472 4.724 7.819 5.756 7.057 7.024L6.256 8.371L4.331 11.616L4.283 11.696C3.135 13.633 2.228 15.161 1.724 16.395C1.21 17.65 1.025 18.806 1.624 19.863L1.742 20.055C2.36 20.975 3.393 21.367 4.648 21.554C5.967 21.75 7.747 21.75 10.002 21.75L13.998 21.75ZM12 14.5C11.448 14.5 11 14.052 11 13.5V9C11 8.448 11.448 8 12 8C12.552 8 13 8.448 13 9V13.5C13 14.052 12.552 14.5 12 14.5ZM12 18.002C11.448 18.002 11 17.554 11 17.002V16.992C11 16.44 11.448 15.992 12 15.992C12.552 15.992 13 16.44 13 16.992V17.002C13 17.554 12.552 18.002 12 18.002Z"
                 fill="#FFFFFF"
               />
             </svg>
@@ -2189,7 +2324,7 @@ export const BrowserCell = ({ frameOffset = 0, variant = "signup" }: BrowserCell
                 flexShrink: 0,
               }}
             >
-              3/3 fixed
+              500 error
             </div>
           </div>
           <svg
@@ -2252,7 +2387,7 @@ export const BrowserCell = ({ frameOffset = 0, variant = "signup" }: BrowserCell
               fillRule="evenodd"
               clipRule="evenodd"
               d="M4.676 3.532C4.492 3.463 4.285 3.508 4.146 3.646C4.008 3.785 3.963 3.992 4.032 4.176L8.157 15.176C8.234 15.38 8.435 15.512 8.653 15.499C8.872 15.487 9.057 15.334 9.11 15.121L10.412 9.912L15.621 8.61C15.834 8.557 15.987 8.372 15.999 8.153C16.012 7.935 15.88 7.734 15.676 7.657L4.676 3.532Z"
-              fill="#00B12E"
+              fill="#FF0000"
             />
           </svg>
         </div>

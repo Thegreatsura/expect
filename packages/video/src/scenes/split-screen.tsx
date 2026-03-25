@@ -1,8 +1,15 @@
 import { AbsoluteFill, Easing, interpolate, Sequence, useCurrentFrame } from "remotion";
-import { CHECK_ICON_COLOR, COMMAND, VIDEO_HEIGHT_PX, VIDEO_WIDTH_PX } from "../constants";
+import {
+  CHECK_ICON_COLOR,
+  COMMAND,
+  ERROR_ICON_COLOR,
+  SPINNER_CHARS,
+  SPINNER_SPEED_FRAMES,
+  VIDEO_HEIGHT_PX,
+  VIDEO_WIDTH_PX,
+} from "../constants";
 import { fontFamily } from "../utils/font";
 import { BrowserCell, CELL_HEIGHT_PX, CELL_WIDTH_PX, type PageVariant } from "./browser-cell";
-import { SpinnerIcon } from "./diff-scan";
 
 const FRAMES_PER_CASE = 75;
 const FINALE_FRAMES = 90;
@@ -16,46 +23,115 @@ interface TestCase {
 }
 
 const TEST_CASES: TestCase[] = [
-  { category: "E2E", label: "checkout flow → 500 Internal Server Error", variant: "signup" },
-  { category: "Perf", label: "First Contentful Paint exceeds 2.5s", variant: "analytics" },
-  { category: "Debug", label: "TypeError — undefined is not a function", variant: "dashboard" },
-  { category: "Security", label: "CSRF token missing on POST /api/pay", variant: "checkout" },
+  { category: "Perf", label: "FCP exceeds 2.5s", variant: "signup" },
+  { category: "Security", label: "CSRF missing on /subscribe", variant: "analytics" },
+  { category: "Debug", label: "TypeError — undefined", variant: "dashboard" },
+  { category: "E2E", label: "/api/signup → 500", variant: "checkout" },
 ];
 
-const LEFT_RATIO = 0.38;
-const LEFT_WIDTH_PX = Math.round(VIDEO_WIDTH_PX * LEFT_RATIO);
+const BROWSER_MARGIN_PX = 50;
+const OVERLAY_HEIGHT_PX = 280;
+const OVERLAY_ICON_SIZE_PX = 140;
+const OVERLAY_FONT_SIZE_PX = 88;
 
-const ENTRY_ICON_SIZE_PX = 40;
-const ENTRY_ICON_X_PX = 50;
-const ENTRY_TEXT_X_PX = 105;
-const ENTRY_SPACING_PX = 80;
-const ENTRY_FONT_SIZE_PX = 22;
-const ENTRY_APPEAR_FRAMES = 8;
-const ENTRY_GROUP_HEIGHT = (CASE_COUNT - 1) * ENTRY_SPACING_PX;
-const ENTRY_TOP_START_PX = (VIDEO_HEIGHT_PX - ENTRY_GROUP_HEIGHT) / 2;
+const AVAIL_WIDTH_PX = VIDEO_WIDTH_PX - BROWSER_MARGIN_PX * 2;
+const AVAIL_HEIGHT_PX = VIDEO_HEIGHT_PX - BROWSER_MARGIN_PX - OVERLAY_HEIGHT_PX / 2;
+const FULL_BROWSER_SCALE = Math.min(
+  AVAIL_WIDTH_PX / CELL_WIDTH_PX,
+  AVAIL_HEIGHT_PX / CELL_HEIGHT_PX,
+);
+const FULL_BROWSER_LEFT = (VIDEO_WIDTH_PX - CELL_WIDTH_PX * FULL_BROWSER_SCALE) / 2;
+const FULL_BROWSER_TOP =
+  (VIDEO_HEIGHT_PX - OVERLAY_HEIGHT_PX / 2 - CELL_HEIGHT_PX * FULL_BROWSER_SCALE) / 2;
 
-const RIGHT_X_PX = LEFT_WIDTH_PX + 1;
-const RIGHT_WIDTH_PX = VIDEO_WIDTH_PX - RIGHT_X_PX;
-const BROWSER_PADDING_X_PX = 50;
-const BROWSER_PADDING_Y_PX = 60;
-const BROWSER_SCALE_X = (RIGHT_WIDTH_PX - BROWSER_PADDING_X_PX * 2) / CELL_WIDTH_PX;
-const BROWSER_SCALE_Y = (VIDEO_HEIGHT_PX - BROWSER_PADDING_Y_PX * 2) / CELL_HEIGHT_PX;
-const BROWSER_SCALE = Math.min(BROWSER_SCALE_X, BROWSER_SCALE_Y);
-const BROWSER_LEFT = RIGHT_X_PX + (RIGHT_WIDTH_PX - CELL_WIDTH_PX * BROWSER_SCALE) / 2;
-const BROWSER_TOP = (VIDEO_HEIGHT_PX - CELL_HEIGHT_PX * BROWSER_SCALE) / 2;
-
-const FINALE_START_FRAME = FRAMES_PER_CASE * CASE_COUNT;
-const CHECK_TRANSITION_FRAMES = 8;
-
+const FAIL_START_FRAMES = 18;
+const FAIL_DURATION_FRAMES = 8;
 const SHIMMER_CYCLE_FRAMES = 30;
 
-const CheckIcon = ({ size, opacity }: { size: number; opacity: number }) => (
+const FINALE_START_FRAME = FRAMES_PER_CASE * CASE_COUNT;
+const FINALE_OVERLAY_FADE_FRAMES = 12;
+const FINALE_ROW_STAGGER_FRAMES = 6;
+const FINALE_ROW_APPEAR_FRAMES = 8;
+const FINALE_ROW_SPACING_PX = 130;
+const FINALE_ICON_SIZE_PX = 100;
+const FINALE_FONT_SIZE_PX = 88;
+const FINALE_GROUP_HEIGHT_PX = (CASE_COUNT - 1) * FINALE_ROW_SPACING_PX;
+const FINALE_TOP_START_PX = (VIDEO_HEIGHT_PX - FINALE_GROUP_HEIGHT_PX) / 2;
+const FINALE_LEFT_PX = 80;
+const FINALE_COMMAND_FONT_SIZE_PX = 48;
+
+const AsciiSpinner = ({ size, frame }: { size: number; frame: number }) => {
+  const charIndex = Math.floor(frame / SPINNER_SPEED_FRAMES) % SPINNER_CHARS.length;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: size * 0.7,
+        lineHeight: 1,
+        color: "#888",
+        fontFamily,
+      }}
+    >
+      {SPINNER_CHARS[charIndex]}
+    </div>
+  );
+};
+
+const FailedIcon = ({
+  size,
+  opacity,
+  scale = 1,
+}: {
+  size: number;
+  opacity: number;
+  scale?: number;
+}) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
     width={size}
     height={size}
-    style={{ opacity, position: "absolute", inset: 0 }}
+    style={{
+      opacity,
+      position: "absolute",
+      inset: 0,
+      transform: `scale(${scale})`,
+      transformOrigin: "center center",
+    }}
+  >
+    <path
+      d="M12 1.25C17.937 1.25 22.75 6.063 22.75 12C22.75 17.937 17.937 22.75 12 22.75C6.063 22.75 1.25 17.937 1.25 12C1.25 6.063 6.063 1.25 12 1.25ZM9.631 8.225C9.238 7.904 8.659 7.927 8.293 8.293C7.927 8.659 7.904 9.238 8.225 9.631L8.293 9.707L10.586 12L8.294 14.293C7.904 14.684 7.903 15.317 8.294 15.707C8.684 16.097 9.318 16.097 9.708 15.707L12 13.414L14.292 15.707L14.368 15.775C14.761 16.096 15.34 16.073 15.706 15.707C16.072 15.341 16.095 14.762 15.775 14.369L15.706 14.293L13.413 12L15.707 9.707L15.775 9.631C16.096 9.238 16.073 8.659 15.707 8.293C15.341 7.927 14.762 7.904 14.369 8.225L14.293 8.293L12 10.586L9.707 8.293L9.631 8.225Z"
+      fill={ERROR_ICON_COLOR}
+    />
+  </svg>
+);
+
+const CheckIcon = ({
+  size,
+  opacity,
+  scale = 1,
+}: {
+  size: number;
+  opacity: number;
+  scale?: number;
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    style={{
+      opacity,
+      position: "absolute",
+      inset: 0,
+      transform: `scale(${scale})`,
+      transformOrigin: "center center",
+    }}
   >
     <path
       fillRule="evenodd"
@@ -91,10 +167,15 @@ export const SplitScreen = () => {
     ? CASE_COUNT - 1
     : Math.min(CASE_COUNT - 1, Math.floor(frame / FRAMES_PER_CASE));
 
-  const passProgress = isFinale
+  const activeCase = TEST_CASES[activeCaseIndex];
+  const localFrame = frame - activeCaseIndex * FRAMES_PER_CASE;
+
+  const hasFailed = isFinale || localFrame >= FAIL_START_FRAMES;
+
+  const finaleOverlayOpacity = isFinale
     ? interpolate(
         frame,
-        [FINALE_START_FRAME, FINALE_START_FRAME + CHECK_TRANSITION_FRAMES],
+        [FINALE_START_FRAME, FINALE_START_FRAME + FINALE_OVERLAY_FADE_FRAMES],
         [0, 1],
         { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) },
       )
@@ -102,88 +183,6 @@ export const SplitScreen = () => {
 
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
-      <div
-        style={{
-          position: "absolute",
-          left: ENTRY_ICON_X_PX,
-          top: ENTRY_TOP_START_PX - 50,
-          fontSize: 20,
-          fontFamily,
-          color: "#555",
-        }}
-      >
-        <span style={{ color: "#555" }}>$ </span>
-        <span style={{ color: "#999" }}>{COMMAND}</span>
-      </div>
-
-      {TEST_CASES.map((testCase, index) => {
-        const caseStart = index * FRAMES_PER_CASE;
-        if (frame < caseStart) return undefined;
-
-        const appearOpacity = interpolate(
-          frame,
-          [caseStart, caseStart + ENTRY_APPEAR_FRAMES],
-          [0, 1],
-          { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) },
-        );
-
-        const isActive = index === activeCaseIndex && !isFinale;
-        const topPosition = ENTRY_TOP_START_PX + index * ENTRY_SPACING_PX;
-
-        return (
-          <div key={testCase.label} style={{ opacity: appearOpacity }}>
-            <div
-              style={{
-                position: "absolute",
-                left: ENTRY_ICON_X_PX,
-                top: topPosition - 8,
-                width: ENTRY_ICON_SIZE_PX,
-                height: ENTRY_ICON_SIZE_PX,
-              }}
-            >
-              {passProgress > 0 && <CheckIcon size={ENTRY_ICON_SIZE_PX} opacity={passProgress} />}
-              {passProgress < 1 && <SpinnerIcon size={ENTRY_ICON_SIZE_PX} frame={frame} />}
-            </div>
-
-            <div
-              style={{
-                position: "absolute",
-                left: ENTRY_TEXT_X_PX,
-                top: topPosition,
-                fontSize: ENTRY_FONT_SIZE_PX,
-                fontFamily,
-                whiteSpace: "nowrap",
-                display: "flex",
-                gap: 10,
-                alignItems: "baseline",
-              }}
-            >
-              <span style={{ color: "#555", fontWeight: 600, minWidth: 72 }}>
-                {testCase.category}
-              </span>
-              {isActive ? (
-                <ShimmerText text={testCase.label} frame={frame} />
-              ) : (
-                <span style={{ color: passProgress > 0 ? CHECK_ICON_COLOR : "#aaa" }}>
-                  {testCase.label}
-                </span>
-              )}
-            </div>
-          </div>
-        );
-      })}
-
-      <div
-        style={{
-          position: "absolute",
-          left: LEFT_WIDTH_PX,
-          top: 0,
-          width: 1,
-          height: "100%",
-          backgroundColor: "rgba(255,255,255,0.08)",
-        }}
-      />
-
       {TEST_CASES.map((testCase, index) => (
         <Sequence
           key={testCase.label}
@@ -195,9 +194,9 @@ export const SplitScreen = () => {
           <div
             style={{
               position: "absolute",
-              left: BROWSER_LEFT,
-              top: BROWSER_TOP,
-              transform: `scale(${BROWSER_SCALE})`,
+              left: FULL_BROWSER_LEFT,
+              top: FULL_BROWSER_TOP,
+              transform: `scale(${FULL_BROWSER_SCALE})`,
               transformOrigin: "top left",
             }}
           >
@@ -205,6 +204,157 @@ export const SplitScreen = () => {
           </div>
         </Sequence>
       ))}
+
+      {!isFinale && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            bottom: 0,
+            width: "100%",
+            height: OVERLAY_HEIGHT_PX,
+            background:
+              "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.7) 40%, rgba(0,0,0,0.9) 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            paddingTop: OVERLAY_HEIGHT_PX * 0.25,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 20,
+              fontFamily,
+              fontSize: OVERLAY_FONT_SIZE_PX,
+              whiteSpace: "nowrap",
+            }}
+          >
+            <div
+              style={{
+                width: OVERLAY_ICON_SIZE_PX,
+                height: OVERLAY_ICON_SIZE_PX,
+                position: "relative",
+                flexShrink: 0,
+              }}
+            >
+              {hasFailed ? (
+                <FailedIcon size={OVERLAY_ICON_SIZE_PX} opacity={1} />
+              ) : (
+                <AsciiSpinner size={OVERLAY_ICON_SIZE_PX} frame={frame} />
+              )}
+            </div>
+            <span
+              style={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: VIDEO_WIDTH_PX - OVERLAY_ICON_SIZE_PX - 20 - 160,
+              }}
+            >
+              {hasFailed ? (
+                <span style={{ color: ERROR_ICON_COLOR }}>{activeCase.label}</span>
+              ) : (
+                <ShimmerText text={activeCase.label} frame={frame} />
+              )}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {isFinale && (
+        <AbsoluteFill
+          style={{
+            backgroundColor: `rgba(0, 0, 0, ${finaleOverlayOpacity * 0.92})`,
+            justifyContent: "center",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              gap: FINALE_ROW_SPACING_PX - FINALE_ICON_SIZE_PX,
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: FINALE_COMMAND_FONT_SIZE_PX,
+                fontFamily,
+                opacity: finaleOverlayOpacity,
+                marginBottom: 8,
+              }}
+            >
+              <span style={{ color: "#555" }}>$ </span>
+              <span style={{ color: "#999" }}>{COMMAND}</span>
+            </div>
+
+            {TEST_CASES.map((testCase, index) => {
+              const rowStartFrame = FINALE_START_FRAME + 8 + index * FINALE_ROW_STAGGER_FRAMES;
+              const rowOpacity = interpolate(
+                frame,
+                [rowStartFrame, rowStartFrame + FINALE_ROW_APPEAR_FRAMES],
+                [0, 1],
+                {
+                  extrapolateLeft: "clamp",
+                  extrapolateRight: "clamp",
+                  easing: Easing.out(Easing.cubic),
+                },
+              );
+              const rowScale = interpolate(
+                frame,
+                [rowStartFrame, rowStartFrame + FINALE_ROW_APPEAR_FRAMES],
+                [0.7, 1],
+                {
+                  extrapolateLeft: "clamp",
+                  extrapolateRight: "clamp",
+                  easing: Easing.out(Easing.cubic),
+                },
+              );
+
+              return (
+                <div
+                  key={testCase.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 20,
+                    fontFamily,
+                    fontSize: FINALE_FONT_SIZE_PX,
+                    whiteSpace: "nowrap",
+                    opacity: rowOpacity,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: FINALE_ICON_SIZE_PX,
+                      height: FINALE_ICON_SIZE_PX,
+                      position: "relative",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <CheckIcon size={FINALE_ICON_SIZE_PX} opacity={1} scale={rowScale} />
+                  </div>
+                  <span
+                    style={{
+                      color: CHECK_ICON_COLOR,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      maxWidth: VIDEO_WIDTH_PX - FINALE_ICON_SIZE_PX - 20 - 160,
+                    }}
+                  >
+                    {testCase.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </AbsoluteFill>
+      )}
     </AbsoluteFill>
   );
 };

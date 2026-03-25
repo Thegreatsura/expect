@@ -4,11 +4,13 @@ import { Audio, interpolate, Sequence, staticFile } from "remotion";
 import {
   CHAR_FRAMES,
   COMMAND,
+  SCENE_COVERAGE_BAR_DURATION_FRAMES,
   SCENE_TYPING_DURATION_FRAMES,
   TRANSITION_DURATION_FRAMES,
   TYPING_INITIAL_DELAY_FRAMES,
   VIDEO_FPS,
 } from "../constants";
+import { CoverageBar } from "../scenes/coverage-bar";
 import { SplitScreen, SPLIT_SCREEN_DURATION_FRAMES } from "../scenes/split-screen";
 import { TerminalTyping } from "../scenes/terminal-typing";
 
@@ -40,6 +42,18 @@ export const Main = () => {
           <Sequence from={TYPING_INITIAL_DELAY_FRAMES} durationInFrames={TYPING_DURATION_FRAMES}>
             <Audio src={staticFile("typing.mp3")} startFrom={TYPING_SOUND_START_FRAME} />
           </Sequence>
+        </TransitionSeries.Sequence>
+
+        <TransitionSeries.Transition
+          presentation={slide({ direction: "from-bottom" })}
+          timing={springTiming({
+            config: { damping: 200 },
+            durationInFrames: TRANSITION_DURATION_FRAMES,
+          })}
+        />
+
+        <TransitionSeries.Sequence durationInFrames={SCENE_COVERAGE_BAR_DURATION_FRAMES}>
+          <CoverageBar />
         </TransitionSeries.Sequence>
 
         <TransitionSeries.Transition
