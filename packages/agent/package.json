@@ -2,21 +2,11 @@
   "name": "@expect/agent",
   "version": "0.0.5",
   "private": true,
-  "files": [
-    "dist"
-  ],
   "type": "module",
-  "main": "./dist/index.mjs",
-  "types": "./dist/index.d.mts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs"
-    }
+    ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "vp pack",
-    "dev": "vp pack --watch",
     "lint": "vp lint && tsc --noEmit",
     "format": "vp fmt",
     "format:check": "vp fmt --check",

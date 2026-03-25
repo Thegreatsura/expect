@@ -2,37 +2,14 @@
   "name": "@expect/shared",
   "version": "0.0.5",
   "private": true,
-  "files": [
-    "dist"
-  ],
   "type": "module",
-  "main": "./dist/index.mjs",
-  "types": "./dist/index.d.mts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs",
-      "default": "./dist/index.mjs"
-    },
-    "./models": {
-      "types": "./dist/models.d.mts",
-      "import": "./dist/models.mjs",
-      "default": "./dist/models.mjs"
-    },
-    "./prompts": {
-      "types": "./dist/prompts.d.mts",
-      "import": "./dist/prompts.mjs",
-      "default": "./dist/prompts.mjs"
-    },
-    "./observability": {
-      "types": "./dist/observability/exports.d.mts",
-      "import": "./dist/observability/exports.mjs",
-      "default": "./dist/observability/exports.mjs"
-    }
+    ".": "./src/index.ts",
+    "./models": "./src/models.ts",
+    "./prompts": "./src/prompts.ts",
+    "./observability": "./src/observability/exports.ts"
   },
   "scripts": {
-    "build": "vp pack",
-    "dev": "vp pack --watch",
     "lint": "vp lint && tsc --noEmit",
     "format": "vp fmt",
     "format:check": "vp fmt --check",

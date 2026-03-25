@@ -418,6 +418,14 @@ export class TestPlan extends TestPlanDraft.extend<TestPlan>("@supervisor/TestPl
     });
   }
 
+  get stepCount(): number {
+    return this.steps.length;
+  }
+
+  get passed();
+
+  get isTerminal() {}
+
   get resetForRerun(): TestPlan {
     return new TestPlan({
       ...this,

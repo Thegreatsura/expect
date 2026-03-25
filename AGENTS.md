@@ -827,7 +827,11 @@ All tooling is run through pnpm scripts defined in the root `package.json`.
 - `pnpm check` — run format, lint, and type checks
 - `pnpm test` — run tests
 
-## Review Checklist for Agents
 
-- [ ] Run `pnpm install` after pulling remote changes and before getting started.
-- [ ] Run `pnpm check` and `pnpm test` to validate changes.
+## Verification Steps
+
+Before considering work complete, run these checks:
+
+1. **Type-checking:** `pnpm typecheck` (runs `tsgo --noEmit` in all packages via turbo)
+2. **Tests:** `pnpm test` (runs `vitest run --testTimeout 0 --bail=1` — no timeout, stops at first failure so you can focus on one error at a time)
+3. **Build:** `pnpm build`

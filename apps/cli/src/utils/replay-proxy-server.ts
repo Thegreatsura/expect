@@ -176,7 +176,10 @@ export const startReplayProxy = Effect.fn("startReplayProxy")(function* (
     typeof address === "object" && address !== undefined && address !== null ? address.port : 0;
   const proxyUrl = `http://localhost:${port}`;
 
-  yield* Effect.logInfo("Replay proxy started", { proxyUrl, liveViewUrl: options.liveViewUrl });
+  yield* Effect.logInfo("Replay proxy started", {
+    proxyUrl,
+    liveViewUrl: options.liveViewUrl,
+  });
 
   return {
     url: proxyUrl,

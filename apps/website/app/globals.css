@@ -156,7 +156,11 @@
   background-position: top left !important;
   width: 54px !important;
   height: 59px !important;
-  transition: left 0.15s cubic-bezier(0.25, 1, 0.5, 1), top 0.15s cubic-bezier(0.25, 1, 0.5, 1), width 0.2s ease-out, height 0.2s ease-out !important;
+  transition:
+    left 0.15s cubic-bezier(0.25, 1, 0.5, 1),
+    top 0.15s cubic-bezier(0.25, 1, 0.5, 1),
+    width 0.2s ease-out,
+    height 0.2s ease-out !important;
 }
 
 .replayer-mouse::after {
