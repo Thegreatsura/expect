@@ -1,165 +1,159 @@
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import {
-  BACKGROUND_COLOR,
-  DIFF_FILE_FONT_SIZE_PX,
-  DIFF_SCAN_INITIAL_DELAY_FRAMES,
-  FRAMES_PER_FILE,
-  GREEN_COLOR,
-  MUTED_COLOR,
-  OVERLAY_GRADIENT_BOTTOM_PADDING_PX,
-  OVERLAY_GRADIENT_HEIGHT_PX,
-  OVERLAY_GRADIENT_HORIZONTAL_PADDING_PX,
-  RED_COLOR,
-  DIFF_FILES,
-  SCENE_DIFF_SCAN_DURATION_FRAMES,
-  TEXT_COLOR,
+  ERROR_LOG_ITEMS,
+  ERROR_LOG_FONT_SIZE_PX,
+  ERROR_LOG_ICON_SIZE_PX,
+  ERROR_LOG_ICON_LEFT_PX,
+  ERROR_LOG_TEXT_LEFT_PX,
+  ERROR_LOG_TOP_START_PX,
+  ERROR_LOG_ITEM_SPACING_PX,
+  ERROR_LOG_INITIAL_DELAY_FRAMES,
+  ERROR_LOG_APPEAR_FRAMES,
+  ERROR_LOG_APPEAR_STAGGER_FRAMES,
+  ERROR_LOG_FAIL_START_FRAMES,
+  ERROR_LOG_FAIL_INTERVAL_FRAMES,
+  ERROR_LOG_FAIL_TRANSITION_FRAMES,
+  ERROR_ICON_COLOR,
 } from "../constants";
-import { getBottomOverlayGradient } from "../utils/get-bottom-overlay-gradient";
-import { fontFamily } from "../utils/font";
 
-const LINE_HEIGHT_MULTIPLIER = 1.6;
-const LINE_HEIGHT_PX = DIFF_FILE_FONT_SIZE_PX * LINE_HEIGHT_MULTIPLIER;
-const FADE_IN_FRAMES = 6;
-const VIEWPORT_HEIGHT_PX = 1080;
-const CONTENT_PADDING_PX = 40;
-const USABLE_HEIGHT_PX = VIEWPORT_HEIGHT_PX - CONTENT_PADDING_PX * 2;
-const VISIBLE_ROW_COUNT = Math.floor(USABLE_HEIGHT_PX / LINE_HEIGHT_PX);
-const TOTAL_LIST_HEIGHT_PX = DIFF_FILES.length * LINE_HEIGHT_PX;
-const MAX_SCROLL_PX = Math.max(0, TOTAL_LIST_HEIGHT_PX - USABLE_HEIGHT_PX);
-const SCROLL_START_FRAME = DIFF_SCAN_INITIAL_DELAY_FRAMES + VISIBLE_ROW_COUNT * FRAMES_PER_FILE;
-const SCROLL_END_FRAME = DIFF_SCAN_INITIAL_DELAY_FRAMES + DIFF_FILES.length * FRAMES_PER_FILE;
+const SPINNER_SPOKE_COUNT = 12;
+const SPINNER_FRAME_RATE = 3;
+const ICON_VERTICAL_OFFSET_PX = -30;
+const SHIMMER_CYCLE_FRAMES = 30;
 
-const OVERLAY_START_FRAME = Math.floor(SCENE_DIFF_SCAN_DURATION_FRAMES * 0.25);
-const OVERLAY_FADE_IN_FRAMES = 15;
-const OVERLAY_HOLD_FRAMES = 60;
-const OVERLAY_FADE_OUT_FRAMES = 15;
-const OVERLAY_END_FRAME =
-  OVERLAY_START_FRAME + OVERLAY_FADE_IN_FRAMES + OVERLAY_HOLD_FRAMES + OVERLAY_FADE_OUT_FRAMES;
-const TITLE_FONT_SIZE_PX = 88;
+const SPINNER_PATHS = [
+  "M12 2v4",
+  "M15 6.8l2-3.5",
+  "M17.2 9l3.5-2",
+  "M18 12h4",
+  "M17.2 15l3.5 2",
+  "M15 17.2l2 3.5",
+  "M12 18v4",
+  "M9 17.2l-2 3.5",
+  "M6.8 15l-3.5 2",
+  "M2 12h4",
+  "M6.8 9l-3.5-2",
+  "M9 6.8l-2-3.5",
+];
+
+export const FailedIcon = ({ size, opacity }: { size: number; opacity: number }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    style={{ opacity, position: "absolute", inset: 0 }}
+  >
+    <path
+      d="M12 1.25C17.937 1.25 22.75 6.063 22.75 12C22.75 17.937 17.937 22.75 12 22.75C6.063 22.75 1.25 17.937 1.25 12C1.25 6.063 6.063 1.25 12 1.25ZM9.631 8.225C9.238 7.904 8.659 7.927 8.293 8.293C7.927 8.659 7.904 9.238 8.225 9.631L8.293 9.707L10.586 12L8.294 14.293C7.904 14.684 7.903 15.317 8.294 15.707C8.684 16.097 9.318 16.097 9.708 15.707L12 13.414L14.292 15.707L14.368 15.775C14.761 16.096 15.34 16.073 15.706 15.707C16.072 15.341 16.095 14.762 15.775 14.369L15.706 14.293L13.413 12L15.707 9.707L15.775 9.631C16.096 9.238 16.073 8.659 15.707 8.293C15.341 7.927 14.762 7.904 14.369 8.225L14.293 8.293L12 10.586L9.707 8.293L9.631 8.225Z"
+      fill={ERROR_ICON_COLOR}
+    />
+  </svg>
+);
+
+export const SpinnerIcon = ({ size, frame }: { size: number; frame: number }) => {
+  const activeIndex = Math.floor(frame / SPINNER_FRAME_RATE) % SPINNER_SPOKE_COUNT;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="#FFFFFF"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {SPINNER_PATHS.map((d, index) => {
+        const distance = (index - activeIndex + SPINNER_SPOKE_COUNT) % SPINNER_SPOKE_COUNT;
+        const opacity = Math.max(0.15, 1 - distance * 0.07);
+        return <path key={d} d={d} opacity={opacity} />;
+      })}
+    </svg>
+  );
+};
+
+export const ShimmerText = ({ text, frame }: { text: string; frame: number }) => {
+  const progress = (frame % SHIMMER_CYCLE_FRAMES) / SHIMMER_CYCLE_FRAMES;
+  const shimmerPosition = progress * 200 - 50;
+
+  return (
+    <span
+      style={{
+        backgroundImage: `linear-gradient(90deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.7) ${shimmerPosition}%, rgba(255,255,255,0.35) ${shimmerPosition + 30}%)`,
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        backgroundClip: "text",
+      }}
+    >
+      {text}
+    </span>
+  );
+};
 
 export const DiffScan = () => {
   const frame = useCurrentFrame();
 
-  const scrollY = interpolate(frame, [SCROLL_START_FRAME, SCROLL_END_FRAME], [0, MAX_SCROLL_PX], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.inOut(Easing.quad),
-  });
-
-  const overlayOpacity = interpolate(
-    frame,
-    [
-      OVERLAY_START_FRAME,
-      OVERLAY_START_FRAME + OVERLAY_FADE_IN_FRAMES,
-      OVERLAY_END_FRAME - OVERLAY_FADE_OUT_FRAMES,
-      OVERLAY_END_FRAME,
-    ],
-    [0, 1, 1, 0],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    },
-  );
-
-  const titleOpacity = interpolate(
-    frame,
-    [
-      OVERLAY_START_FRAME + 5,
-      OVERLAY_START_FRAME + OVERLAY_FADE_IN_FRAMES + 5,
-      OVERLAY_END_FRAME - OVERLAY_FADE_OUT_FRAMES - 5,
-      OVERLAY_END_FRAME - 5,
-    ],
-    [0, 1, 1, 0],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.out(Easing.cubic),
-    },
-  );
-
   return (
-    <AbsoluteFill
-      style={{
-        backgroundColor: BACKGROUND_COLOR,
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          overflow: "hidden",
-          padding: `${CONTENT_PADDING_PX}px 60px`,
-        }}
-      >
-        <div style={{ transform: `translateY(-${scrollY}px)` }}>
-          {DIFF_FILES.map((file, index) => {
-            const fileStartFrame = DIFF_SCAN_INITIAL_DELAY_FRAMES + index * FRAMES_PER_FILE;
-            const localFrame = frame - fileStartFrame;
-            const fileOpacity = interpolate(localFrame, [0, FADE_IN_FRAMES], [0, 1], {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-              easing: Easing.out(Easing.cubic),
-            });
+    <AbsoluteFill style={{ backgroundColor: "#000000" }}>
+      {ERROR_LOG_ITEMS.map((item, index) => {
+        const appearStart =
+          ERROR_LOG_INITIAL_DELAY_FRAMES + index * ERROR_LOG_APPEAR_STAGGER_FRAMES;
+        const appearOpacity = interpolate(
+          frame,
+          [appearStart, appearStart + ERROR_LOG_APPEAR_FRAMES],
+          [0, 1],
+          { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) },
+        );
 
-            return (
-              <div
-                key={file.path}
-                style={{
-                  opacity: fileOpacity,
-                  fontFamily,
-                  fontSize: DIFF_FILE_FONT_SIZE_PX,
-                  lineHeight: LINE_HEIGHT_MULTIPLIER,
-                  color: TEXT_COLOR,
-                  whiteSpace: "nowrap",
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
-              >
-                <span>
-                  <span style={{ color: MUTED_COLOR }}>{String(index + 1).padStart(2, " ")} </span>
-                  <span>{file.path}</span>
-                </span>
-                <span>
-                  <span style={{ color: GREEN_COLOR }}>+{file.added}</span>
-                  {"  "}
-                  <span style={{ color: RED_COLOR }}>-{file.removed}</span>
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+        const failFrame =
+          ERROR_LOG_FAIL_START_FRAMES + item.failIndex * ERROR_LOG_FAIL_INTERVAL_FRAMES;
+        const failProgress = interpolate(
+          frame,
+          [failFrame, failFrame + ERROR_LOG_FAIL_TRANSITION_FRAMES],
+          [0, 1],
+          { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+        );
+        const isLoading = failProgress === 0;
 
-      <AbsoluteFill
-        style={{
-          justifyContent: "flex-end",
-        }}
-      >
-        <div
-          style={{
-            width: "100%",
-            height: OVERLAY_GRADIENT_HEIGHT_PX,
-            background: getBottomOverlayGradient(overlayOpacity),
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "flex-end",
-            padding: `0 ${OVERLAY_GRADIENT_HORIZONTAL_PADDING_PX}px ${OVERLAY_GRADIENT_BOTTOM_PADDING_PX}px`,
-          }}
-        >
-          <div
-            style={{
-              fontFamily,
-              fontSize: TITLE_FONT_SIZE_PX,
-              color: "white",
-              opacity: titleOpacity,
-              textAlign: "center",
-              lineHeight: 1.4,
-            }}
-          >
-            Scan your changes
+        const topPosition = ERROR_LOG_TOP_START_PX + index * ERROR_LOG_ITEM_SPACING_PX;
+
+        return (
+          <div key={item.message} style={{ opacity: appearOpacity }}>
+            <div
+              style={{
+                position: "absolute",
+                left: ERROR_LOG_ICON_LEFT_PX,
+                top: topPosition + ICON_VERTICAL_OFFSET_PX,
+                width: ERROR_LOG_ICON_SIZE_PX,
+                height: ERROR_LOG_ICON_SIZE_PX,
+              }}
+            >
+              {isLoading ? (
+                <SpinnerIcon size={ERROR_LOG_ICON_SIZE_PX} frame={frame} />
+              ) : (
+                <FailedIcon size={ERROR_LOG_ICON_SIZE_PX} opacity={failProgress} />
+              )}
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                left: ERROR_LOG_TEXT_LEFT_PX,
+                top: topPosition,
+                fontFamily: "system-ui, sans-serif",
+                fontSize: ERROR_LOG_FONT_SIZE_PX,
+                lineHeight: "90px",
+                color: "#FFFFFF",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {isLoading ? <ShimmerText text={item.message} frame={frame} /> : item.message}
+            </div>
           </div>
-        </div>
-      </AbsoluteFill>
+        );
+      })}
     </AbsoluteFill>
   );
 };
