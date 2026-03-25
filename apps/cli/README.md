@@ -7,6 +7,8 @@ Let agents test your code in a real browser. One command scans your unstaged cha
 
 ### **[See it in action →](https://expect.dev)**
 
+<a href="https://expect.dev"><img src="https://github.com/millionco/testie/blob/main/apps/website/public/og.png?raw=true" width="800" /></a>
+
 ## Install
 
 ```bash
