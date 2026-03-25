@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { Effect, FileSystem, Option, Schema } from "effect";
-import { NodeServices } from "@effect/platform-node";
+import { Option, Schema } from "effect";
 import {
   ExecutedTestPlan,
   TestPlan,
@@ -10,13 +9,6 @@ import {
   ChangesFor,
   AcpSessionUpdate,
 } from "@expect/shared/models";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const FIXTURE_PATH = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../../fixtures/execute-1.acp.jsonl",
-);
 
 const makeTestPlan = (): TestPlan =>
   new TestPlan({
@@ -48,18 +40,38 @@ const makeTestPlan = (): TestPlan =>
 
 const decode = Schema.decodeSync(AcpSessionUpdate);
 
-const loadFixtureUpdates = Effect.gen(function* () {
-  const fs = yield* FileSystem.FileSystem;
-  const content = yield* fs.readFileString(FIXTURE_PATH);
-  return content
-    .split("\n")
-    .filter((line) => line.trim().length > 0)
-    .map((line) => decode(JSON.parse(line)));
-}).pipe(Effect.provide(NodeServices.layer));
+const fixtureUpdates = [
+  {
+    sessionUpdate: "agent_thought_chunk",
+    content: { type: "text", text: "Inspecting the CLI startup flow." },
+  },
+  {
+    sessionUpdate: "agent_message_chunk",
+    content: { type: "text", text: "STEP_START|step-01|CLI Application Startup\n" },
+  },
+  {
+    sessionUpdate: "agent_message_chunk",
+    content: { type: "text", text: "STEP_DONE|step-01|CLI started successfully" },
+  },
+  {
+    sessionUpdate: "tool_call",
+    toolCallId: "tool-01",
+    title: "ReadFile",
+    status: "pending",
+    rawInput: { path: "package.json" },
+  },
+  {
+    sessionUpdate: "tool_call_update",
+    toolCallId: "tool-01",
+    title: "ReadFile",
+    status: "completed",
+    rawOutput: { content: "{ ... }" },
+  },
+].map((update) => decode(update));
 
 describe("reducer", () => {
-  it.only("reduces AcpSessionUpdates into ExecutedTestPlan", async () => {
-    const updates = await Effect.runPromise(loadFixtureUpdates);
+  it("reduces AcpSessionUpdates into ExecutedTestPlan", () => {
+    const updates = fixtureUpdates;
     let executed = new ExecutedTestPlan({ ...makeTestPlan(), events: [] });
 
     for (const update of updates) {
@@ -77,8 +89,8 @@ describe("reducer", () => {
     expect(hasThinking).toBe(true);
   });
 
-  it("each addEvent returns a new instance for non-trivial updates", async () => {
-    const updates = await Effect.runPromise(loadFixtureUpdates);
+  it("each addEvent returns a new instance for non-trivial updates", () => {
+    const updates = fixtureUpdates;
     const initial = new ExecutedTestPlan({ ...makeTestPlan(), events: [] });
 
     let previous = initial;
