@@ -7,7 +7,6 @@ import { TestingScreen } from "./screens/testing-screen";
 import { ResultsScreen } from "./screens/results-screen";
 import { SavedFlowPickerScreen } from "./screens/saved-flow-picker-screen";
 import { MainMenu } from "./screens/main-menu-screen";
-import { Spinner } from "./ui/spinner";
 import { Modeline } from "./ui/modeline";
 import { useNavigationStore, Screen } from "../stores/use-navigation";
 import { usePlanExecutionStore } from "../stores/use-plan-execution-store";
@@ -23,7 +22,7 @@ export const App = ({ agent }: { agent: AgentBackend }) => {
   const screen = useNavigationStore((state) => state.screen);
   const setScreen = useNavigationStore((state) => state.setScreen);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const { data: gitState, isLoading: gitStateLoading } = useGitState();
+  const { data: gitState } = useGitState();
 
   const setAgentProvider = useAtomSet(agentProviderAtom);
   useEffect(() => {
@@ -65,15 +64,11 @@ export const App = ({ agent }: { agent: AgentBackend }) => {
     }
   });
 
-  if (gitStateLoading || !gitState) {
-    return (
-      <Box flexDirection="column" paddingX={2} paddingY={1}>
-        <Spinner message="Checking git state..." />
-      </Box>
-    );
-  }
-
   const renderScreen = () => {
+    if (!gitState) {
+      return <MainMenu gitState={undefined} />;
+    }
+
     switch (screen._tag) {
       case "Testing":
         return (

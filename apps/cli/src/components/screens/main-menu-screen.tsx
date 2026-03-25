@@ -11,6 +11,7 @@ import { Clickable } from "../ui/clickable";
 import { Input } from "../ui/input";
 import { RuledBox } from "../ui/ruled-box";
 import { ErrorMessage } from "../ui/error-message";
+import { Spinner } from "../ui/spinner";
 import { ContextPicker } from "../ui/context-picker";
 import { useStdoutDimensions } from "../../hooks/use-stdout-dimensions";
 import { useContextPicker } from "../../hooks/use-context-picker";
@@ -19,7 +20,7 @@ import { getContextDisplayLabel, getContextDescription } from "../../utils/conte
 import { queryClient } from "../../query-client";
 
 interface MainMenuProps {
-  gitState: GitState;
+  gitState: GitState | undefined;
 }
 
 export const MainMenu = ({ gitState }: MainMenuProps) => {
@@ -63,7 +64,7 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
   }, [historyIndex, instructionHistory, savedCurrentInput]);
 
   const picker = useContextPicker({
-    gitState,
+    gitState: gitState ?? null,
     onSelect: setSelectedContext,
   });
 
@@ -75,7 +76,7 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
 
   const activeContext = selectedContext ?? defaultContext ?? null;
   const suggestions = useMemo(
-    () => getFlowSuggestions(activeContext, gitState),
+    () => getFlowSuggestions(activeContext, gitState ?? null),
     [activeContext, gitState],
   );
 
@@ -89,6 +90,10 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
       console.error("[main-menu] submit called, trimmed:", JSON.stringify(trimmed));
       if (!trimmed) {
         setErrorMessage("Describe what you want the browser agent to test.");
+        return;
+      }
+      if (!gitState) {
+        setErrorMessage("Still loading git state...");
         return;
       }
 
@@ -175,7 +180,7 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
       <Box flexDirection="column" marginBottom={1} paddingX={1}>
         <Text color={COLORS.BORDER}>
           <Text bold color={COLORS.TEXT}>
-            {"Expect CLI"}
+            {"Expect"}
           </Text>
           <Text color={COLORS.DIM}>{" v0.0.2"}</Text>
         </Text>
@@ -184,27 +189,31 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
 
       <Box flexDirection="column" width="100%">
         <Box justifyContent="space-between" paddingX={1}>
-          <Clickable
-            fullWidth={false}
-            onClick={() => {
-              if (picker.pickerOpen) picker.closePicker();
-              else picker.openPicker();
-            }}
-          >
-            {activeContext ? (
-              <Text color={COLORS.DIM}>
-                Testing{" "}
-                <Text color={COLORS.PRIMARY}>
-                  @{getContextDisplayLabel(activeContext, gitState)}
-                </Text>{" "}
-                {getContextDescription(activeContext, gitState)}
-              </Text>
-            ) : (
-              <Text color={COLORS.DIM}>
-                <Text color={COLORS.PRIMARY}>@</Text> no context
-              </Text>
-            )}
-          </Clickable>
+          {!gitState ? (
+            <Spinner message="loading context" />
+          ) : (
+            <Clickable
+              fullWidth={false}
+              onClick={() => {
+                if (picker.pickerOpen) picker.closePicker();
+                else picker.openPicker();
+              }}
+            >
+              {activeContext ? (
+                <Text color={COLORS.DIM}>
+                  Testing{" "}
+                  <Text color={COLORS.PRIMARY}>
+                    @{getContextDisplayLabel(activeContext, gitState)}
+                  </Text>{" "}
+                  {getContextDescription(activeContext, gitState)}
+                </Text>
+              ) : (
+                <Text color={COLORS.DIM}>
+                  <Text color={COLORS.PRIMARY}>@</Text> no context
+                </Text>
+              )}
+            </Clickable>
+          )}
         </Box>
         <Clickable>
           <RuledBox
@@ -264,7 +273,7 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
             </Text>
           )}
         </Box>
-        {picker.pickerOpen ? (
+        {picker.pickerOpen && gitState ? (
           <Box flexDirection="column">
             <Box marginBottom={0} paddingX={1}>
               <Text color={COLORS.DIM}>@ </Text>

@@ -17,7 +17,6 @@ import { setInkInstance } from "./utils/clear-ink-display";
 import { RegistryProvider } from "@effect/atom-react";
 import { agentProviderAtom } from "./data/runtime";
 import { flushSession, trackSessionStarted } from "./utils/session-analytics";
-import { playSound } from "./utils/play-sound";
 import { Option } from "effect";
 
 const DEFAULT_INSTRUCTION =
@@ -61,17 +60,14 @@ Examples:
   $ expect --target unstaged                        test unstaged changes`,
   );
 
+const MOUSE_DISABLE = "\u001b[?1000l\u001b[?1006l";
+
 const renderApp = async (agent: AgentBackend) => {
   const sessionStartedAt = Date.now();
   await trackSessionStarted();
 
-  let interrupted = false;
-  process.on("SIGINT", () => {
-    interrupted = true;
-  });
-
   process.stdout.write(ALT_SCREEN_ON);
-  process.on("exit", () => process.stdout.write(ALT_SCREEN_OFF));
+  process.on("exit", () => process.stdout.write(MOUSE_DISABLE + ALT_SCREEN_OFF));
   const instance = render(
     <RegistryProvider initialValues={[[agentProviderAtom, Option.some(agent)]]}>
       <QueryClientProvider client={queryClient}>
@@ -82,9 +78,7 @@ const renderApp = async (agent: AgentBackend) => {
   setInkInstance(instance);
   await instance.waitUntilExit();
   await flushSession(sessionStartedAt);
-  if (!interrupted) {
-    await playSound();
-  }
+  process.stdout.write(MOUSE_DISABLE + ALT_SCREEN_OFF);
   process.exit(0);
 };
 
