@@ -144,14 +144,14 @@ export const PortPickerScreen = ({
       return;
     }
 
-    if (highlightedIndex === customUrlIndex) {
-      setIsEnteringCustomUrl(true);
-      return;
-    }
-
     if (selectedPorts.size > 0 || customUrls.size > 0) {
       const urls = [...selectedPorts].sort((left, right) => left - right).map(portToUrl);
       navigateToTesting(urls);
+      return;
+    }
+
+    if (highlightedIndex === customUrlIndex) {
+      setIsEnteringCustomUrl(true);
       return;
     }
 
@@ -235,6 +235,10 @@ export const PortPickerScreen = ({
     }
 
     if (input === " ") {
+      if (highlightedIndex === customUrlIndex) {
+        setIsEnteringCustomUrl(true);
+        return;
+      }
       const entry = filteredEntries[highlightedIndex];
       if (entry) {
         togglePort(entry.port);
