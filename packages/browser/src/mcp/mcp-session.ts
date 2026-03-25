@@ -2,6 +2,7 @@ import path from "node:path";
 import type { Browser as PlaywrightBrowser, BrowserContext, Page } from "playwright";
 import type { eventWithTime } from "@rrweb/types";
 import { Config, Effect, Fiber, Layer, Option, Ref, Schedule, ServiceMap } from "effect";
+import type { Cookie } from "@expect/cookies";
 import { FileSystem } from "effect/FileSystem";
 import { Browser } from "../browser";
 import { NavigationError } from "../errors";
@@ -97,6 +98,14 @@ export class McpSession extends ServiceMap.Service<McpSession>()("@browser/McpSe
     const liveViewRef = yield* Ref.make<LiveViewHandle | undefined>(undefined);
     const pollingFiberRef = yield* Ref.make<Fiber.Fiber<unknown> | undefined>(undefined);
     const latestRunStateRef = yield* Ref.make<ViewerRunState | undefined>(undefined);
+    const preExtractedCookiesRef = yield* Ref.make<Cookie[] | undefined>(undefined);
+
+    yield* browserService.preExtractCookies().pipe(
+      Effect.tap((cookies) => Ref.set(preExtractedCookiesRef, cookies)),
+      Effect.tap((cookies) => Effect.logInfo("Cookies pre-extracted", { count: cookies.length })),
+      Effect.catchCause(() => Effect.void),
+      Effect.forkDetach,
+    );
 
     const requireSession = Effect.fn("McpSession.requireSession")(function* () {
       const session = yield* Ref.get(sessionRef);
@@ -134,9 +143,13 @@ export class McpSession extends ServiceMap.Service<McpSession>()("@browser/McpSe
     const open = Effect.fn("McpSession.open")(function* (url: string, options: OpenOptions = {}) {
       yield* Effect.annotateCurrentSpan({ url });
 
+      const preExtracted = options.cookies ? yield* Ref.get(preExtractedCookiesRef) : undefined;
+      const cookiesOption =
+        preExtracted && preExtracted.length > 0 ? preExtracted : options.cookies;
+
       const pageResult = yield* browserService.createPage(url, {
         headed: options.headed,
-        cookies: options.cookies,
+        cookies: cookiesOption,
         waitUntil: options.waitUntil,
       });
 

@@ -5,6 +5,7 @@ import { TESTING_TOOL_TEXT_CHAR_LIMIT } from "../constants";
 export interface FormattedToolCall {
   name: string;
   args: string;
+  multilineArgs?: string;
 }
 
 interface ToolInput {
@@ -33,6 +34,8 @@ const parseInput = (raw: unknown): ToolInput => {
   return {};
 };
 
+const collapseWhitespace = (text: string): string => text.replace(/\s+/g, " ").trim();
+
 const normalizeName = (toolName: string): string => {
   const match = toolName.match(/^mcp__.+__(.+)$/);
   return match ? match[1] : toolName;
@@ -40,6 +43,7 @@ const normalizeName = (toolName: string): string => {
 
 export const formatToolCall = (toolName: string, rawInput: unknown): FormattedToolCall => {
   const name = normalizeName(toolName);
+  const raw = typeof rawInput === "string" ? rawInput : JSON.stringify(rawInput ?? {});
   const input = parseInput(rawInput);
 
   const args: string = Match.value(name).pipe(
@@ -48,7 +52,10 @@ export const formatToolCall = (toolName: string, rawInput: unknown): FormattedTo
       const mode = input.mode ?? "screenshot";
       return mode === "screenshot" ? "" : mode;
     }),
-    Match.when("playwright", () => cliTruncate(input.code ?? "", TESTING_TOOL_TEXT_CHAR_LIMIT)),
+    Match.when("playwright", () => {
+      const code = input.code ?? raw;
+      return cliTruncate(collapseWhitespace(code), TESTING_TOOL_TEXT_CHAR_LIMIT);
+    }),
     Match.when("console_logs", () => (input.type ? `type: "${input.type}"` : "")),
     Match.when("network_requests", () => {
       const parts: string[] = [];
@@ -61,7 +68,11 @@ export const formatToolCall = (toolName: string, rawInput: unknown): FormattedTo
     Match.orElse(() => summarizeInput(input)),
   );
 
-  return { name, args };
+  const trimmedCode = (input.code ?? raw).trim();
+  const multilineArgs =
+    name === "playwright" && trimmedCode.includes("\n") ? trimmedCode : undefined;
+
+  return { name, args, multilineArgs };
 };
 
 const summarizeInput = (input: ToolInput): string => {
@@ -69,5 +80,5 @@ const summarizeInput = (input: ToolInput): string => {
     (value) => typeof value === "string" && value.length > 0,
   );
   if (values.length === 0) return "";
-  return cliTruncate(values.join(", "), TESTING_TOOL_TEXT_CHAR_LIMIT);
+  return cliTruncate(collapseWhitespace(values.join(", ")), TESTING_TOOL_TEXT_CHAR_LIMIT);
 };

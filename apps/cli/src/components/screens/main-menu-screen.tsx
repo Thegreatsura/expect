@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Text, useInput } from "ink";
 import figures from "figures";
 import { ChangesFor, checkoutBranch } from "@expect/supervisor";
 import type { GitState, TestContext } from "@expect/shared/models";
 import { usePreferencesStore } from "../../stores/use-preferences";
 import { useProjectPreferencesStore } from "../../stores/use-project-preferences";
-import { useNavigationStore, Screen } from "../../stores/use-navigation";
+import {
+  useNavigationStore,
+  Screen,
+  screenForTestingOrPortPicker,
+} from "../../stores/use-navigation";
 import { useColors } from "../theme-context";
 import { Clickable } from "../ui/clickable";
 import { Input } from "../ui/input";
@@ -19,6 +23,7 @@ import { useStdoutDimensions } from "../../hooks/use-stdout-dimensions";
 import { getFlowSuggestions } from "../../utils/get-flow-suggestions";
 import { getContextDisplayLabel, getContextDescription } from "../../utils/context-options";
 import { queryClient } from "../../query-client";
+import { containsUrl } from "../../utils/detect-url";
 
 interface MainMenuProps {
   gitState: GitState | undefined;
@@ -42,7 +47,7 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
   const cookiesEnabled = useProjectPreferencesStore((state) => state.cookiesEnabled);
   const toggleCookies = useProjectPreferencesStore((state) => state.toggleCookies);
 
-  const navigateHistoryBack = useCallback(() => {
+  const navigateHistoryBack = () => {
     if (instructionHistory.length === 0) return;
     const nextIndex = historyIndex + 1;
     if (nextIndex >= instructionHistory.length) return;
@@ -52,9 +57,9 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
     setHistoryIndex(nextIndex);
     setValue(instructionHistory[nextIndex]!);
     setInputKey((previous) => previous + 1);
-  }, [historyIndex, instructionHistory, value]);
+  };
 
-  const navigateHistoryForward = useCallback(() => {
+  const navigateHistoryForward = () => {
     if (historyIndex <= -1) return;
     const nextIndex = historyIndex - 1;
     setHistoryIndex(nextIndex);
@@ -64,78 +69,68 @@ export const MainMenu = ({ gitState }: MainMenuProps) => {
       setValue(instructionHistory[nextIndex]!);
     }
     setInputKey((previous) => previous + 1);
-  }, [historyIndex, instructionHistory, savedCurrentInput]);
+  };
 
   const picker = useContextPicker({
     gitState: gitState ?? null,
     onSelect: setSelectedContext,
   });
 
-  const defaultContext = useMemo(() => {
-    return picker.localOptions.find((option) => option._tag === "WorkingTree") ?? undefined;
-  }, [picker.localOptions]);
+  const defaultContext =
+    picker.localOptions.find((option) => option._tag === "WorkingTree") ?? undefined;
 
   const activeContext = selectedContext ?? defaultContext ?? null;
-  const suggestions = useMemo(
-    () => getFlowSuggestions(activeContext, gitState ?? null),
-    [activeContext, gitState],
-  );
+  const suggestions = getFlowSuggestions(activeContext, gitState ?? null);
 
   useEffect(() => {
     setSuggestionIndex(0);
   }, [activeContext, gitState]);
 
-  const submit = useCallback(
-    (submittedValue?: string) => {
-      const trimmed = (submittedValue ?? value).trim();
-      console.error("[main-menu] submit called, trimmed:", JSON.stringify(trimmed));
-      if (!trimmed) {
-        setErrorMessage("Describe what you want the browser agent to test.");
-        return;
+  const submit = (submittedValue?: string) => {
+    const trimmed = (submittedValue ?? value).trim();
+    if (!trimmed) {
+      setErrorMessage("Describe what you want the browser agent to test.");
+      return;
+    }
+    if (!gitState) return;
+
+    const mainBranch = gitState.mainBranch ?? "main";
+    let changesFor: ChangesFor;
+
+    if (activeContext?._tag === "Commit") {
+      changesFor = ChangesFor.makeUnsafe({ _tag: "Commit", hash: activeContext.hash });
+    } else if (activeContext?._tag === "Branch" || activeContext?._tag === "PullRequest") {
+      if (activeContext.branch.name) {
+        checkoutBranch(process.cwd(), activeContext.branch.name);
+        void queryClient.invalidateQueries({ queryKey: ["git-state"] });
       }
-      if (!gitState) return;
+      changesFor = ChangesFor.makeUnsafe({ _tag: "Branch", mainBranch });
+    } else {
+      changesFor = ChangesFor.makeUnsafe({ _tag: "Changes", mainBranch });
+    }
 
-      const mainBranch = gitState.mainBranch ?? "main";
-      let changesFor: ChangesFor;
+    usePreferencesStore.getState().rememberInstruction(trimmed);
 
-      console.error("[main-menu] activeContext:", activeContext?._tag ?? "none");
-
-      if (activeContext?._tag === "Commit") {
-        changesFor = ChangesFor.makeUnsafe({ _tag: "Commit", hash: activeContext.hash });
-      } else if (activeContext?._tag === "Branch" || activeContext?._tag === "PullRequest") {
-        if (activeContext.branch.name) {
-          checkoutBranch(process.cwd(), activeContext.branch.name);
-          void queryClient.invalidateQueries({ queryKey: ["git-state"] });
-        }
-        changesFor = ChangesFor.makeUnsafe({ _tag: "Branch", mainBranch });
-      } else {
-        changesFor = ChangesFor.makeUnsafe({ _tag: "Changes", mainBranch });
-      }
-
-      console.error("[main-menu] changesFor:", changesFor._tag);
-
-      usePreferencesStore.getState().rememberInstruction(trimmed);
-
-      if (cookiesEnabled) {
-        setScreen(Screen.Testing({ changesFor, instruction: trimmed, requiresCookies: true }));
-      } else {
-        setScreen(Screen.CookieSyncConfirm({ changesFor, instruction: trimmed }));
-      }
-    },
-    [value, activeContext, gitState, setScreen, cookiesEnabled],
-  );
+    if (cookiesEnabled || containsUrl(trimmed)) {
+      setScreen(
+        screenForTestingOrPortPicker({
+          changesFor,
+          instruction: trimmed,
+          requiresCookies: cookiesEnabled,
+        }),
+      );
+    } else {
+      setScreen(Screen.CookieSyncConfirm({ changesFor, instruction: trimmed }));
+    }
+  };
 
   const valueRef = useRef(value);
   valueRef.current = value;
 
-  const handleInputChange = useMemo(
-    () =>
-      picker.createInputChangeHandler(valueRef, (stripped) => {
-        setValue(stripped);
-        if (errorMessage) setErrorMessage(undefined);
-      }),
-    [picker, errorMessage],
-  );
+  const handleInputChange = picker.createInputChangeHandler(valueRef, (stripped) => {
+    setValue(stripped);
+    if (errorMessage) setErrorMessage(undefined);
+  });
 
   const showSuggestion = value === "" && !picker.pickerOpen && suggestions.length > 0;
   const showCycleHint = showSuggestion && !hasCycled && columns >= MIN_COLUMNS_FOR_CYCLE_HINT;

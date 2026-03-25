@@ -2,7 +2,11 @@ import { Box, Text, useInput } from "ink";
 import figures from "figures";
 import cliTruncate from "cli-truncate";
 import { ChangesFor, type SavedFlowFileData } from "@expect/supervisor";
-import { useNavigationStore, Screen } from "../../stores/use-navigation";
+import {
+  useNavigationStore,
+  Screen,
+  screenForTestingOrPortPicker,
+} from "../../stores/use-navigation";
 import { useColors } from "../theme-context";
 import { useStdoutDimensions } from "../../hooks/use-stdout-dimensions";
 import { useScrollableList } from "../../hooks/use-scrollable-list";
@@ -21,17 +25,19 @@ const getSavedFlowSteps = (flow: SavedFlowFileData) =>
 const selectFlow = (flow: SavedFlowFileData, mainBranch: string) => {
   const changesFor = ChangesFor.makeUnsafe({ _tag: "Changes", mainBranch });
   const steps = getSavedFlowSteps(flow);
+  const savedFlow = {
+    title: flow.flow.title,
+    userInstruction: flow.flow.userInstruction,
+    steps,
+  };
+  const requiresCookies = flow.environment.cookies;
 
   useNavigationStore.getState().setScreen(
-    Screen.Testing({
+    screenForTestingOrPortPicker({
       changesFor,
       instruction: flow.flow.userInstruction,
-      savedFlow: {
-        title: flow.flow.title,
-        userInstruction: flow.flow.userInstruction,
-        steps,
-      },
-      requiresCookies: flow.environment.cookies,
+      savedFlow,
+      requiresCookies,
     }),
   );
 };

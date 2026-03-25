@@ -3,6 +3,7 @@ import { Box, useInput } from "ink";
 import { MouseProvider } from "../hooks/mouse-context";
 import { PrPickerScreen } from "./screens/pr-picker-screen";
 import { CookieSyncConfirmScreen } from "./screens/cookie-sync-confirm-screen";
+import { PortPickerScreen } from "./screens/port-picker-screen";
 import { TestingScreen } from "./screens/testing-screen";
 import { ResultsScreen } from "./screens/results-screen";
 import { SavedFlowPickerScreen } from "./screens/saved-flow-picker-screen";
@@ -31,6 +32,10 @@ export const App = ({ agent }: { agent: AgentBackend }) => {
 
   const goBack = () => {
     if (screen._tag === "CookieSyncConfirm") {
+      setScreen(Screen.Main());
+      return;
+    }
+    if (screen._tag === "PortPicker") {
       setScreen(Screen.Main());
       return;
     }
@@ -70,6 +75,15 @@ export const App = ({ agent }: { agent: AgentBackend }) => {
     }
 
     switch (screen._tag) {
+      case "PortPicker":
+        return (
+          <PortPickerScreen
+            changesFor={screen.changesFor}
+            instruction={screen.instruction}
+            savedFlow={screen.savedFlow}
+            requiresCookies={screen.requiresCookies}
+          />
+        );
       case "Testing":
         return (
           <TestingScreen
@@ -77,6 +91,7 @@ export const App = ({ agent }: { agent: AgentBackend }) => {
             instruction={screen.instruction}
             savedFlow={screen.savedFlow}
             requiresCookies={screen.requiresCookies}
+            baseUrls={screen.baseUrls}
           />
         );
       case "Results":

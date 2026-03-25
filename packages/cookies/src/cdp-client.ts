@@ -27,7 +27,7 @@ import { HttpClientResponse } from "effect/unstable/http";
 import { Socket } from "effect/unstable/socket/Socket";
 import * as NodeSocket from "@effect/platform-node/NodeSocket";
 
-const CDP_RETRY_COUNT = 40;
+const CDP_RETRY_COUNT = 15;
 const CPD_COOKIE_READ_TIMEOUT: Duration.Input = "10 seconds";
 const HEADLESS_CHROME_ARGS = [
   "--headless=new",
@@ -188,7 +188,7 @@ export class CdpClient extends ServiceMap.Service<CdpClient>()("@cookies/CdpClie
         ),
         Effect.retry({
           times: CDP_RETRY_COUNT,
-          schedule: Schedule.exponential("200 millis"),
+          schedule: Schedule.exponential("100 millis"),
         }),
       );
 

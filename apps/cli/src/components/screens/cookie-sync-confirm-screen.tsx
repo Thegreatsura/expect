@@ -5,7 +5,7 @@ import type { ChangesFor, SavedFlow } from "@expect/shared/models";
 import { useColors } from "../theme-context";
 import { Clickable } from "../ui/clickable";
 import { Logo } from "../ui/logo";
-import { useNavigationStore, Screen } from "../../stores/use-navigation";
+import { useNavigationStore, screenForTestingOrPortPicker } from "../../stores/use-navigation";
 
 interface ConfirmOption {
   id: "enable-sync" | "run-without-sync";
@@ -42,13 +42,9 @@ export const CookieSyncConfirmScreen = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const activateOption = (option: ConfirmOption) => {
+    const requiresCookies = option.id === "enable-sync";
     setScreen(
-      Screen.Testing({
-        changesFor,
-        instruction,
-        savedFlow,
-        requiresCookies: option.id === "enable-sync",
-      }),
+      screenForTestingOrPortPicker({ changesFor, instruction, savedFlow, requiresCookies }),
     );
   };
 

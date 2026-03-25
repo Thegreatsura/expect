@@ -11,7 +11,7 @@ import { useColors } from "../theme-context";
 import { Logo } from "../ui/logo";
 import { Image } from "../ui/image";
 import { usePostPrComment } from "../../data/github-mutations";
-import { useNavigationStore, Screen } from "../../stores/use-navigation";
+import { useNavigationStore, screenForTestingOrPortPicker } from "../../stores/use-navigation";
 import { usePlanExecutionStore } from "../../stores/use-plan-execution-store";
 import { saveFlowFn } from "../../data/flow-storage-atom";
 import { formatElapsedTime } from "../../utils/format-elapsed-time";
@@ -72,7 +72,7 @@ export const ResultsScreen = ({ report, replayUrl }: ResultsScreenProps) => {
   const handleRestartFlow = () => {
     usePlanExecutionStore.getState().setExecutedPlan(undefined);
     setScreen(
-      Screen.Testing({
+      screenForTestingOrPortPicker({
         changesFor: report.changesFor,
         instruction: report.instruction,
       }),

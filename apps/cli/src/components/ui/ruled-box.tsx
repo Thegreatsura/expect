@@ -28,11 +28,15 @@ export const RuledBox = ({
       marginBottom={marginBottom}
       ref={ref}
     >
-      <Text color={color}>{"─".repeat(columns)}</Text>
+      <Text color={color} wrap="truncate">
+        {"─".repeat(columns)}
+      </Text>
       <Box flexDirection="column" paddingX={paddingX}>
         {children}
       </Box>
-      <Text color={color}>{"─".repeat(columns)}</Text>
+      <Text color={color} wrap="truncate">
+        {"─".repeat(columns)}
+      </Text>
     </Box>
   );
 };

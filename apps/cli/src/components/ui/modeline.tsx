@@ -4,10 +4,15 @@ import stringWidth from "string-width";
 import { useColors, theme } from "../theme-context";
 import { HintBar, HINT_SEPARATOR, type HintSegment } from "./hint-bar";
 import { Option } from "effect";
-import { useNavigationStore, Screen } from "../../stores/use-navigation";
+import {
+  useNavigationStore,
+  Screen,
+  screenForTestingOrPortPicker,
+} from "../../stores/use-navigation";
 import { usePlanExecutionStore } from "../../stores/use-plan-execution-store";
 import { useGitState, type GitState } from "../../hooks/use-git-state";
 import { useProjectPreferencesStore } from "../../stores/use-project-preferences";
+import { usePreferencesStore } from "../../stores/use-preferences";
 import { Clickable } from "./clickable";
 import { TextShimmer } from "./text-shimmer";
 
@@ -16,6 +21,9 @@ const useHintSegments = (screen: Screen, gitState: GitState | undefined): HintSe
   const setScreen = useNavigationStore((state) => state.setScreen);
   const cookiesEnabled = useProjectPreferencesStore((state) => state.cookiesEnabled);
   const toggleCookies = useProjectPreferencesStore((state) => state.toggleCookies);
+  const notifications = usePreferencesStore((state) => state.notifications);
+  const toggleNotifications = usePreferencesStore((state) => state.toggleNotifications);
+  const expanded = usePlanExecutionStore((state) => state.expanded);
 
   switch (screen._tag) {
     case "Main": {
@@ -71,7 +79,7 @@ const useHintSegments = (screen: Screen, gitState: GitState | undefined): HintSe
           cta: true,
           onClick: () => {
             setScreen(
-              Screen.Testing({
+              screenForTestingOrPortPicker({
                 changesFor: screen.changesFor,
                 instruction: screen.instruction,
                 savedFlow: screen.savedFlow,
@@ -87,7 +95,7 @@ const useHintSegments = (screen: Screen, gitState: GitState | undefined): HintSe
           cta: true,
           onClick: () => {
             setScreen(
-              Screen.Testing({
+              screenForTestingOrPortPicker({
                 changesFor: screen.changesFor,
                 instruction: screen.instruction,
                 savedFlow: screen.savedFlow,
@@ -97,8 +105,27 @@ const useHintSegments = (screen: Screen, gitState: GitState | undefined): HintSe
           },
         },
       ];
+    case "PortPicker":
+      return [
+        { key: "↑↓", label: "nav" },
+        { key: "space", label: "toggle" },
+        { key: "/", label: "custom port" },
+        { key: "esc", label: "back", cta: true, onClick: () => setScreen(Screen.Main()) },
+        { key: "enter", label: "confirm", color: COLORS.PRIMARY, cta: true },
+      ];
     case "Testing": {
-      return [{ key: "esc", label: "cancel" }];
+      const notifyLabel = notifications === true ? "notify on" : "notify off";
+      const expandLabel = expanded ? "collapse" : "expand";
+      return [
+        {
+          key: "ctrl+n",
+          label: notifyLabel,
+          cta: true,
+          onClick: toggleNotifications,
+        },
+        { key: "ctrl+o", label: expandLabel, cta: true },
+        { key: "esc", label: expanded ? "collapse" : "cancel" },
+      ];
     }
     case "Results": {
       const hints: HintSegment[] = [{ key: "y", label: "copy", color: COLORS.PRIMARY, cta: true }];
@@ -114,7 +141,7 @@ const useHintSegments = (screen: Screen, gitState: GitState | undefined): HintSe
         onClick: () => {
           usePlanExecutionStore.getState().setExecutedPlan(undefined);
           setScreen(
-            Screen.Testing({
+            screenForTestingOrPortPicker({
               changesFor: screen.report.changesFor,
               instruction: screen.report.instruction,
             }),

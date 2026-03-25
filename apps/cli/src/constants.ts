@@ -29,6 +29,12 @@ export const HEALTHCHECK_SCRIPT_TIMEOUT_MS = 120_000;
 
 export const GIT_STATE_TIMEOUT_MS = 10_000;
 
+export const PORT_PICKER_VISIBLE_COUNT = 10;
+export const MIN_USER_PORT = 1024;
+export const MAX_PORT = 65535;
+export const EPHEMERAL_PORT_START = 32768;
+export const LISTENING_PORTS_REFETCH_INTERVAL_MS = 5000;
+
 export const LOCK_FILE_TO_AGENT: Record<string, string> = {
   "pnpm-lock.yaml": "pnpm",
   "pnpm-workspace.yaml": "pnpm",

@@ -745,11 +745,28 @@ export class ExecutedTestPlan extends TestPlan.extend<ExecutedTestPlan>(
     }
 
     if (update.sessionUpdate === "tool_call_update") {
+      let current: ExecutedTestPlan = this;
+
+      if (update.rawInput !== undefined) {
+        const updatedEvents = [...current.events];
+        for (let index = updatedEvents.length - 1; index >= 0; index--) {
+          const event = updatedEvents[index];
+          if (event._tag === "ToolCall" && event.toolName === (update.title ?? "")) {
+            updatedEvents[index] = new ToolCall({
+              toolName: event.toolName,
+              input: JSON.stringify(update.rawInput),
+            });
+            break;
+          }
+        }
+        current = new ExecutedTestPlan({ ...current, events: updatedEvents });
+      }
+
       if (update.status === "completed" || update.status === "failed") {
         return new ExecutedTestPlan({
-          ...this,
+          ...current,
           events: [
-            ...this.events,
+            ...current.events,
             new ToolResult({
               toolName: update.title ?? "",
               result: serializeToolResult(update.rawOutput),
@@ -761,9 +778,9 @@ export class ExecutedTestPlan extends TestPlan.extend<ExecutedTestPlan>(
       if (update.rawOutput !== undefined) {
         const outputSize = serializeToolResult(update.rawOutput).length;
         return new ExecutedTestPlan({
-          ...this,
+          ...current,
           events: [
-            ...this.events.filter(
+            ...current.events.filter(
               (event) =>
                 !(event._tag === "ToolProgress" && event.toolName === (update.title ?? "")),
             ),
@@ -774,7 +791,7 @@ export class ExecutedTestPlan extends TestPlan.extend<ExecutedTestPlan>(
           ],
         });
       }
-      return this;
+      return current;
     }
 
     return this;

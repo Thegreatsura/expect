@@ -1,21 +1,36 @@
 import { create } from "zustand";
 import * as Data from "effect/Data";
 import type { ChangesFor, SavedFlow, TestReport } from "@expect/shared/models";
+import { containsUrl } from "../utils/detect-url";
 
 export type Screen = Data.TaggedEnum<{
   Main: {};
   SelectPr: {};
   CookieSyncConfirm: { changesFor: ChangesFor; instruction: string; savedFlow?: SavedFlow };
-  Testing: {
+  PortPicker: {
     changesFor: ChangesFor;
     instruction: string;
     savedFlow?: SavedFlow;
     requiresCookies?: boolean;
   };
+  Testing: {
+    changesFor: ChangesFor;
+    instruction: string;
+    savedFlow?: SavedFlow;
+    requiresCookies?: boolean;
+    baseUrls?: readonly string[];
+  };
   Results: { report: TestReport; replayUrl?: string };
   SavedFlowPicker: {};
 }>;
 export const Screen = Data.taggedEnum<Screen>();
+
+export const screenForTestingOrPortPicker = (props: {
+  changesFor: ChangesFor;
+  instruction: string;
+  savedFlow?: SavedFlow;
+  requiresCookies?: boolean;
+}): Screen => (containsUrl(props.instruction) ? Screen.Testing(props) : Screen.PortPicker(props));
 
 interface NavigationStore {
   screen: Screen;

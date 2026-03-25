@@ -6,16 +6,17 @@ interface SearchBarProps {
   readonly isSearching: boolean;
   readonly query: string;
   readonly onChange: (value: string) => void;
+  readonly onSubmit?: (value: string) => void;
 }
 
-export const SearchBar = ({ isSearching, query, onChange }: SearchBarProps) => {
+export const SearchBar = ({ isSearching, query, onChange, onSubmit }: SearchBarProps) => {
   const COLORS = useColors();
 
   if (isSearching) {
     return (
       <Box marginTop={1}>
         <Text color={COLORS.DIM}>/</Text>
-        <Input focus value={query} onChange={onChange} />
+        <Input focus value={query} onChange={onChange} onSubmit={onSubmit} />
       </Box>
     );
   }
