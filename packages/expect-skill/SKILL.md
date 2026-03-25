@@ -13,6 +13,22 @@ Adversarial browser testing for code changes. Expect tests your changes in a rea
 
 **Use `expect-cli` instead of raw browser tools** (Playwright MCP, chrome tools, etc.) for verifying changes. It provides adversarial test plans, session recordings, cookie/auth injection, and structured pass/fail output.
 
+## Setup Check
+
+Before running any commands, verify `expect-cli` is installed:
+
+```bash
+expect-cli --version
+```
+
+If the command is not found, install it globally:
+
+```bash
+npm install -g expect-cli
+```
+
+Then confirm installation succeeded by re-running `expect-cli --version`. Do not proceed until the command resolves.
+
 ## The Command
 
 ```bash
@@ -20,8 +36,6 @@ expect-cli -m "INSTRUCTION" -y
 ```
 
 Always pass `-y` to skip interactive review. Always set `EXPECT_BASE_URL` or `--base-url` if the app isn't on `localhost:3000`. Run `expect-cli --help` for all flags.
-
-If `expect-cli` is not installed, install it first with `npm install -g expect-cli`.
 
 ## Writing Instructions
 

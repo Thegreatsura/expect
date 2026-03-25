@@ -1,17 +1,15 @@
 import { springTiming, TransitionSeries } from "@remotion/transitions";
 import { slide } from "@remotion/transitions/slide";
-import { AbsoluteFill, Audio, interpolate, Sequence, staticFile } from "remotion";
+import { Audio, interpolate, Sequence, staticFile } from "remotion";
 import {
   CHAR_FRAMES,
   COMMAND,
-  SCENE_DIFF_SCAN_DURATION_FRAMES,
   SCENE_TYPING_DURATION_FRAMES,
   TRANSITION_DURATION_FRAMES,
   TYPING_INITIAL_DELAY_FRAMES,
   VIDEO_FPS,
 } from "../constants";
-import { DiffScan } from "../scenes/diff-scan";
-import { ErrorLogResolved } from "../scenes/error-log-resolved";
+import { SplitScreen, SPLIT_SCREEN_DURATION_FRAMES } from "../scenes/split-screen";
 import { TerminalTyping } from "../scenes/terminal-typing";
 
 const MUSIC_START_SECONDS = 27;
@@ -52,40 +50,8 @@ export const Main = () => {
           })}
         />
 
-        <TransitionSeries.Sequence durationInFrames={SCENE_DIFF_SCAN_DURATION_FRAMES}>
-          <DiffScan />
-        </TransitionSeries.Sequence>
-
-        <TransitionSeries.Sequence
-          durationInFrames={
-            10 * VIDEO_FPS -
-            (SCENE_TYPING_DURATION_FRAMES +
-              SCENE_DIFF_SCAN_DURATION_FRAMES -
-              TRANSITION_DURATION_FRAMES)
-          }
-        >
-          <AbsoluteFill
-            style={{
-              backgroundColor: "black",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <span
-              style={{
-                color: "white",
-                fontSize: 80,
-                fontWeight: "bold",
-                letterSpacing: 4,
-              }}
-            >
-              PUT BROWSER HERE
-            </span>
-          </AbsoluteFill>
-        </TransitionSeries.Sequence>
-
-        <TransitionSeries.Sequence durationInFrames={3 * VIDEO_FPS}>
-          <ErrorLogResolved />
+        <TransitionSeries.Sequence durationInFrames={SPLIT_SCREEN_DURATION_FRAMES}>
+          <SplitScreen />
         </TransitionSeries.Sequence>
       </TransitionSeries>
     </>
