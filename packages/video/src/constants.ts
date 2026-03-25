@@ -62,7 +62,7 @@ export const TEST_PLAN_STEPS = [
   "Navigate to the login page and verify it loads correctly",
   "Enter valid credentials and submit the login form",
   "Verify the dashboard renders with the correct user data",
-  "Click the settings button and verify the modal opens",
+  "Navigate to the profile page and verify user details display",
   "Update the profile name and verify the change persists",
   "Navigate to the user card and verify the new styling",
   "Test the logout flow and verify redirect to login page",

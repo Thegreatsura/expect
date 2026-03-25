@@ -111,7 +111,7 @@ export const TestPlan = () => {
             }}
           >
             <span style={{ color: MUTED_COLOR }}>❯ </span>
-            <span style={{ color: TEXT_COLOR }}>Verify login, dashboard, and settings work</span>
+            <span style={{ color: TEXT_COLOR }}>Verify login, dashboard, and checkout flow</span>
           </div>
         </div>
 

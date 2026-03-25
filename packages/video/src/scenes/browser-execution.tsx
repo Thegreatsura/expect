@@ -82,7 +82,7 @@ export const BrowserExecution = () => {
           <span style={{ color: GREEN_COLOR }}>✓</span>
           <span style={{ color: "white", fontWeight: 700 }}> Expect</span>
           <span style={{ color: MUTED_COLOR, fontSize: 32, marginLeft: 8 }}>
-            ‣ Verify login, dashboard, and settings work
+            ‣ Verify login, dashboard, and checkout flow
           </span>
         </div>
       </div>

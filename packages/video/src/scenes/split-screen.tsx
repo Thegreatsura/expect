@@ -6,7 +6,7 @@ import { SpinnerIcon } from "./diff-scan";
 
 const FRAMES_PER_CASE = 75;
 const FINALE_FRAMES = 90;
-const CASE_COUNT = 5;
+const CASE_COUNT = 4;
 export const SPLIT_SCREEN_DURATION_FRAMES = FRAMES_PER_CASE * CASE_COUNT + FINALE_FRAMES;
 
 interface TestCase {
@@ -19,7 +19,6 @@ const TEST_CASES: TestCase[] = [
   { category: "E2E", label: "checkout flow → 500 Internal Server Error", variant: "signup" },
   { category: "Perf", label: "First Contentful Paint exceeds 2.5s", variant: "analytics" },
   { category: "Debug", label: "TypeError — undefined is not a function", variant: "dashboard" },
-  { category: "A11y", label: "contrast ratio 2.1:1 (min 4.5:1)", variant: "settings" },
   { category: "Security", label: "CSRF token missing on POST /api/pay", variant: "checkout" },
 ];
 
