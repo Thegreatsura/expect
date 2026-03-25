@@ -38,6 +38,8 @@ const LIVE_FAILED_STEP_MARKER_BACKGROUND_IMAGE =
   "linear-gradient(in oklab 180deg, oklab(63.6% 0.216 0.107) 0%, oklab(67.1% 0.194 0.096) 100%)";
 const LIVE_PLAYBACK_PROGRESS_SHADOW =
   "color(display-p3 0.615 0.615 0.615 / 20%) 0px 0px 3px";
+const LIVE_PLAYBACK_PROGRESS_RIGHT_BORDER =
+  "1px solid color(display-p3 0.725 0.725 0.725 / 80%)";
 const VIEWER_SHELL_SHADOW = "color(display-p3 0.788 0.788 0.788 / 20%) 0px 2px 3px";
 const CONTROL_FONT_FAMILY =
   '"SF Pro Display", "SFProDisplay-Medium", "Inter Variable", system-ui, sans-serif';
@@ -164,6 +166,7 @@ export const ReplayViewer = ({
   live = false,
   onAddEventsRef,
 }: ReplayViewerProps) => {
+  const [playbackBarClientReady, setPlaybackBarClientReady] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
@@ -185,6 +188,8 @@ export const ReplayViewer = ({
   const lastCursorPosRef = useRef("");
   const idleTicksRef = useRef(0);
   const cleanupIdleObserverRef = useRef<(() => void) | undefined>(undefined);
+  const stepListPointerActiveRef = useRef(false);
+  const stepListDraggedStepIdRef = useRef<string | undefined>(undefined);
   const playbackBarRectRef = useRef<DOMRect | undefined>(undefined);
   const playbackBarPointerActiveRef = useRef(false);
   const playbackBarRubberResetRef = useRef<{ stop: () => void } | undefined>(undefined);
@@ -292,6 +297,10 @@ export const ReplayViewer = ({
     const intervalId = setInterval(checkIdle, TIMER_INTERVAL_MS);
     return () => clearInterval(intervalId);
   };
+
+  useMountEffect(() => {
+    setPlaybackBarClientReady(true);
+  });
 
   useMountEffect(() => {
     return () => {
@@ -625,6 +634,17 @@ export const ReplayViewer = ({
   const isAtLiveEdge = live && totalTime - currentTime < LIVE_EDGE_THRESHOLD_MS;
   const timeLabel = formatPaperTime(currentTime);
   const totalTimeLabel = formatPaperTime(totalTime);
+  const playbackBarWrapperClassName = playbackBarClientReady
+    ? "relative pb-6 will-change-transform"
+    : "relative pb-6";
+  const playbackBarTrackClassName = playbackBarClientReady
+    ? "group/playback-bar relative h-9.75 overflow-hidden rounded-full"
+    : "relative h-9.75 overflow-hidden rounded-full";
+  const playbackBarButtonVisibilityClassName = live
+    ? playbackBarClientReady
+      ? "opacity-0 pointer-events-none transition-[opacity,transform] duration-150 ease-out group-hover/playback-bar:opacity-100 group-hover/playback-bar:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto"
+      : "opacity-0 pointer-events-none"
+    : "transition-transform duration-150 ease-out disabled:opacity-40";
   const playbackBarMax = totalTime || 1;
   const playbackBarValue = Math.min(currentTime, playbackBarMax);
   const playbackBarProgressPercent = (playbackBarValue / playbackBarMax) * 100;
@@ -691,6 +711,61 @@ export const ReplayViewer = ({
       seekTo(targetStep.timeMs);
     }
   };
+  const seekToDraggedStepListItem = (element: EventTarget | null) => {
+    if (!(element instanceof HTMLElement)) return false;
+
+    const stepButton = element.closest<HTMLElement>(
+      "[data-replay-step-id][data-replay-step-time-ms]",
+    );
+    const stepId = stepButton?.dataset.replayStepId;
+    const stepTimeMs = stepButton?.dataset.replayStepTimeMs;
+    if (!stepId || !stepTimeMs) return false;
+    if (stepListDraggedStepIdRef.current === stepId) return true;
+
+    stepListDraggedStepIdRef.current = stepId;
+    seekTo(Number(stepTimeMs));
+    return true;
+  };
+  const finishStepListPointerInteraction = (
+    target?: HTMLDivElement,
+    pointerId?: number,
+  ) => {
+    if (!stepListPointerActiveRef.current) return;
+
+    stepListPointerActiveRef.current = false;
+    stepListDraggedStepIdRef.current = undefined;
+
+    if (target && pointerId !== undefined && target.hasPointerCapture(pointerId)) {
+      target.releasePointerCapture(pointerId);
+    }
+  };
+  const handleStepListPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "mouse" || !hasEvents) return;
+
+    event.preventDefault();
+    stepListPointerActiveRef.current = true;
+    stepListDraggedStepIdRef.current = undefined;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    seekToDraggedStepListItem(event.target);
+  };
+  const handleStepListPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!stepListPointerActiveRef.current) return;
+    if (event.buttons === 0) {
+      finishStepListPointerInteraction(event.currentTarget, event.pointerId);
+      return;
+    }
+
+    seekToDraggedStepListItem(document.elementFromPoint(event.clientX, event.clientY));
+  };
+  const handleStepListPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    finishStepListPointerInteraction(event.currentTarget, event.pointerId);
+  };
+  const handleStepListPointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
+    finishStepListPointerInteraction(event.currentTarget, event.pointerId);
+  };
+  const handleStepListLostPointerCapture = () => {
+    finishStepListPointerInteraction();
+  };
   const playbackBarFillVisible = hasEvents && playbackBarValue > 0;
   const playbackBarFillClassName =
     playbackBarValue >= playbackBarMax ? "rounded-full" : "rounded-l-full";
@@ -731,6 +806,11 @@ export const ReplayViewer = ({
         })
       : [];
   const showFirstStepLabel = Boolean(steps && steps.steps.length > 0);
+  const firstPlaybackStep = stepList[0];
+  const firstPlaybackStepTimeMs = firstPlaybackStep?.timeMs;
+  const firstPlaybackStepLabelDisabled = !hasEvents || firstPlaybackStepTimeMs === undefined;
+  const playbackStepLabelClassName =
+    "pointer-events-auto absolute top-full -mt-[17px] h-4.5 appearance-none bg-transparent p-0 [letter-spacing:0em] font-['SFProDisplay-Semibold','SF_Pro_Display',system-ui,sans-serif] text-[11.5px]/4.5 font-semibold text-[color(display-p3_0.553_0.553_0.553)] transition-opacity duration-150 ease-out hover:opacity-70 focus-visible:opacity-70 disabled:cursor-default disabled:opacity-50";
   const playbackBar = (
     <input
       type="range"
@@ -761,7 +841,14 @@ export const ReplayViewer = ({
       >
         {stepList.length > 0 && (
           <div className="flex w-72 shrink-0 pt-2.5 pr-6 pb-6 pl-2.5">
-            <div className="min-h-0 w-full overflow-y-auto">
+            <div
+              className="min-h-0 w-full overflow-y-auto select-none"
+              onPointerDown={handleStepListPointerDown}
+              onPointerMove={handleStepListPointerMove}
+              onPointerUp={handleStepListPointerUp}
+              onPointerCancel={handleStepListPointerCancel}
+              onLostPointerCapture={handleStepListLostPointerCapture}
+            >
               <div className="flex flex-col p-[1px]">
                 {stepList.map((step) => (
                   <button
@@ -773,9 +860,11 @@ export const ReplayViewer = ({
                     }}
                     disabled={step.timeMs === undefined || !hasEvents}
                     aria-label={`Step ${step.label}: ${step.title}`}
-                    className="[font-synthesis:none] relative w-full py-[3px] text-left antialiased disabled:cursor-default disabled:opacity-50"
+                    data-replay-step-id={step.stepId}
+                    data-replay-step-time-ms={step.timeMs}
+                    className="[font-synthesis:none] group/replay-step relative w-full py-[3px] text-left antialiased disabled:cursor-default disabled:opacity-50"
                   >
-                    <div className="relative flex w-full items-center gap-1.75 rounded-[11px] px-3 py-1.5">
+                    <div className="relative flex w-full items-center gap-1.75 rounded-[11px] px-3 py-1.5 transition-colors duration-150 ease-out group-hover/replay-step:bg-white/65 group-focus-visible/replay-step:bg-white/65">
                       {step.isActive && (
                         <motion.div
                           layoutId="active-replay-step-background"
@@ -793,7 +882,11 @@ export const ReplayViewer = ({
                         </div>
                         <div
                           title={step.title}
-                          className="min-w-0 truncate [letter-spacing:0em] font-['SFProDisplay-Medium','SF_Pro_Display',system-ui,sans-serif] text-[13px]/4.5 font-medium text-[color(display-p3_0.188_0.188_0.188)]"
+                          className={`min-w-0 truncate [letter-spacing:0em] font-['SFProDisplay-Medium','SF_Pro_Display',system-ui,sans-serif] text-[13px]/4.5 font-medium transition-colors duration-150 ease-out ${
+                            step.isActive
+                              ? "text-[color(display-p3_0.188_0.188_0.188)]"
+                              : "text-[color(display-p3_0.332_0.332_0.332)] group-hover/replay-step:text-[color(display-p3_0.188_0.188_0.188)] group-focus-visible/replay-step:text-[color(display-p3_0.188_0.188_0.188)]"
+                          }`}
                         >
                           {step.title}
                         </div>
@@ -922,14 +1015,18 @@ export const ReplayViewer = ({
 
         <motion.div
           ref={playbackBarRef}
-          className="relative pb-6 will-change-transform"
-          style={{
-            width: playbackBarRubberBandWidth,
-            x: playbackBarRubberBandX,
-          }}
+          className={playbackBarWrapperClassName}
+          style={
+            playbackBarClientReady
+              ? {
+                  width: playbackBarRubberBandWidth,
+                  x: playbackBarRubberBandX,
+                }
+              : undefined
+          }
         >
           <div
-            className="relative h-9.75 overflow-hidden rounded-full"
+            className={playbackBarTrackClassName}
             style={{
               backgroundColor: LIVE_PLAYBACK_BAR_SURFACE_COLOR,
               boxShadow: LIVE_PLAYBACK_BAR_SHADOW,
@@ -943,6 +1040,7 @@ export const ReplayViewer = ({
                     width: `${playbackBarProgress}%`,
                     boxShadow: LIVE_PLAYBACK_PROGRESS_SHADOW,
                     backgroundImage: LIVE_PLAYBACK_PROGRESS_BACKGROUND_IMAGE,
+                    borderRight: LIVE_PLAYBACK_PROGRESS_RIGHT_BORDER,
                   }}
                 />
               )}
@@ -988,7 +1086,7 @@ export const ReplayViewer = ({
               onClick={handlePlay}
               disabled={!canPlay}
               aria-label={playing ? "Pause replay" : "Play replay"}
-              className="absolute inset-y-1.5 left-1.5 z-[30] flex w-12.75 items-center justify-center gap-0 rounded-full bg-white px-2.75 py-0.75 text-[#2F2F2F] transition-transform duration-150 ease-out disabled:opacity-40 active:scale-[0.97]"
+              className={`absolute inset-y-1.5 left-1.5 z-[30] flex w-12.75 items-center justify-center gap-0 rounded-full bg-white px-2.75 py-0.75 text-[#2F2F2F] ${playbackBarButtonVisibilityClassName} active:scale-[0.97]`}
               style={{ boxShadow: LIVE_PLAYBACK_BAR_BUTTON_SHADOW }}
             >
               {playing && <PauseIcon className="h-[12px] w-auto" />}
@@ -996,18 +1094,33 @@ export const ReplayViewer = ({
             </button>
           </div>
           {playbackStepMarkers.map((marker) => (
-            <div
+            <button
+              type="button"
               key={`${marker.stepId}-label`}
-              className="pointer-events-none absolute top-full -mt-[17px] -translate-x-1/2 [letter-spacing:0em] h-4.5 font-['SFProDisplay-Semibold','SF_Pro_Display',system-ui,sans-serif] text-[11.5px]/4.5 font-semibold text-[color(display-p3_0.553_0.553_0.553)]"
+              onClick={() => {
+                seekTo(marker.timeMs)
+              }}
+              disabled={!hasEvents}
+              aria-label={`Jump to step ${marker.label}: ${marker.title}`}
+              className={`${playbackStepLabelClassName} -translate-x-1/2`}
               style={{ left: marker.left }}
             >
               {marker.label}
-            </div>
+            </button>
           ))}
           {showFirstStepLabel && (
-            <div className="pointer-events-none absolute top-full left-0 -mt-[17px] [letter-spacing:0em] h-4.5 font-['SFProDisplay-Semibold','SF_Pro_Display',system-ui,sans-serif] text-[11.5px]/4.5 font-semibold text-[color(display-p3_0.553_0.553_0.553)]">
+            <button
+              type="button"
+              onClick={() => {
+                if (firstPlaybackStepTimeMs === undefined) return;
+                seekTo(firstPlaybackStepTimeMs);
+              }}
+              disabled={firstPlaybackStepLabelDisabled}
+              aria-label={`Jump to step 1: ${firstPlaybackStep?.title ?? "Step 1"}`}
+              className={`${playbackStepLabelClassName} left-0`}
+            >
               1
-            </div>
+            </button>
           )}
         </motion.div>
       </div>
