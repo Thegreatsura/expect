@@ -35,6 +35,7 @@ interface CommanderOpts {
   target?: Target;
   verbose?: boolean;
   headed?: boolean;
+  noCookies?: boolean;
   replayHost?: string;
 }
 
@@ -49,6 +50,7 @@ const program = new Command()
   .option("-t, --target <target>", "what to test: unstaged, branch, or changes", "changes")
   .option("--verbose", "enable verbose logging")
   .option("--headed", "show a visible browser window during tests")
+  .option("--no-cookies", "skip system browser cookie extraction")
   .option("--replay-host <url>", "website host for live replay viewer", "https://expect.dev")
   .addHelpText(
     "after",
@@ -58,7 +60,8 @@ Examples:
   $ expect -m "test the login flow" -y              run immediately
   $ expect --headed -m "smoke test" -y              run with a visible browser
   $ expect --target branch                          test all branch changes
-  $ expect --target unstaged                        test unstaged changes`,
+  $ expect --target unstaged                        test unstaged changes
+  $ expect --no-cookies -m "test" -y                skip system browser cookie extraction`,
   );
 
 const MOUSE_DISABLE = "\u001b[?1000l\u001b[?1006l";

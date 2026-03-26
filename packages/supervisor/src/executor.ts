@@ -22,7 +22,7 @@ import {
 import { buildExecutionPrompt } from "@expect/shared/prompts";
 import { NodeServices } from "@effect/platform-node";
 import { Git } from "./git/git";
-import { EXPECT_LIVE_VIEW_URL_ENV_NAME } from "@expect/browser/mcp";
+import { EXPECT_LIVE_VIEW_URL_ENV_NAME, EXPECT_NO_COOKIES_ENV_NAME } from "@expect/browser/mcp";
 import {
   EXECUTION_CONTEXT_FILE_LIMIT,
   EXECUTION_RECENT_COMMIT_LIMIT,
@@ -139,6 +139,12 @@ export class Executor extends ServiceMap.Service<Executor>()("@supervisor/Execut
         mcpEnv.push({
           name: EXPECT_LIVE_VIEW_URL_ENV_NAME,
           value: options.liveViewUrl,
+        });
+      }
+      if (!options.requiresCookies) {
+        mcpEnv.push({
+          name: EXPECT_NO_COOKIES_ENV_NAME,
+          value: "1",
         });
       }
 
