@@ -820,7 +820,7 @@ export class ExecutedTestPlan extends TestPlan.extend<ExecutedTestPlan>(
     return this;
   }
 
-  private finalizeTextBlock(): ExecutedTestPlan {
+  finalizeTextBlock(): ExecutedTestPlan {
     const lastEvent = this.events.at(-1);
     if (lastEvent?._tag !== "AgentText") return this;
     const foundMarkers = lastEvent.text

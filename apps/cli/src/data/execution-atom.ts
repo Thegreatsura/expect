@@ -111,7 +111,7 @@ const execute = Effect.fnUntraced(
       ),
       Stream.runLast,
       Effect.map((option) =>
-        option._tag === "Some"
+        (option._tag === "Some"
           ? option.value
           : new ExecutedTestPlan({
               ...input.options,
@@ -129,7 +129,8 @@ const execute = Effect.fnUntraced(
               rationale: "Direct execution",
               steps: [],
               events: [],
-            }),
+            })
+        ).finalizeTextBlock(),
       ),
     );
 
@@ -243,7 +244,7 @@ export const executeAtomFn = cliAtomRuntime.fn(
         ),
         Stream.runLast,
         Effect.map((option) =>
-          option._tag === "Some"
+          (option._tag === "Some"
             ? option.value
             : new ExecutedTestPlan({
                 ...input.options,
@@ -261,7 +262,8 @@ export const executeAtomFn = cliAtomRuntime.fn(
                 rationale: "Direct execution",
                 steps: [],
                 events: [],
-              }),
+              })
+          ).finalizeTextBlock(),
         ),
       );
 

@@ -11,6 +11,8 @@ import {
   StepCompleted,
   StepFailed,
   RunStarted,
+  AgentText,
+  RunFinished,
 } from "../src/models";
 
 const makeEmptyPlan = (): TestPlan =>
@@ -151,5 +153,82 @@ describe("dynamic step discovery", () => {
     );
 
     expect(executed.completedStepCount).toBe(2);
+  });
+
+  it("finalizeTextBlock parses markers from trailing AgentText", () => {
+    let executed = makeEmptyExecuted();
+
+    executed = executed.applyMarker(
+      new StepStarted({ stepId: StepId.makeUnsafe("step-01"), title: "Navigate" }),
+    );
+
+    const withText = new ExecutedTestPlan({
+      ...executed,
+      events: [
+        ...executed.events,
+        new AgentText({
+          text: "STEP_DONE|step-01|Page loaded successfully\nRUN_COMPLETED|passed|All steps passed",
+        }),
+      ],
+    });
+
+    expect(withText.completedStepCount).toBe(0);
+
+    const finalized = withText.finalizeTextBlock();
+
+    expect(finalized.completedStepCount).toBe(1);
+    expect(finalized.steps[0].status).toBe("passed");
+    expect(Option.getOrElse(finalized.steps[0].summary, () => "")).toBe("Page loaded successfully");
+
+    const runFinished = finalized.events.find(
+      (event): event is RunFinished => event._tag === "RunFinished",
+    );
+    expect(runFinished).toBeDefined();
+    expect(runFinished!.status).toBe("passed");
+    expect(runFinished!.summary).toBe("All steps passed");
+  });
+
+  it("finalizeTextBlock parses ASSERTION_FAILED from trailing AgentText", () => {
+    let executed = makeEmptyExecuted();
+
+    executed = executed.applyMarker(
+      new StepStarted({ stepId: StepId.makeUnsafe("step-01"), title: "Login" }),
+    );
+
+    const withText = new ExecutedTestPlan({
+      ...executed,
+      events: [
+        ...executed.events,
+        new AgentText({
+          text: "ASSERTION_FAILED|step-01|Login button not found\nRUN_COMPLETED|failed|Step failed",
+        }),
+      ],
+    });
+
+    const finalized = withText.finalizeTextBlock();
+
+    expect(finalized.completedStepCount).toBe(1);
+    expect(finalized.steps[0].status).toBe("failed");
+    expect(Option.getOrElse(finalized.steps[0].summary, () => "")).toBe("Login button not found");
+
+    const runFinished = finalized.events.find(
+      (event): event is RunFinished => event._tag === "RunFinished",
+    );
+    expect(runFinished).toBeDefined();
+    expect(runFinished!.status).toBe("failed");
+  });
+
+  it("finalizeTextBlock is idempotent when no AgentText is last event", () => {
+    let executed = makeEmptyExecuted();
+    executed = executed.applyMarker(
+      new StepStarted({ stepId: StepId.makeUnsafe("step-01"), title: "First" }),
+    );
+    executed = executed.applyMarker(
+      new StepCompleted({ stepId: StepId.makeUnsafe("step-01"), summary: "Done" }),
+    );
+
+    const finalized = executed.finalizeTextBlock();
+    expect(finalized.completedStepCount).toBe(1);
+    expect(finalized.steps[0].status).toBe("passed");
   });
 });
