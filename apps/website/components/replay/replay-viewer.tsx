@@ -813,11 +813,11 @@ export const ReplayViewer = ({
   const timeLabel = formatPaperTime(currentTime);
   const totalTimeLabel = formatPaperTime(totalTime);
   const playbackBarWrapperClassName = playbackBarClientReady
-    ? "relative pb-6 will-change-transform"
-    : "relative pb-6";
+    ? "relative pb-4 will-change-transform md:pb-6"
+    : "relative pb-4 md:pb-6";
   const playbackBarTrackClassName = playbackBarClientReady
-    ? "group/playback-bar relative h-9.75 overflow-hidden rounded-full"
-    : "relative h-9.75 overflow-hidden rounded-full";
+    ? "group/playback-bar relative h-8 overflow-hidden rounded-full md:h-9.75"
+    : "relative h-8 overflow-hidden rounded-full md:h-9.75";
   const defaultPlaybackBarButtonClassName =
     "transition-transform duration-150 ease-out disabled:opacity-40";
   const playbackBarButtonVisibilityClassName = live
@@ -1018,15 +1018,15 @@ export const ReplayViewer = ({
   return (
     <div
       data-rrweb-block
-      className="flex h-screen flex-col gap-3 bg-[color(display-p3_0.986_0.986_0.986)] p-6"
+      className="flex h-screen flex-col gap-2 bg-[color(display-p3_0.986_0.986_0.986)] p-2 sm:p-4 md:gap-3 md:p-6"
     >
       <div
         ref={viewerShellRef}
-        className="flex h-0 grow overflow-hidden rounded-[26px] border-[7px] border-solid border-[color(display-p3_1_1_1)] bg-[color(display-p3_0.977_0.977_0.977)]"
+        className="flex h-0 grow flex-col overflow-hidden rounded-xl border-4 border-solid border-[color(display-p3_1_1_1)] bg-[color(display-p3_0.977_0.977_0.977)] md:flex-row md:rounded-[26px] md:border-[7px]"
         style={{ boxShadow: VIEWER_SHELL_SHADOW }}
       >
         {stepList.length > 0 && (
-          <div className="flex w-72 shrink-0 pt-2.5 pr-6 pb-6 pl-2.5">
+          <div className="order-2 flex max-h-28 w-full px-2.5 pt-0 pb-2 md:order-none md:max-h-none md:w-72 md:shrink-0 md:pt-2.5 md:pr-6 md:pb-6">
             <div
               className="min-h-0 w-full overflow-y-auto select-none"
               onPointerDown={handleStepListPointerDown}
@@ -1084,8 +1084,8 @@ export const ReplayViewer = ({
             </div>
           </div>
         )}
-        <div className="relative min-w-0 flex-1">
-          <div className="absolute inset-0 p-6" style={REPLAY_BACKDROP_STYLE}>
+        <div className="relative order-1 min-h-0 min-w-0 flex-1 md:order-none">
+          <div className="absolute inset-0 p-2 md:p-6" style={REPLAY_BACKDROP_STYLE}>
             <div
               className="glow-pulse pointer-events-none absolute inset-0"
               style={{
@@ -1096,7 +1096,7 @@ export const ReplayViewer = ({
               <div ref={replayRef} className="relative h-full w-full overflow-hidden" />
             </MacWindow>
           </div>
-          <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-end justify-end gap-2 p-5">
+          <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-end justify-end gap-2 p-2 md:p-5">
             <AnimatePresence mode="popLayout">
               {visibleActions.map((action) => (
                 <motion.div
@@ -1106,7 +1106,7 @@ export const ReplayViewer = ({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.96 }}
                   transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
-                  className="max-w-80 truncate rounded-xl bg-[#1c1c1c] px-4 py-3 text-base font-medium text-white shadow-xl"
+                  className="max-w-48 truncate rounded-xl bg-[#1c1c1c] px-3 py-2 text-sm font-medium text-white shadow-xl md:max-w-80 md:px-4 md:py-3 md:text-base"
                   style={{ fontFamily: CONTROL_FONT_FAMILY }}
                 >
                   {action.label}
@@ -1133,13 +1133,13 @@ export const ReplayViewer = ({
       </div>
 
       <div
-        className={`flex flex-col gap-3 rounded-[28px] pr-6 pt-3 pb-5 ${stepList.length > 0 ? "pl-[295px]" : "pl-6"}`}
+        className={`flex flex-col gap-2 rounded-[28px] px-3 pt-2 pb-3 md:gap-3 md:pr-6 md:pt-3 md:pb-5 ${stepList.length > 0 ? "md:pl-[295px]" : "md:pl-6"}`}
         style={{ fontFamily: CONTROL_FONT_FAMILY }}
       >
-        <div className="mt-1.5 flex items-center justify-between gap-4 p-0 antialiased [font-synthesis:none]">
+        <div className="mt-1 flex items-center justify-between gap-2 p-0 antialiased [font-synthesis:none] md:mt-1.5 md:gap-4">
           <div className="flex min-w-0 items-center gap-1.5">
             {!currentStepLabel && !currentStepTitle && live && (
-              <div className="h-5.5 shrink-0 font-['SFProDisplay-Medium','SF_Pro_Display',system-ui,sans-serif] text-lg/5.5 font-medium tracking-[0em] text-[color(display-p3_0.587_0.587_0.587)]">
+              <div className="h-5.5 shrink-0 font-['SFProDisplay-Medium','SF_Pro_Display',system-ui,sans-serif] text-sm/5.5 font-medium tracking-[0em] text-[color(display-p3_0.587_0.587_0.587)] md:text-lg/5.5">
                 Waiting for steps...
               </div>
             )}
@@ -1147,19 +1147,19 @@ export const ReplayViewer = ({
               <Calligraph
                 as="div"
                 autoSize={false}
-                className="h-5.5 shrink-0 font-['SFProDisplay-Medium','SF_Pro_Display',system-ui,sans-serif] text-lg/5.5 font-medium tracking-[0em] text-[color(display-p3_0.587_0.587_0.587)]"
+                className="h-5.5 shrink-0 font-['SFProDisplay-Medium','SF_Pro_Display',system-ui,sans-serif] text-sm/5.5 font-medium tracking-[0em] text-[color(display-p3_0.587_0.587_0.587)] md:text-lg/5.5"
               >
                 {currentStepLabel}
               </Calligraph>
             )}
             {currentStepTitle && (
-              <div className="min-w-0 truncate font-['SFProDisplay-Medium','SF_Pro_Display',system-ui,sans-serif] text-lg/5.5 font-medium tracking-[0em] text-[color(display-p3_0.188_0.188_0.188)]">
+              <div className="min-w-0 truncate font-['SFProDisplay-Medium','SF_Pro_Display',system-ui,sans-serif] text-sm/5.5 font-medium tracking-[0em] text-[color(display-p3_0.188_0.188_0.188)] md:text-lg/5.5">
                 {currentStepTitle}
               </div>
             )}
           </div>
-          <div className="flex shrink-0 items-center gap-3">
-            <span className="inline-flex items-center gap-2.5 text-[15px] leading-4.5 font-medium tracking-[0em] tabular-nums text-[color(display-p3_0.361_0.361_0.361)]">
+          <div className="flex shrink-0 items-center gap-1.5 md:gap-3">
+            <span className="inline-flex items-center gap-1.5 text-[13px] leading-4.5 font-medium tracking-[0em] tabular-nums text-[color(display-p3_0.361_0.361_0.361)] md:gap-2.5 md:text-[15px]">
               <Calligraph variant="number" autoSize={false} className="tabular-nums">
                 {timeLabel}
               </Calligraph>
@@ -1190,7 +1190,7 @@ export const ReplayViewer = ({
                 onChange={handleSpeedChange}
                 disabled={!hasEvents}
                 aria-label="Replay speed"
-                className="cursor-pointer appearance-none rounded-full bg-transparent px-2 py-1 text-[15px] font-medium text-[color(display-p3_0.361_0.361_0.361)] outline-none disabled:cursor-default disabled:opacity-40"
+                className="cursor-pointer appearance-none rounded-full bg-transparent px-1.5 py-1 text-[13px] font-medium text-[color(display-p3_0.361_0.361_0.361)] outline-none disabled:cursor-default disabled:opacity-40 md:px-2 md:text-[15px]"
                 style={{ fontFamily: CONTROL_FONT_FAMILY }}
               >
                 {SPEEDS.map((supportedSpeed) => (
