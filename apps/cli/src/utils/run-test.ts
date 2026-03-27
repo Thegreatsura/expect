@@ -222,7 +222,7 @@ export const runHeadless = (options: HeadlessRunOptions) =>
         const artifacts = extractCloseArtifacts(finalExecuted.events);
 
         let generatedVideoPath: string | undefined;
-        if (artifacts.replaySessionPath) {
+        if (artifacts.replaySessionPath && artifacts.replaySessionPath.endsWith(".ndjson")) {
           const latestJsonPath = artifacts.replaySessionPath.replace(/\.ndjson$/, "-latest.json");
           const videoOutputPath = artifacts.replaySessionPath.replace(/\.ndjson$/, ".mp4");
           console.error("\nGenerating session video...");

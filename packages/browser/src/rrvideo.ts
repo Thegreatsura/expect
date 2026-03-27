@@ -1,9 +1,8 @@
-import { Effect, Layer, ServiceMap } from "effect";
+import { Effect, Layer, Predicate, ServiceMap } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Schema } from "effect";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { chromium, type Browser } from "playwright";
-import { readFileSync } from "node:fs";
 import * as path from "node:path";
 import { createRequire } from "node:module";
 
@@ -12,17 +11,28 @@ const TIMEOUT_BUFFER_MS = 120_000;
 const DEFAULT_RESOLUTION_RATIO = 0.8;
 const META_EVENT_TYPE = 4;
 
-const resolveRrwebAssets = () => {
+const resolveRrwebAssets = Effect.fn("RrVideo.resolveRrwebAssets")(function* () {
+  const fileSystem = yield* FileSystem;
   const require = createRequire(import.meta.url);
-  const rrwebEntry = require.resolve("rrweb");
+  const rrwebEntry = yield* Effect.try({
+    try: () => require.resolve("rrweb"),
+    catch: (cause) =>
+      new RrVideoConvertError({ cause: `Failed to resolve rrweb package: ${String(cause)}` }),
+  });
   const rrwebUmdPath = path.resolve(rrwebEntry, "../../dist/rrweb.umd.cjs");
   const rrwebStylePath = path.resolve(rrwebEntry, "../../dist/style.css");
-  const rrwebScript = readFileSync(rrwebUmdPath, "utf-8");
-  const rrwebStyle = readFileSync(rrwebStylePath, "utf-8");
+  const rrwebScript = yield* fileSystem.readFileString(rrwebUmdPath).pipe(
+    Effect.catchTag("PlatformError", (cause) =>
+      new RrVideoConvertError({ cause: `Failed to read rrweb script: ${cause}` }).asEffect(),
+    ),
+  );
+  const rrwebStyle = yield* fileSystem.readFileString(rrwebStylePath).pipe(
+    Effect.catchTag("PlatformError", (cause) =>
+      new RrVideoConvertError({ cause: `Failed to read rrweb style: ${cause}` }).asEffect(),
+    ),
+  );
   return { rrwebScript, rrwebStyle };
-};
-
-const RRWEB_ASSETS = resolveRrwebAssets();
+});
 
 export class RrVideoConvertError extends Schema.ErrorClass<RrVideoConvertError>(
   "RrVideoConvertError",
@@ -96,6 +106,13 @@ interface RrwebEvent {
   readonly data: { readonly width?: number; readonly height?: number };
 }
 
+const isRrwebEvent = (value: unknown): value is RrwebEvent =>
+  Predicate.isObject(value) &&
+  "type" in value &&
+  typeof value.type === "number" &&
+  "timestamp" in value &&
+  typeof value.timestamp === "number";
+
 const getMaxViewport = (events: readonly RrwebEvent[]) => {
   let maxWidth = 0;
   let maxHeight = 0;
@@ -107,6 +124,11 @@ const getMaxViewport = (events: readonly RrwebEvent[]) => {
   return { width: maxWidth, height: maxHeight };
 };
 
+interface RrwebAssets {
+  readonly rrwebScript: string;
+  readonly rrwebStyle: string;
+}
+
 interface ReplayOptions {
   readonly eventsJson: string;
   readonly scaleFactor: number;
@@ -114,11 +136,14 @@ interface ReplayOptions {
   readonly totalTimeout: number;
   readonly tempVideoDir: string;
   readonly replayConfig: { readonly speed?: number; readonly skipInactive?: boolean };
+  readonly rrwebAssets: RrwebAssets;
   readonly onProgress?: (percent: number) => void;
 }
 
 const closeContext = (context: import("playwright").BrowserContext) =>
-  Effect.promise(() => context.close()).pipe(Effect.catchCause(() => Effect.void));
+  Effect.promise(() => context.close()).pipe(
+    Effect.catchCause((cause) => Effect.logDebug("Failed to close browser context", { cause })),
+  );
 
 const replayToVideo = Effect.fn("RrVideo.replayToVideo")(function* (
   browser: Browser,
@@ -170,8 +195,8 @@ const replayToVideo = Effect.fn("RrVideo.replayToVideo")(function* (
             page.setContent(
               buildReplayHtml(
                 options.eventsJson,
-                RRWEB_ASSETS.rrwebScript,
-                RRWEB_ASSETS.rrwebStyle,
+                options.rrwebAssets.rrwebScript,
+                options.rrwebAssets.rrwebStyle,
                 options.scaleFactor,
                 options.replayConfig,
               ),
@@ -202,6 +227,7 @@ const replayToVideo = Effect.fn("RrVideo.replayToVideo")(function* (
 export class RrVideo extends ServiceMap.Service<RrVideo>()("@expect/browser/RrVideo", {
   make: Effect.gen(function* () {
     const fileSystem = yield* FileSystem;
+    const rrwebAssets = yield* resolveRrwebAssets();
 
     const acquireBrowser = Effect.acquireRelease(
       Effect.tryPromise({
@@ -210,7 +236,9 @@ export class RrVideo extends ServiceMap.Service<RrVideo>()("@expect/browser/RrVi
           new RrVideoConvertError({ cause: `Failed to launch browser: ${String(cause)}` }),
       }),
       (browser) =>
-        Effect.promise(() => browser.close()).pipe(Effect.catchCause(() => Effect.void)),
+        Effect.promise(() => browser.close()).pipe(
+          Effect.catchCause((cause) => Effect.logDebug("Failed to close browser", { cause })),
+        ),
     );
 
     const convert = Effect.fn("RrVideo.convert")(function* (options: ConvertOptions) {
@@ -225,11 +253,25 @@ export class RrVideo extends ServiceMap.Service<RrVideo>()("@expect/browser/RrVi
         ),
       );
 
-      const events = yield* Effect.try({
-        try: () => JSON.parse(eventsJson) as RrwebEvent[],
+      const parsed = yield* Effect.try({
+        try: () => JSON.parse(eventsJson) as unknown,
         catch: (cause) =>
           new RrVideoConvertError({ cause: `Failed to parse events: ${String(cause)}` }),
       });
+
+      if (!Array.isArray(parsed)) {
+        return yield* new RrVideoConvertError({ cause: "Events file must contain a JSON array" });
+      }
+
+      const events: RrwebEvent[] = [];
+      for (const item of parsed) {
+        if (!isRrwebEvent(item)) {
+          return yield* new RrVideoConvertError({
+            cause: "Event missing required 'type' (number) and 'timestamp' (number) fields",
+          });
+        }
+        events.push(item);
+      }
 
       if (events.length === 0) {
         return yield* new RrVideoConvertError({ cause: "No events in session file" });
@@ -267,11 +309,12 @@ export class RrVideo extends ServiceMap.Service<RrVideo>()("@expect/browser/RrVi
         totalTimeout,
         tempVideoDir,
         replayConfig: { speed: options.speed, skipInactive: options.skipInactive },
+        rrwebAssets,
         onProgress: options.onProgress,
       });
 
       yield* fileSystem.makeDirectory(path.dirname(options.outputPath), { recursive: true }).pipe(
-        Effect.catchTag("PlatformError", () => Effect.void),
+        Effect.catchReason("PlatformError", "AlreadyExists", () => Effect.void),
       );
 
       yield* fileSystem.copyFile(tempVideoPath, options.outputPath).pipe(

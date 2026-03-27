@@ -219,6 +219,39 @@ describe("RrVideo", () => {
       }
     });
 
+    it("fails with RrVideoConvertError when JSON is not an array", async () => {
+      tempDir = mkdtempSync(join(tmpdir(), TEMP_DIR_PREFIX));
+      const inputPath = join(tempDir, "object.json");
+      writeFileSync(inputPath, JSON.stringify({ type: 4, timestamp: 1000 }));
+      const outputPath = join(tempDir, "output.mp4");
+
+      const result = await runConvertExit({ inputPath, outputPath });
+
+      expect(result._tag).toBe("Failure");
+      if (result._tag === "Failure") {
+        expect(String(result.cause)).toContain("RrVideoConvertError");
+        expect(String(result.cause)).toContain("must contain a JSON array");
+      }
+    });
+
+    it("fails with RrVideoConvertError when events have invalid shape", async () => {
+      tempDir = mkdtempSync(join(tmpdir(), TEMP_DIR_PREFIX));
+      const events = [
+        { type: 4, timestamp: 1000, data: { width: 800, height: 600 } },
+        { notType: "bad", notTimestamp: "bad" },
+      ];
+      const inputPath = writeSessionFile(tempDir, "bad-shape.json", events);
+      const outputPath = join(tempDir, "output.mp4");
+
+      const result = await runConvertExit({ inputPath, outputPath });
+
+      expect(result._tag).toBe("Failure");
+      if (result._tag === "Failure") {
+        expect(String(result.cause)).toContain("RrVideoConvertError");
+        expect(String(result.cause)).toContain("'type' (number) and 'timestamp' (number)");
+      }
+    });
+
     it("fails with RrVideoConvertError for empty events array", async () => {
       tempDir = mkdtempSync(join(tmpdir(), TEMP_DIR_PREFIX));
       const inputPath = writeSessionFile(tempDir, "empty.json", []);

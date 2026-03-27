@@ -547,8 +547,8 @@ export const TestingScreen = ({
 
           {liveReplayUrl && isExecuting && (
             <Box marginTop={0}>
-              <Text color={COLORS.DIM}>
-                {"  "}Press <Text color={COLORS.PRIMARY}>o</Text> to open live preview
+              <Text color={COLORS.PRIMARY} bold>
+                {"  "}Press <Text color={COLORS.PRIMARY} bold>o</Text> to open live preview
               </Text>
             </Box>
           )}
