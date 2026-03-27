@@ -66,14 +66,17 @@ jobs:
         continue-on-error: true
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: >-
-          node apps/cli/dist/index.js --verbose -y -m
-          "Test the expect.dev marketing website at http://localhost:3000.
-          Verify the homepage loads, key sections are visible, and navigation works.
-          IMPORTANT: Run every test scenario to completion. If a step fails, record the failure
-          with evidence (screenshot or error) but continue testing remaining steps. Do not bail early."
+        run: |
+          set -o pipefail
+          node apps/cli/dist/index.js --verbose -y -m \
+            "Test the expect.dev marketing website at http://localhost:3000. \
+            Verify the homepage loads, key sections are visible, and navigation works. \
+            IMPORTANT: Run every test scenario to completion. If a step fails, record the failure \
+            with evidence (screenshot or error) but continue testing remaining steps. Do not bail early." \
+            2>&1 | tee /tmp/expect-output.txt
 
       - name: Upload session recording
+        id: recording
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -81,6 +84,39 @@ jobs:
           path: /tmp/expect-replays/
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Comment on commit
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ steps.expect.outcome }}" = "success" ]; then
+            STATUS="✅ Expect tests passed"
+          else
+            STATUS="❌ Expect tests failed"
+          fi
+
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          BODY="${STATUS}"
+          BODY+=$'\n\n'"[Workflow run #${{ github.run_number }}](${RUN_URL})"
+
+          if [ -f /tmp/expect-output.txt ]; then
+            OUTPUT=$(tail -100 /tmp/expect-output.txt)
+            BODY+=$'\n\n'"<details><summary>Test output</summary>"$'\n\n'"\`\`\`"$'\n'"${OUTPUT}"$'\n'"\`\`\`"$'\n'"</details>"
+          fi
+
+          ARTIFACT_ID="${{ steps.recording.outputs.artifact-id }}"
+          if [ -n "$ARTIFACT_ID" ]; then
+            BODY+=$'\n\n'"📎 [Download session recording](${RUN_URL}/artifacts/${ARTIFACT_ID})"
+          fi
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            gh pr comment "${{ github.event.pull_request.number }}" --body "$BODY"
+          else
+            gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
+              -f body="$BODY"
+          fi
 
       - name: Print expect debug logs
         if: always()
