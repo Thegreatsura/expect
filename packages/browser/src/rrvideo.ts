@@ -21,16 +21,20 @@ const resolveRrwebAssets = Effect.fn("RrVideo.resolveRrwebAssets")(function* () 
   });
   const rrwebUmdPath = path.resolve(rrwebEntry, "../../dist/rrweb.umd.cjs");
   const rrwebStylePath = path.resolve(rrwebEntry, "../../dist/style.css");
-  const rrwebScript = yield* fileSystem.readFileString(rrwebUmdPath).pipe(
-    Effect.catchTag("PlatformError", (cause) =>
-      new RrVideoConvertError({ cause: `Failed to read rrweb script: ${cause}` }).asEffect(),
-    ),
-  );
-  const rrwebStyle = yield* fileSystem.readFileString(rrwebStylePath).pipe(
-    Effect.catchTag("PlatformError", (cause) =>
-      new RrVideoConvertError({ cause: `Failed to read rrweb style: ${cause}` }).asEffect(),
-    ),
-  );
+  const rrwebScript = yield* fileSystem
+    .readFileString(rrwebUmdPath)
+    .pipe(
+      Effect.catchTag("PlatformError", (cause) =>
+        new RrVideoConvertError({ cause: `Failed to read rrweb script: ${cause}` }).asEffect(),
+      ),
+    );
+  const rrwebStyle = yield* fileSystem
+    .readFileString(rrwebStylePath)
+    .pipe(
+      Effect.catchTag("PlatformError", (cause) =>
+        new RrVideoConvertError({ cause: `Failed to read rrweb style: ${cause}` }).asEffect(),
+      ),
+    );
   return { rrwebScript, rrwebStyle };
 });
 
@@ -164,8 +168,7 @@ const replayToVideo = Effect.fn("RrVideo.replayToVideo")(function* (
 
   const page = yield* Effect.tryPromise({
     try: () => context.newPage(),
-    catch: (cause) =>
-      new RrVideoConvertError({ cause: `Failed to create page: ${String(cause)}` }),
+    catch: (cause) => new RrVideoConvertError({ cause: `Failed to create page: ${String(cause)}` }),
   });
 
   yield* Effect.tryPromise({
@@ -175,8 +178,7 @@ const replayToVideo = Effect.fn("RrVideo.replayToVideo")(function* (
         options.onProgress?.(progress);
       });
     },
-    catch: (cause) =>
-      new RrVideoConvertError({ cause: `Failed to set up page: ${String(cause)}` }),
+    catch: (cause) => new RrVideoConvertError({ cause: `Failed to set up page: ${String(cause)}` }),
   });
 
   yield* Effect.tryPromise({
@@ -247,11 +249,13 @@ export class RrVideo extends ServiceMap.Service<RrVideo>()("@expect/browser/RrVi
       const ratio = Math.min(options.resolutionRatio ?? DEFAULT_RESOLUTION_RATIO, 1);
       const scaleFactor = ratio * MAX_SCALE_VALUE;
 
-      const eventsJson = yield* fileSystem.readFileString(options.inputPath).pipe(
-        Effect.catchTag("PlatformError", (cause) =>
-          new RrVideoConvertError({ cause: `Failed to read input: ${cause}` }).asEffect(),
-        ),
-      );
+      const eventsJson = yield* fileSystem
+        .readFileString(options.inputPath)
+        .pipe(
+          Effect.catchTag("PlatformError", (cause) =>
+            new RrVideoConvertError({ cause: `Failed to read input: ${cause}` }).asEffect(),
+          ),
+        );
 
       const parsed = yield* Effect.try({
         try: () => JSON.parse(eventsJson) as unknown,
@@ -294,11 +298,13 @@ export class RrVideo extends ServiceMap.Service<RrVideo>()("@expect/browser/RrVi
       const expectedPlaybackTime = videoDuration / playbackSpeed;
       const totalTimeout = expectedPlaybackTime + TIMEOUT_BUFFER_MS;
 
-      const tempVideoDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "rrvideo-" }).pipe(
-        Effect.catchTag("PlatformError", (cause) =>
-          new RrVideoConvertError({ cause: `Failed to create temp dir: ${cause}` }).asEffect(),
-        ),
-      );
+      const tempVideoDir = yield* fileSystem
+        .makeTempDirectoryScoped({ prefix: "rrvideo-" })
+        .pipe(
+          Effect.catchTag("PlatformError", (cause) =>
+            new RrVideoConvertError({ cause: `Failed to create temp dir: ${cause}` }).asEffect(),
+          ),
+        );
 
       const browser = yield* acquireBrowser;
 
@@ -313,15 +319,17 @@ export class RrVideo extends ServiceMap.Service<RrVideo>()("@expect/browser/RrVi
         onProgress: options.onProgress,
       });
 
-      yield* fileSystem.makeDirectory(path.dirname(options.outputPath), { recursive: true }).pipe(
-        Effect.catchReason("PlatformError", "AlreadyExists", () => Effect.void),
-      );
+      yield* fileSystem
+        .makeDirectory(path.dirname(options.outputPath), { recursive: true })
+        .pipe(Effect.catchReason("PlatformError", "AlreadyExists", () => Effect.void));
 
-      yield* fileSystem.copyFile(tempVideoPath, options.outputPath).pipe(
-        Effect.catchTag("PlatformError", (cause) =>
-          new RrVideoConvertError({ cause: `Failed to copy video: ${cause}` }).asEffect(),
-        ),
-      );
+      yield* fileSystem
+        .copyFile(tempVideoPath, options.outputPath)
+        .pipe(
+          Effect.catchTag("PlatformError", (cause) =>
+            new RrVideoConvertError({ cause: `Failed to copy video: ${cause}` }).asEffect(),
+          ),
+        );
 
       yield* Effect.logInfo("rrweb session converted to video", {
         outputPath: options.outputPath,

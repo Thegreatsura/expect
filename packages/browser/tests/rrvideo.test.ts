@@ -331,9 +331,7 @@ describe("RrVideo", () => {
     it("formats message with cause", () => {
       const error = new RrVideoConvertError({ cause: "something broke" });
 
-      expect(error.message).toBe(
-        "Failed to convert rrweb session to video: something broke",
-      );
+      expect(error.message).toBe("Failed to convert rrweb session to video: something broke");
       expect(error._tag).toBe("RrVideoConvertError");
     });
   });

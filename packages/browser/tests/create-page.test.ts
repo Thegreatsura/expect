@@ -8,6 +8,7 @@ const {
   newContextMock,
   addCookiesMock,
   addInitScriptMock,
+  pagesMock,
   newPageMock,
   gotoMock,
   closeMock,
@@ -19,6 +20,7 @@ const {
   newContextMock: vi.fn(),
   addCookiesMock: vi.fn(),
   addInitScriptMock: vi.fn(),
+  pagesMock: vi.fn(),
   newPageMock: vi.fn(),
   gotoMock: vi.fn(),
   closeMock: vi.fn(),
@@ -126,10 +128,12 @@ describe("Browser.createPage cookie reuse", () => {
     newPageMock.mockResolvedValue({ goto: gotoMock });
     addCookiesMock.mockResolvedValue(undefined);
     addInitScriptMock.mockResolvedValue(undefined);
+    pagesMock.mockReturnValue([]);
     newContextMock.mockResolvedValue({
       newPage: newPageMock,
       addCookies: addCookiesMock,
       addInitScript: addInitScriptMock,
+      pages: pagesMock,
     });
     closeMock.mockResolvedValue(undefined);
     launchMock.mockResolvedValue({

@@ -106,13 +106,13 @@ export class CdpDiscoveryError extends Schema.ErrorClass<CdpDiscoveryError>("Cdp
   message = `CDP discovery failed: ${this.cause}`;
 }
 
-export class CdpConnectionError extends Schema.ErrorClass<CdpConnectionError>(
-  "CdpConnectionError",
-)({
-  _tag: Schema.tag("CdpConnectionError"),
-  endpointUrl: Schema.String,
-  cause: Schema.String,
-}) {
+export class CdpConnectionError extends Schema.ErrorClass<CdpConnectionError>("CdpConnectionError")(
+  {
+    _tag: Schema.tag("CdpConnectionError"),
+    endpointUrl: Schema.String,
+    cause: Schema.String,
+  },
+) {
   message = `Failed to connect to CDP endpoint ${this.endpointUrl}: ${this.cause}`;
 }
 

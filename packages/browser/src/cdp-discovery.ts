@@ -3,11 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import net from "node:net";
 import { Effect, Option } from "effect";
-import {
-  CDP_DISCOVERY_TIMEOUT_MS,
-  CDP_COMMON_PORTS,
-  CDP_PORT_PROBE_TIMEOUT_MS,
-} from "./constants";
+import { CDP_DISCOVERY_TIMEOUT_MS, CDP_COMMON_PORTS, CDP_PORT_PROBE_TIMEOUT_MS } from "./constants";
 import { CdpDiscoveryError } from "./errors";
 
 interface VersionInfo {
@@ -26,8 +22,7 @@ const fetchJson = <A>(url: string) =>
         clearTimeout(timer);
       }
     },
-    catch: (cause) =>
-      new CdpDiscoveryError({ cause: `Failed to fetch ${url}: ${cause}` }),
+    catch: (cause) => new CdpDiscoveryError({ cause: `Failed to fetch ${url}: ${cause}` }),
   });
 
 const rewriteWsHost = (wsUrl: string, host: string, port: number) => {
@@ -101,10 +96,7 @@ const tryDiscover = <A>(effect: Effect.Effect<A, CdpDiscoveryError>) =>
     Effect.catchTag("CdpDiscoveryError", () => Effect.succeed(Option.none<A>())),
   );
 
-export const discoverCdpUrl = Effect.fn("discoverCdpUrl")(function* (
-  host: string,
-  port: number,
-) {
+export const discoverCdpUrl = Effect.fn("discoverCdpUrl")(function* (host: string, port: number) {
   yield* Effect.annotateCurrentSpan({ host, port });
 
   const versionResult = yield* tryDiscover(discoverViaJsonVersion(host, port));

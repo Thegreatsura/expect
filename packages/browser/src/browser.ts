@@ -122,28 +122,27 @@ const extractDefaultBrowserCookies = Effect.fn("Browser.extractDefaultBrowserCoo
   return dedupCookies(results.flat());
 }, Effect.provide(cookiesLayer));
 
-const extractCookiesForBrowserKeys = Effect.fn("Browser.extractCookiesForBrowserKeys")(
-  function* (browserKeys: readonly string[]) {
-    const cookiesService = yield* Cookies;
-    const browsers = yield* Browsers;
-    const allProfiles = yield* browsers.list.pipe(
-      Effect.catchTag("ListBrowsersError", () => Effect.succeed<BrowserProfile[]>([])),
-    );
+const extractCookiesForBrowserKeys = Effect.fn("Browser.extractCookiesForBrowserKeys")(function* (
+  browserKeys: readonly string[],
+) {
+  const cookiesService = yield* Cookies;
+  const browsers = yield* Browsers;
+  const allProfiles = yield* browsers.list.pipe(
+    Effect.catchTag("ListBrowsersError", () => Effect.succeed<BrowserProfile[]>([])),
+  );
 
-    const matchingProfiles = allProfiles.filter((profile) =>
-      browserKeys.includes(browserKeyOf(profile)),
-    );
+  const matchingProfiles = allProfiles.filter((profile) =>
+    browserKeys.includes(browserKeyOf(profile)),
+  );
 
-    const results = yield* Effect.forEach(
-      matchingProfiles,
-      (profile) => extractCookiesForProfile(cookiesService, profile),
-      { concurrency: "unbounded" },
-    );
+  const results = yield* Effect.forEach(
+    matchingProfiles,
+    (profile) => extractCookiesForProfile(cookiesService, profile),
+    { concurrency: "unbounded" },
+  );
 
-    return dedupCookies(results.flat());
-  },
-  Effect.provide(cookiesLayer),
-);
+  return dedupCookies(results.flat());
+}, Effect.provide(cookiesLayer));
 
 const appendCursorInteractiveElements = Effect.fn("Browser.appendCursorInteractive")(function* (
   page: Page,
@@ -188,7 +187,10 @@ export class Browser extends ServiceMap.Service<Browser>()("@browser/Browser", {
       url: string | undefined,
       options: CreatePageOptions = {},
     ) {
-      yield* Effect.annotateCurrentSpan({ url: url ?? "about:blank", cdp: Boolean(options.cdpUrl) });
+      yield* Effect.annotateCurrentSpan({
+        url: url ?? "about:blank",
+        cdp: Boolean(options.cdpUrl),
+      });
 
       const cdpEndpoint = options.cdpUrl;
       const browser = cdpEndpoint
@@ -253,9 +255,7 @@ export class Browser extends ServiceMap.Service<Browser>()("@browser/Browser", {
             yield* Effect.tryPromise({
               try: () => existingPage.evaluate(RUNTIME_SCRIPT),
               catch: toBrowserLaunchError,
-            }).pipe(
-              Effect.catchTag("BrowserLaunchError", () => Effect.void),
-            );
+            }).pipe(Effect.catchTag("BrowserLaunchError", () => Effect.void));
           }
         }
 
