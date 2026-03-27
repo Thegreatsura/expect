@@ -21,11 +21,11 @@ const GLOBAL_INSTALL_COMMANDS: Record<PackageManager, string> = {
 };
 
 const SKILL_COMMANDS: Record<PackageManager, string> = {
-  npm: "npx -y skills add https://github.com/millionco/expect --skill expect",
-  pnpm: "pnpm dlx skills add https://github.com/millionco/expect --skill expect",
-  yarn: "npx -y skills add https://github.com/millionco/expect --skill expect",
-  bun: "bunx skills add https://github.com/millionco/expect --skill expect",
-  vp: "npx -y skills add https://github.com/millionco/expect --skill expect",
+  npm: "npx -y skills add https://github.com/millionco/expect --skill expect -y",
+  pnpm: "pnpm dlx skills add https://github.com/millionco/expect --skill expect -y",
+  yarn: "npx -y skills add https://github.com/millionco/expect --skill expect -y",
+  bun: "bunx skills add https://github.com/millionco/expect --skill expect -y",
+  vp: "npx -y skills add https://github.com/millionco/expect --skill expect -y",
 };
 
 export { detectAvailableAgents };
