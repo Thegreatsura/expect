@@ -1,5 +1,13 @@
 # @expect/browser
 
+## 0.0.16
+
+### Patch Changes
+
+- fix
+- Updated dependencies
+  - @expect/cookies@0.0.16
+
 ## 0.0.15
 
 ### Patch Changes
