@@ -94,7 +94,9 @@ const execute = Effect.fnUntraced(
               steps: [],
               events: [],
             })
-        ).finalizeTextBlock(),
+        )
+          .finalizeTextBlock()
+          .synthesizeRunFinished(),
       ),
     );
 
@@ -227,7 +229,9 @@ export const executeAtomFn = cliAtomRuntime.fn(
                 steps: [],
                 events: [],
               })
-          ).finalizeTextBlock(),
+          )
+          .finalizeTextBlock()
+          .synthesizeRunFinished(),
         ),
       );
 

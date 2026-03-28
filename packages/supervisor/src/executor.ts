@@ -27,6 +27,7 @@ import {
   EXPECT_COOKIE_BROWSERS_ENV_NAME,
 } from "@expect/browser/mcp";
 import {
+  ALL_STEPS_TERMINAL_GRACE_MS,
   EXECUTION_CONTEXT_FILE_LIMIT,
   EXECUTION_RECENT_COMMIT_LIMIT,
   EXPECT_REPLAY_OUTPUT_ENV_NAME,
@@ -59,6 +60,19 @@ export interface ExecuteOptions {
   readonly liveViewUrl?: string;
   readonly testCoverage?: TestCoverageReport;
 }
+
+interface ExecutorAccumState {
+  readonly plan: ExecutedTestPlan;
+  readonly allTerminalSince: number | undefined;
+}
+
+const resolveTerminalTimestamp = (
+  executed: ExecutedTestPlan,
+  previous: number | undefined,
+) => {
+  if (!executed.allStepsTerminal) return undefined;
+  return previous ?? Date.now();
+};
 
 export class Executor extends ServiceMap.Service<Executor>()("@supervisor/Executor", {
   make: Effect.gen(function* () {
@@ -161,12 +175,30 @@ export class Executor extends ServiceMap.Service<Executor>()("@supervisor/Execut
 
       return agent.stream(streamOptions).pipe(
         Stream.mapAccum(
-          () => initial,
-          (executed, part) => {
-            const next = executed.addEvent(part);
-            return [next, [next]] as const;
+          (): ExecutorAccumState => ({
+            plan: initial,
+            allTerminalSince: undefined,
+          }),
+          (state, part) => {
+            const updated = state.plan.addEvent(part);
+            const terminalTimestamp = resolveTerminalTimestamp(
+              updated,
+              state.allTerminalSince,
+            );
+            const finalized =
+              terminalTimestamp !== undefined &&
+              !updated.hasRunFinished &&
+              Date.now() - terminalTimestamp >= ALL_STEPS_TERMINAL_GRACE_MS
+                ? updated.synthesizeRunFinished()
+                : updated;
+
+            return [
+              { plan: finalized, allTerminalSince: terminalTimestamp },
+              [finalized],
+            ] as const;
           },
         ),
+        Stream.takeUntil((executed) => executed.hasRunFinished),
         Stream.mapError((reason) => new ExecutionError({ reason })),
       );
     }, Stream.unwrap);

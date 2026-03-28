@@ -384,8 +384,16 @@ export class AcpClient extends ServiceMap.Service<AcpClient>()("@expect/AcpClien
       });
       yield* inactivityWatchdog.pipe(Effect.forkScoped);
 
+      const isMeaningfulActivity = (update: AcpSessionUpdate): boolean =>
+        update.sessionUpdate === "agent_message_chunk" ||
+        update.sessionUpdate === "agent_thought_chunk" ||
+        update.sessionUpdate === "tool_call" ||
+        update.sessionUpdate === "tool_call_update";
+
       return Stream.fromQueue(updatesQueue).pipe(
-        Stream.tap(() => Ref.set(lastActivityAt, Date.now())),
+        Stream.tap((update) =>
+          isMeaningfulActivity(update) ? Ref.set(lastActivityAt, Date.now()) : Effect.void,
+        ),
       );
     }, Stream.unwrap);
 

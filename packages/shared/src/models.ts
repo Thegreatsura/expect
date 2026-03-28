@@ -943,6 +943,36 @@ export class ExecutedTestPlan extends TestPlan.extend<ExecutedTestPlan>(
     return this;
   }
 
+  get hasRunFinished(): boolean {
+    return this.events.some((event) => event._tag === "RunFinished");
+  }
+
+  get allStepsTerminal(): boolean {
+    return (
+      this.steps.length > 0 &&
+      this.steps.every(
+        (step) =>
+          step.status === "passed" || step.status === "failed" || step.status === "skipped",
+      )
+    );
+  }
+
+  synthesizeRunFinished(): ExecutedTestPlan {
+    if (this.hasRunFinished) return this;
+    const hasFailures = this.steps.some((step) => step.status === "failed");
+    const status = hasFailures ? ("failed" as const) : ("passed" as const);
+    const passedCount = this.steps.filter((step) => step.status === "passed").length;
+    const failedCount = this.steps.filter((step) => step.status === "failed").length;
+    const skippedCount = this.steps.filter((step) => step.status === "skipped").length;
+    const parts = [`${passedCount} passed`, `${failedCount} failed`];
+    if (skippedCount > 0) parts.push(`${skippedCount} skipped`);
+    const summary = `Run auto-completed: ${parts.join(", ")}`;
+    return new ExecutedTestPlan({
+      ...this,
+      events: [...this.events, new RunFinished({ status, summary })],
+    });
+  }
+
   get activeStep(): TestPlanStep | undefined {
     return this.steps.find((step) => step.status === "active");
   }

@@ -10,6 +10,7 @@ import {
   StepStarted,
   StepCompleted,
   StepFailed,
+  StepSkipped,
   RunStarted,
   AgentText,
   RunFinished,
@@ -230,5 +231,145 @@ describe("dynamic step discovery", () => {
     const finalized = executed.finalizeTextBlock();
     expect(finalized.completedStepCount).toBe(1);
     expect(finalized.steps[0].status).toBe("passed");
+  });
+});
+
+describe("run completion detection", () => {
+  it("hasRunFinished returns false when no RunFinished event exists", () => {
+    const executed = makeEmptyExecuted();
+    expect(executed.hasRunFinished).toBe(false);
+  });
+
+  it("hasRunFinished returns true when RunFinished event exists", () => {
+    const executed = new ExecutedTestPlan({
+      ...makeEmptyPlan(),
+      events: [
+        new RunStarted({ plan: makeEmptyPlan() }),
+        new RunFinished({ status: "passed", summary: "All done" }),
+      ],
+    });
+    expect(executed.hasRunFinished).toBe(true);
+  });
+
+  it("allStepsTerminal returns false with no steps", () => {
+    const executed = makeEmptyExecuted();
+    expect(executed.allStepsTerminal).toBe(false);
+  });
+
+  it("allStepsTerminal returns false with an active step", () => {
+    let executed = makeEmptyExecuted();
+    executed = executed.applyMarker(
+      new StepStarted({ stepId: StepId.makeUnsafe("step-01"), title: "Active" }),
+    );
+    expect(executed.allStepsTerminal).toBe(false);
+  });
+
+  it("allStepsTerminal returns true when all steps are passed/failed/skipped", () => {
+    let executed = makeEmptyExecuted();
+    executed = executed.applyMarker(
+      new StepStarted({ stepId: StepId.makeUnsafe("step-01"), title: "First" }),
+    );
+    executed = executed.applyMarker(
+      new StepCompleted({ stepId: StepId.makeUnsafe("step-01"), summary: "OK" }),
+    );
+    executed = executed.applyMarker(
+      new StepStarted({ stepId: StepId.makeUnsafe("step-02"), title: "Second" }),
+    );
+    executed = executed.applyMarker(
+      new StepFailed({ stepId: StepId.makeUnsafe("step-02"), message: "Broke" }),
+    );
+    executed = executed.applyMarker(
+      new StepStarted({ stepId: StepId.makeUnsafe("step-03"), title: "Third" }),
+    );
+    executed = executed.applyMarker(
+      new StepSkipped({ stepId: StepId.makeUnsafe("step-03"), reason: "N/A" }),
+    );
+    expect(executed.allStepsTerminal).toBe(true);
+  });
+
+  it("synthesizeRunFinished creates RunFinished with correct status for mixed results", () => {
+    let executed = makeEmptyExecuted();
+    executed = executed.applyMarker(
+      new StepStarted({ stepId: StepId.makeUnsafe("step-01"), title: "First" }),
+    );
+    executed = executed.applyMarker(
+      new StepCompleted({ stepId: StepId.makeUnsafe("step-01"), summary: "OK" }),
+    );
+    executed = executed.applyMarker(
+      new StepStarted({ stepId: StepId.makeUnsafe("step-02"), title: "Second" }),
+    );
+    executed = executed.applyMarker(
+      new StepFailed({ stepId: StepId.makeUnsafe("step-02"), message: "Broke" }),
+    );
+
+    const result = executed.synthesizeRunFinished();
+    const runFinished = result.events.find(
+      (event): event is RunFinished => event._tag === "RunFinished",
+    );
+    expect(runFinished).toBeDefined();
+    expect(runFinished!.status).toBe("failed");
+    expect(runFinished!.summary).toBe("Run auto-completed: 1 passed, 1 failed");
+  });
+
+  it("synthesizeRunFinished marks passed when all steps pass", () => {
+    let executed = makeEmptyExecuted();
+    executed = executed.applyMarker(
+      new StepStarted({ stepId: StepId.makeUnsafe("step-01"), title: "First" }),
+    );
+    executed = executed.applyMarker(
+      new StepCompleted({ stepId: StepId.makeUnsafe("step-01"), summary: "OK" }),
+    );
+
+    const result = executed.synthesizeRunFinished();
+    const runFinished = result.events.find(
+      (event): event is RunFinished => event._tag === "RunFinished",
+    );
+    expect(runFinished).toBeDefined();
+    expect(runFinished!.status).toBe("passed");
+  });
+
+  it("synthesizeRunFinished includes skipped count in summary", () => {
+    let executed = makeEmptyExecuted();
+    executed = executed.applyMarker(
+      new StepStarted({ stepId: StepId.makeUnsafe("step-01"), title: "First" }),
+    );
+    executed = executed.applyMarker(
+      new StepCompleted({ stepId: StepId.makeUnsafe("step-01"), summary: "OK" }),
+    );
+    executed = executed.applyMarker(
+      new StepStarted({ stepId: StepId.makeUnsafe("step-02"), title: "Second" }),
+    );
+    executed = executed.applyMarker(
+      new StepSkipped({ stepId: StepId.makeUnsafe("step-02"), reason: "N/A" }),
+    );
+
+    const result = executed.synthesizeRunFinished();
+    const runFinished = result.events.find(
+      (event): event is RunFinished => event._tag === "RunFinished",
+    );
+    expect(runFinished!.summary).toBe("Run auto-completed: 1 passed, 0 failed, 1 skipped");
+  });
+
+  it("synthesizeRunFinished is idempotent when RunFinished already exists", () => {
+    let executed = makeEmptyExecuted();
+    executed = executed.applyMarker(
+      new StepStarted({ stepId: StepId.makeUnsafe("step-01"), title: "First" }),
+    );
+    executed = executed.applyMarker(
+      new StepCompleted({ stepId: StepId.makeUnsafe("step-01"), summary: "OK" }),
+    );
+
+    const withFinish = new ExecutedTestPlan({
+      ...executed,
+      events: [
+        ...executed.events,
+        new RunFinished({ status: "passed", summary: "Agent summary" }),
+      ],
+    });
+
+    const result = withFinish.synthesizeRunFinished();
+    expect(result).toBe(withFinish);
+    const allFinished = result.events.filter((event) => event._tag === "RunFinished");
+    expect(allFinished.length).toBe(1);
   });
 });

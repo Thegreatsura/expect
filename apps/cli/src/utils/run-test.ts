@@ -150,7 +150,9 @@ export const runHeadless = (options: HeadlessRunOptions) =>
                     steps: [],
                     events: [],
                   })
-              ).finalizeTextBlock(),
+              )
+                .finalizeTextBlock()
+                .synthesizeRunFinished(),
             ),
           );
 
