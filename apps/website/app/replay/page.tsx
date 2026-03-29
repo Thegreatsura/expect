@@ -66,6 +66,7 @@ const LiveMode = () => {
       events={events}
       steps={steps}
       live={isRunning}
+      autoPlay
       onAddEventsRef={handleAddEventsRef}
     />
   );
