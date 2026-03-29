@@ -53,7 +53,7 @@ const execute = Effect.fnUntraced(
         replayHost: input.replayHost,
         liveViewUrl,
       });
-      replayUrl = `${proxyHandle.url}/replay?live=true`;
+      replayUrl = `${proxyHandle.url}/replay`;
 
       yield* Effect.logInfo("Replay viewer available", { replayUrl });
       yield* Effect.sync(() => input.onReplayUrl?.(replayUrl!));
@@ -188,7 +188,7 @@ export const executeAtomFn = cliAtomRuntime.fn(
           replayHost: input.replayHost,
           liveViewUrl,
         });
-        replayUrl = `${proxyHandle.url}/replay?live=true`;
+        replayUrl = `${proxyHandle.url}/replay`;
 
         yield* Effect.logInfo("Replay viewer available", { replayUrl });
         yield* Effect.sync(() => input.onReplayUrl?.(replayUrl!));

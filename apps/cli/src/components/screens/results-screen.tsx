@@ -135,10 +135,15 @@ export const ResultsScreen = ({
         <Text color={statusColor} bold>
           {statusIcon} {statusLabel}
         </Text>
-        <Text color={COLORS.DIM}>
-          {"  "}
-          {report.steps.length} step{report.steps.length === 1 ? "" : "s"}
-        </Text>
+        {report.steps.length === 0 && (
+          <Text color={COLORS.DIM}>{"  "}no testing was necessary</Text>
+        )}
+        {report.steps.length > 0 && (
+          <Text color={COLORS.DIM}>
+            {"  "}
+            {report.steps.length} step{report.steps.length === 1 ? "" : "s"}
+          </Text>
+        )}
       </Box>
 
       <Box flexDirection="column" marginTop={1}>

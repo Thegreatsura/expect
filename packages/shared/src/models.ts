@@ -1067,7 +1067,9 @@ export class TestReport extends ExecutedTestPlan.extend<TestReport>("@supervisor
       "",
       this.summary,
       "",
-      `${summaryParts.join(", ")} out of ${this.steps.length} steps`,
+      this.steps.length === 0
+        ? "no testing was necessary"
+        : `${summaryParts.join(", ")} out of ${this.steps.length} steps`,
       "",
     ];
 
