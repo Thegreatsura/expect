@@ -76,9 +76,16 @@ export const startReplayProxy = Effect.fn("startReplayProxy")(function* (
   let cachedSteps: Record<string, unknown> = { title: "", status: "running", steps: [] };
   let runDone = false;
 
-  const markDoneIfTerminal = () => {
+  const markDoneIfTerminal = async () => {
     const status = cachedSteps?.status;
     if (status === "passed" || status === "failed") {
+      try {
+        const response = await fetch(`${options.liveViewUrl}/latest.json`);
+        if (response.ok) {
+          const data: unknown[] = await response.json();
+          if (Array.isArray(data) && data.length > 0) cachedEvents = data;
+        }
+      } catch {}
       runDone = true;
       cachedSteps = { ...cachedSteps, done: true };
     }
@@ -114,7 +121,7 @@ export const startReplayProxy = Effect.fn("startReplayProxy")(function* (
       if (!upstream.ok) return context.json(cachedSteps);
       const data = (await upstream.json()) as Record<string, unknown>;
       cachedSteps = data;
-      markDoneIfTerminal();
+      await markDoneIfTerminal();
       return context.json(cachedSteps);
     } catch {
       return context.json(cachedSteps);
@@ -126,7 +133,7 @@ export const startReplayProxy = Effect.fn("startReplayProxy")(function* (
       const body = await context.req.text();
       const parsed = JSON.parse(body) as Record<string, unknown>;
       cachedSteps = parsed;
-      markDoneIfTerminal();
+      await markDoneIfTerminal();
       const upstream = await fetch(`${options.liveViewUrl}/steps`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
