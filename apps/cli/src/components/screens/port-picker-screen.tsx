@@ -6,7 +6,7 @@ import { PORT_PICKER_VISIBLE_COUNT } from "../../constants";
 import { useColors } from "../theme-context";
 import { useNavigationStore, Screen } from "../../stores/use-navigation";
 import { useProjectPreferencesStore } from "../../stores/use-project-preferences";
-import { useListeningPorts } from "../../hooks/use-listening-ports";
+import { useListeningPorts, type Protocol } from "../../hooks/use-listening-ports";
 import { useScrollableList } from "../../hooks/use-scrollable-list";
 import { trackEvent } from "../../utils/session-analytics";
 import { SearchBar } from "../ui/search-bar";
@@ -25,9 +25,11 @@ interface PortEntry {
   readonly port: number;
   readonly processName: string;
   readonly cwd: string;
+  readonly protocol: Protocol;
 }
 
-const portToUrl = (port: number): string => `http://localhost:${port}`;
+const portEntryToUrl = (entry: PortEntry): string =>
+  `${entry.protocol}://localhost:${entry.port}`;
 
 const matchesSearch = (entry: PortEntry, query: string): boolean => {
   const lowerQuery = query.toLowerCase();
@@ -85,6 +87,7 @@ export const PortPickerScreen = ({
     port: listening.port,
     processName: listening.processName,
     cwd: listening.cwd,
+    protocol: listening.protocol,
   }));
 
   const filteredEntries = searchQuery
@@ -145,7 +148,10 @@ export const PortPickerScreen = ({
     }
 
     if (selectedPorts.size > 0 || customUrls.size > 0) {
-      const urls = [...selectedPorts].sort((left, right) => left - right).map(portToUrl);
+      const urls = entries
+        .filter((entry) => selectedPorts.has(entry.port))
+        .sort((left, right) => left.port - right.port)
+        .map(portEntryToUrl);
       navigateToTesting(urls);
       return;
     }
@@ -157,7 +163,7 @@ export const PortPickerScreen = ({
 
     const entry = filteredEntries[highlightedIndex];
     if (entry) {
-      navigateToTesting([portToUrl(entry.port)]);
+      navigateToTesting([portEntryToUrl(entry)]);
     }
   };
 
@@ -165,10 +171,12 @@ export const PortPickerScreen = ({
     const trimmed = value.trim();
     const portNumber = Number(trimmed);
     if (Number.isInteger(portNumber) && portNumber >= 1 && portNumber <= 65535) {
-      return portToUrl(portNumber);
+      const matchingEntry = entries.find((entry) => entry.port === portNumber);
+      const protocol = matchingEntry?.protocol ?? "http";
+      return `${protocol}://localhost:${portNumber}`;
     }
     if (!/^https?:\/\//i.test(trimmed)) {
-      return `http://${trimmed}`;
+      return `https://${trimmed}`;
     }
     return trimmed;
   };
@@ -261,7 +269,10 @@ export const PortPickerScreen = ({
   const isSkipHighlighted = highlightedIndex === skipIndex;
 
   const allSelectedUrls = [
-    ...[...selectedPorts].sort((left, right) => left - right).map(portToUrl),
+    ...entries
+      .filter((entry) => selectedPorts.has(entry.port))
+      .sort((left, right) => left.port - right.port)
+      .map(portEntryToUrl),
     ...customUrls,
   ];
 
@@ -291,7 +302,7 @@ export const PortPickerScreen = ({
           !isCustomUrlHighlighted &&
           highlightedEntry && (
             <Text color={COLORS.DIM}>
-              {figures.arrowRight} {portToUrl(highlightedEntry.port)}
+              {figures.arrowRight} {portEntryToUrl(highlightedEntry)}
             </Text>
           )}
         {allSelectedUrls.length === 0 && isSkipHighlighted && (
@@ -348,7 +359,7 @@ export const PortPickerScreen = ({
                   <Input
                     focus
                     value={customUrlValue}
-                    placeholder="http://localhost:4000 or staging.example.com"
+                    placeholder="https://localhost:4000 or staging.example.com"
                     onChange={setCustomUrlValue}
                     onSubmit={handleCustomUrlSubmit}
                   />

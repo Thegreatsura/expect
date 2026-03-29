@@ -1,16 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import { execSync } from "child_process";
+import { connect as tlsConnect } from "node:tls";
 import {
   LISTENING_PORTS_REFETCH_INTERVAL_MS,
   MIN_USER_PORT,
   MAX_PORT,
   EPHEMERAL_PORT_START,
+  TLS_PROBE_TIMEOUT_MS,
 } from "../constants";
+
+export type Protocol = "http" | "https";
 
 export interface ListeningPort {
   readonly port: number;
   readonly processName: string;
   readonly cwd: string;
+  readonly protocol: Protocol;
 }
 
 const NON_WEB_SERVER_PREFIXES = [
@@ -160,7 +165,26 @@ const parseLsofOutput = (output: string): LsofEntry[] => {
   return entries;
 };
 
-const detectListeningPorts = (): ListeningPort[] => {
+const probeProtocol = (port: number): Promise<Protocol> =>
+  new Promise((resolve) => {
+    const socket = tlsConnect(
+      { port, host: "localhost", rejectUnauthorized: false, timeout: TLS_PROBE_TIMEOUT_MS },
+      () => {
+        socket.destroy();
+        resolve("https");
+      },
+    );
+    socket.on("error", () => {
+      socket.destroy();
+      resolve("http");
+    });
+    socket.on("timeout", () => {
+      socket.destroy();
+      resolve("http");
+    });
+  });
+
+const detectListeningPorts = async (): Promise<ListeningPort[]> => {
   try {
     const output = execSync("lsof -iTCP -sTCP:LISTEN -nP", {
       encoding: "utf-8",
@@ -168,16 +192,26 @@ const detectListeningPorts = (): ListeningPort[] => {
     });
 
     const entries = parseLsofOutput(output);
-    const ports: ListeningPort[] = [];
 
-    for (const entry of entries) {
-      const resolved = resolveProcess(entry.pid, entry.commandName);
-      if (resolved === undefined) continue;
-      if (entry.port >= EPHEMERAL_PORT_START && !resolved.isFramework) continue;
-      ports.push({ port: entry.port, processName: resolved.name, cwd: resolved.cwd });
+    interface ResolvedEntry {
+      readonly port: number;
+      readonly processName: string;
+      readonly cwd: string;
     }
 
-    return ports.sort((left, right) => left.port - right.port);
+    const resolved: ResolvedEntry[] = [];
+    for (const entry of entries) {
+      const process = resolveProcess(entry.pid, entry.commandName);
+      if (process === undefined) continue;
+      if (entry.port >= EPHEMERAL_PORT_START && !process.isFramework) continue;
+      resolved.push({ port: entry.port, processName: process.name, cwd: process.cwd });
+    }
+
+    const protocols = await Promise.all(resolved.map((entry) => probeProtocol(entry.port)));
+
+    return resolved
+      .map((entry, index) => ({ ...entry, protocol: protocols[index]! }))
+      .sort((left, right) => left.port - right.port);
   } catch {
     return [];
   }
