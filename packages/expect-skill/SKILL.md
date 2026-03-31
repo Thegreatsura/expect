@@ -39,7 +39,7 @@ Then confirm installation succeeded by re-running `expect-cli --version`. Do not
 
 ## Timeout
 
-`expect-cli` runs a real browser and can take several minutes to complete — often 2–5 minutes depending on the number of test steps. Account for this when running and do not assume it will finish quickly.
+`expect-cli` runs a real browser and can take several minutes to complete — often 2–5 minutes depending on the number of test steps. **Do not set a timeout on the command.** If your tool runner requires a timeout, set it to at least 10 minutes (600s). A 120s or 300s timeout will frequently kill runs mid-test.
 
 ## The Command
 
