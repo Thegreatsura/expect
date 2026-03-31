@@ -105,18 +105,37 @@ const formatTestCoverageSection = (testCoverage: TestCoverageReport | undefined)
   return lines;
 };
 
-export const buildExecutionPrompt = (options: ExecutionPromptOptions): string => {
-  const mcpName = options.browserMcpServerName ?? DEFAULT_BROWSER_MCP_SERVER_NAME;
-  const changedFiles = options.changedFiles.slice(0, EXECUTION_CONTEXT_FILE_LIMIT);
-  const recentCommits = options.recentCommits.slice(0, EXECUTION_RECENT_COMMIT_LIMIT);
-  const rawDiff = options.diffPreview || "";
-  const diffPreview =
-    rawDiff.length > DIFF_PREVIEW_CHAR_LIMIT
-      ? rawDiff.slice(0, DIFF_PREVIEW_CHAR_LIMIT) + "\n... (truncated)"
-      : rawDiff;
+export const buildExecutionSystemPrompt = (browserMcpServerName?: string): string => {
+  const mcpName = browserMcpServerName ?? DEFAULT_BROWSER_MCP_SERVER_NAME;
 
   return [
     "You are executing a browser regression test directly from repository context.",
+    "Change-analysis protocol:",
+    "- Before opening the browser, read the developer request, changed files, test coverage, recent commits, and diff preview as one package of evidence.",
+    "- Analyze EVERY changed file listed in the prompt. Do not skip a file just because the user instruction sounds narrower.",
+    "- For each changed file, infer what behavior changed, what user flow reaches it, which adjacent surfaces share it, and whether it needs browser coverage or code-level verification.",
+    "- Group related files into concrete flows. A flow is an end-to-end path with a clear entry point, user action, and observable outcome.",
+    "- Treat the diff as the source of truth. The developer request is a starting point, not the full scope.",
+    "- If the diff preview is truncated or partial, use the changed file paths and commit context to widen coverage rather than narrowing it.",
+    "- Files without existing automated tests are higher risk. Give them deeper browser coverage when they touch runtime behavior.",
+    "",
+    "Coverage planning rules:",
+    "- Minimum bar: every changed route, page, form, mutation, API interaction, auth gate, shared component, shared hook, or shared utility that affects runtime behavior must be covered by at least one tested flow or one code-level check.",
+    "- When shared code changes, test multiple consumers instead of one happy path.",
+    "- If a diff changes validation, branching logic, permissions, loading, empty, or error handling, include the matching negative or edge-case path.",
+    "- If a diff changes persistence or mutations, verify the before/after state and one durability check such as refresh, revisit, or back-navigation when relevant.",
+    "- If multiple files implement one feature, test the full user journey end-to-end instead of isolated clicks.",
+    "- Before RUN_COMPLETED, make sure every changed file is accounted for by a tested flow, a code-level verification, or an explicit blocker with evidence.",
+    "",
+    "Execution strategy:",
+    "- First master the primary flow the developer asked for. Verify it thoroughly before moving on.",
+    "- Once the primary flow passes, test additional related flows suggested by the changed files, diff semantics, and route context. The scope strategy below specifies how many — follow it.",
+    "- For each flow, test both the happy path AND at least one edge case or negative path (e.g. empty input, missing data, back-navigation, double-click, refresh mid-flow).",
+    "- Use the same browser session throughout unless the app forces you into a different path.",
+    "- Execution style is assertion-first: navigate, act, validate, recover once, then fail with evidence if still blocked.",
+    "- Create your own step structure while executing. Use stable sequential IDs like step-01, step-02, step-03.",
+    "- Take your time. A thorough run that catches real issues is more valuable than a fast run that misses them. Do not rush to RUN_COMPLETED.",
+    "",
     `You have browser tools via the MCP server named "${mcpName}":`,
     "",
     "1. open — Launch a browser and navigate to a URL.",
@@ -124,9 +143,7 @@ export const buildExecutionPrompt = (options: ExecutionPromptOptions): string =>
     "3. screenshot — Capture page state. Set mode: 'snapshot' (ARIA accessibility tree, default and preferred), 'screenshot' (PNG image), or 'annotated' (PNG with numbered labels on interactive elements).",
     "4. console_logs — Get browser console messages. Filter by type ('error', 'warning', 'log'). Use after navigation or interactions to catch errors.",
     "5. network_requests — Get captured network requests. Filter by method, URL substring, or resource type ('xhr', 'fetch', 'document').",
-    "6. performance_metrics — Collect a full performance trace: Web Vitals, TTFB, Long Animation Frames (LoAF) with script-level attribution, and resource breakdown. Writes the trace to a file in /tmp and returns the path. Read the file for script attribution details (source URL, function name, forced layout duration).",
-    "7. accessibility_audit — Run a WCAG accessibility audit (axe-core + IBM Equal Access). Returns violations sorted by severity with selectors, HTML context, and fix guidance. Call after opening a page or completing a significant interaction.",
-    "8. close — Close the browser and end the session.",
+    "6. close — Close the browser and end the session.",
     "",
     "Strongly prefer screenshot with mode 'snapshot' for observing page state — the ARIA tree is fast, cheap, and sufficient for almost all assertions.",
     "Only use mode 'screenshot' or 'annotated' when you need to verify something purely visual (layout, colors, images) that the accessibility tree cannot capture.",
@@ -158,15 +175,6 @@ export const buildExecutionPrompt = (options: ExecutionPromptOptions): string =>
     "  playwright: await ref('e3').fill('test@example.com'); await ref('e5').fill('secret'); await ref('e6').click(); await page.waitForLoadState('networkidle'); return await page.innerText('.result');",
     "  playwright: await ref('e1').click(); await page.waitForURL('**/about');",
     "  playwright: return { url: page.url(), title: await page.title() };",
-    "",
-    "Execution strategy:",
-    "- First master the primary flow the developer asked for. Verify it thoroughly before moving on.",
-    "- Once the primary flow passes, test additional related flows suggested by the changed files and route context. The scope strategy below specifies how many — follow it.",
-    "- For each flow, test both the happy path AND at least one edge case or negative path (e.g. empty input, missing data, back-navigation, double-click, refresh mid-flow).",
-    "- Use the same browser session throughout unless the app forces you into a different path.",
-    "- Execution style is assertion-first: navigate, act, validate, recover once, then fail with evidence if still blocked.",
-    "- Create your own step structure while executing. Use stable sequential IDs like step-01, step-02, step-03.",
-    "- Take your time. A thorough run that catches real issues is more valuable than a fast run that misses them. Do not rush to RUN_COMPLETED.",
     "",
     "Code-level testing fallback:",
     "Not all changes need a browser. If the diff only touches internal logic — utilities, algorithms, data transforms, backend modules, CLI tooling, build scripts — with no user-visible surface, test the code directly instead of forcing a browser session.",
@@ -202,7 +210,10 @@ export const buildExecutionPrompt = (options: ExecutionPromptOptions): string =>
     "- Call screenshot with mode 'snapshot' to capture the ARIA tree.",
     "- Use playwright to gather diagnostics: return { url: page.url(), title: await page.title(), text: await page.innerText('body').then(t => t.slice(0, 500)) };",
     "- Only take a visual screenshot if the failure might be layout/rendering related.",
-    "- Summarize the failure category and the most important evidence inside <why-it-failed>.",
+    "- Make <why-it-failed> dense and copy-pasteable for a follow-up coding agent. Do not write a vague summary like 'button missing' or 'page broken'.",
+    "- Use a single-line bug report format inside <why-it-failed>: category=<allowed-category>; expected=<expected behavior>; actual=<what happened>; url=<current url>; evidence=<key text, console error, network failure, or DOM/snapshot observation>; repro=<short reproduction sequence>; likely-scope=<changed file, component, route, or unknown>; next-agent-prompt=<one sentence the user can paste into an agent to investigate or fix it>.",
+    "- Prefer concrete values over placeholders. Include exact labels, URLs, error text, refs, status codes, and changed-file paths when known.",
+    "- If the failure appears to come from a likely regression in the changed code, say so explicitly in likely-scope and next-agent-prompt.",
     "",
     "Stability heuristics:",
     "- After navigation or major UI changes, use playwright to wait for the page to settle (e.g. await page.waitForLoadState('networkidle')).",
@@ -223,12 +234,20 @@ export const buildExecutionPrompt = (options: ExecutionPromptOptions): string =>
     "- If you encounter a blocker such as login, passkey/manual user interaction, permissions, captchas, destructive confirmations, missing data, or an unexpected state, stop and report it instead of improvising repeated actions.",
     "- Do not get stuck in wait-action-wait loops. Every retry should be justified by something newly observed.",
     "",
-    "REQUIRED before emitting RUN_COMPLETED — you MUST complete all three steps:",
-    "1. Call accessibility_audit to check for WCAG violations. Report critical or serious violations as ASSERTION_FAILED steps.",
-    "2. Call performance_metrics to collect the performance trace. If any Web Vital is rated 'poor' or any LoAF has blockingDuration > 150ms, report it as an ASSERTION_FAILED step.",
-    "3. Call close exactly once to flush the browser session video to disk.",
-    "Do not emit RUN_COMPLETED until all three steps above are done. Skipping accessibility_audit or performance_metrics is a test execution failure.",
-    "",
+    "Before emitting RUN_COMPLETED, call the close tool exactly once so the browser session flushes the video to disk.",
+  ].join("\n");
+};
+
+export const buildExecutionPrompt = (options: ExecutionPromptOptions): string => {
+  const changedFiles = options.changedFiles.slice(0, EXECUTION_CONTEXT_FILE_LIMIT);
+  const recentCommits = options.recentCommits.slice(0, EXECUTION_RECENT_COMMIT_LIMIT);
+  const rawDiff = options.diffPreview || "";
+  const diffPreview =
+    rawDiff.length > DIFF_PREVIEW_CHAR_LIMIT
+      ? rawDiff.slice(0, DIFF_PREVIEW_CHAR_LIMIT) + "\n... (truncated)"
+      : rawDiff;
+
+  return [
     "Environment:",
     `- Base URL: ${options.baseUrl ?? "not provided"}`,
     `- Headed mode preference: ${options.isHeadless ? "headless" : "headed"}`,
@@ -259,6 +278,11 @@ export const buildExecutionPrompt = (options: ExecutionPromptOptions): string =>
     "",
     "Diff preview:",
     diffPreview || "No diff preview available",
+    "",
+    "Coverage planning reminder:",
+    "- Analyze every changed file below before choosing what to test.",
+    "- Derive flows from the diff itself, not just the developer request.",
+    "- Account for each changed file with either a browser flow, a code-level verification, or an explicit blocker.",
     "",
     "Scope strategy:",
     ...getScopeStrategy(options.scope),
