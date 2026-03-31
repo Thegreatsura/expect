@@ -271,10 +271,7 @@ export const getPerformanceTrace = (): PerformanceTrace => {
       duration: Math.round(entry.duration),
     }));
 
-    const totalTransferSizeBytes = mapped.reduce(
-      (sum, entry) => sum + entry.transferSize,
-      0,
-    );
+    const totalTransferSizeBytes = mapped.reduce((sum, entry) => sum + entry.transferSize, 0);
 
     const slowest = [...mapped]
       .sort((left, right) => right.duration - left.duration)

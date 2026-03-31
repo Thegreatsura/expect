@@ -75,9 +75,7 @@ export const runAccessibilityAudit = Effect.fn("runAccessibilityAudit")(function
   page: Page,
   options: AccessibilityAuditOptions = {},
 ) {
-  const { default: AxeBuilder } = yield* Effect.promise(
-    () => import("@axe-core/playwright"),
-  );
+  const { default: AxeBuilder } = yield* Effect.promise(() => import("@axe-core/playwright"));
 
   let builder = new AxeBuilder({ page });
   const tags = options.tags ?? DEFAULT_WCAG_TAGS;
@@ -162,11 +160,13 @@ export const runAccessibilityAudit = Effect.fn("runAccessibilityAudit")(function
           description: issue.message,
           helpUrl: `https://able.ibm.com/rules/archives/latest/doc/${issue.ruleId}`,
           wcagTags: [],
-          nodes: [{
-            selector: issue.path?.dom ?? "",
-            html: issue.snippet ?? "",
-            failureSummary: issue.message,
-          }],
+          nodes: [
+            {
+              selector: issue.path?.dom ?? "",
+              html: issue.snippet ?? "",
+              failureSummary: issue.message,
+            },
+          ],
         }))
     : [];
 

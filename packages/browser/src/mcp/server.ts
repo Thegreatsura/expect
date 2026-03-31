@@ -312,8 +312,7 @@ export const createBrowserMcpServer = <E>(
           const page = yield* session.requirePage();
           const trace = yield* evaluateRuntime(page, "getPerformanceTrace");
 
-          const hasMetrics =
-            trace.webVitals.fcp || trace.webVitals.lcp || trace.webVitals.inp;
+          const hasMetrics = trace.webVitals.fcp || trace.webVitals.lcp || trace.webVitals.inp;
           if (!hasMetrics && trace.longAnimationFrames.length === 0) {
             return textResult("No performance metrics available yet.");
           }
@@ -326,16 +325,16 @@ export const createBrowserMcpServer = <E>(
             writeFileSync(tracePath, traceDocument);
           });
 
-          const summary = [
-            `Performance trace written to: ${tracePath}`,
-            "",
-            "Web Vitals:",
-          ];
+          const summary = [`Performance trace written to: ${tracePath}`, "", "Web Vitals:"];
           const { webVitals } = trace;
-          if (webVitals.fcp) summary.push(`  FCP: ${webVitals.fcp.value}ms (${webVitals.fcp.rating})`);
-          if (webVitals.lcp) summary.push(`  LCP: ${webVitals.lcp.value}ms (${webVitals.lcp.rating})`);
-          if (webVitals.cls) summary.push(`  CLS: ${webVitals.cls.value} (${webVitals.cls.rating})`);
-          if (webVitals.inp) summary.push(`  INP: ${webVitals.inp.value}ms (${webVitals.inp.rating})`);
+          if (webVitals.fcp)
+            summary.push(`  FCP: ${webVitals.fcp.value}ms (${webVitals.fcp.rating})`);
+          if (webVitals.lcp)
+            summary.push(`  LCP: ${webVitals.lcp.value}ms (${webVitals.lcp.rating})`);
+          if (webVitals.cls)
+            summary.push(`  CLS: ${webVitals.cls.value} (${webVitals.cls.rating})`);
+          if (webVitals.inp)
+            summary.push(`  INP: ${webVitals.inp.value}ms (${webVitals.inp.rating})`);
           if (trace.navigation) {
             summary.push(`  TTFB: ${trace.navigation.ttfb}ms`);
           }
@@ -346,7 +345,9 @@ export const createBrowserMcpServer = <E>(
             );
             summary.push(`  Worst blocking duration: ${Math.round(worstBlocking)}ms`);
           }
-          summary.push(`\nResources: ${trace.resources.totalCount} loaded (${Math.round(trace.resources.totalTransferSizeBytes / 1024)}KB total)`);
+          summary.push(
+            `\nResources: ${trace.resources.totalCount} loaded (${Math.round(trace.resources.totalTransferSizeBytes / 1024)}KB total)`,
+          );
           summary.push(`\nFull trace: ${tracePath}`);
 
           return textResult(summary.join("\n"));

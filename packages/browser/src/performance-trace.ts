@@ -87,9 +87,7 @@ export const formatPerformanceTrace = (trace: PerformanceTrace): string => {
             script.forcedStyleAndLayoutDuration > FORCED_LAYOUT_WARN_MS
               ? ` ⚠ forced layout: ${formatMs(script.forcedStyleAndLayoutDuration)}`
               : "";
-          lines.push(
-            `- \`${functionName}\` — ${formatMs(script.duration)}${layoutWarn}`,
-          );
+          lines.push(`- \`${functionName}\` — ${formatMs(script.duration)}${layoutWarn}`);
           lines.push(`  - Invoker: ${script.invoker} (${script.invokerType})`);
           lines.push(`  - Source: ${source}`);
         }
