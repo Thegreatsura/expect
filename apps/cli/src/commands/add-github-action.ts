@@ -42,9 +42,9 @@ const DLX_COMMANDS: Record<PackageManager, string> = {
 
 const INSTALL_COMMANDS: Record<PackageManager, string> = {
   npm: "npm ci",
-  pnpm: "pnpm install",
+  pnpm: "pnpm install --frozen-lockfile",
   yarn: "yarn install --frozen-lockfile",
-  bun: "bun install",
+  bun: "bun install --frozen-lockfile",
   deno: "deno install",
   vp: "npm ci",
 };
@@ -110,8 +110,9 @@ ${setupSteps}
 };
 
 const buildSetupSteps = (packageManager: PackageManager, install: string): string => {
-  if (packageManager === "pnpm") {
-    return `
+  switch (packageManager) {
+    case "pnpm":
+      return `
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v4
@@ -121,18 +122,16 @@ const buildSetupSteps = (packageManager: PackageManager, install: string): strin
 
       - name: Install dependencies
         run: ${install}`;
-  }
 
-  if (packageManager === "bun") {
-    return `
+    case "bun":
+      return `
       - uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
         run: ${install}`;
-  }
 
-  if (packageManager === "yarn") {
-    return `
+    case "yarn":
+      return `
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -140,9 +139,21 @@ const buildSetupSteps = (packageManager: PackageManager, install: string): strin
 
       - name: Install dependencies
         run: ${install}`;
-  }
 
-  return `
+    case "deno":
+      return `
+      - uses: denoland/setup-deno@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: ${install}`;
+
+    case "npm":
+    case "vp":
+      return `
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -150,6 +161,7 @@ const buildSetupSteps = (packageManager: PackageManager, install: string): strin
 
       - name: Install dependencies
         run: ${install}`;
+  }
 };
 
 export const runAddGithubAction = async (options: AddGithubActionOptions = {}) => {
