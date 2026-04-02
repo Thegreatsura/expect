@@ -50,6 +50,7 @@ interface CommanderOpts {
   url?: string[];
 }
 
+// HACK: when adding or changing options/commands below, update the Options and Commands tables in README-new.md
 const program = new Command()
   .name("expect")
   .description("AI-powered browser testing for your changes")
@@ -168,6 +169,7 @@ const runInteractiveForTarget = async (target: Target, opts: CommanderOpts) => {
 
 program
   .command("init")
+  .alias("setup")
   .description("set up expect for your coding agent")
   .option("-y, --yes", "skip confirmation prompts")
   .action(async (opts: { yes?: boolean }) => {
