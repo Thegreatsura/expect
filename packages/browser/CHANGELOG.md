@@ -1,5 +1,14 @@
 # @expect/browser
 
+## 0.0.20
+
+### Patch Changes
+
+- lots of agent improvements
+- Updated dependencies
+  - @expect/cookies@0.0.20
+  - @expect/shared@0.0.20
+
 ## 0.0.19
 
 ### Patch Changes
