@@ -3,7 +3,7 @@ import { Box, Text, render } from "ink";
 import InkSpinner from "ink-spinner";
 import pc from "picocolors";
 import figures from "figures";
-import { isRunningInAgent } from "../utils/is-running-in-agent";
+import { isRunningInAgent } from "@expect/shared/launched-from";
 import { isHeadless } from "../utils/is-headless";
 import { runAudit, type PackageAuditResult, type ScriptResult } from "../utils/audit";
 import { COLORS } from "../components/theme-context";

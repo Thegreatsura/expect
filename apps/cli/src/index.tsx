@@ -9,7 +9,7 @@ import { runAddGithubAction } from "./commands/add-github-action";
 import { runAddSkill } from "./commands/add-skill";
 import { runAuditCommand } from "./commands/audit";
 import { runWatchCommand } from "./commands/watch";
-import { isRunningInAgent } from "./utils/is-running-in-agent";
+import { isRunningInAgent } from "@expect/shared/launched-from";
 import { isHeadless } from "./utils/is-headless";
 import { type AgentBackend, detectAvailableAgents } from "@expect/agent";
 import { useNavigationStore, Screen } from "./stores/use-navigation";
