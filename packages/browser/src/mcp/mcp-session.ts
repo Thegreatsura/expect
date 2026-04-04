@@ -213,7 +213,10 @@ export class McpSession extends ServiceMap.Service<McpSession>()("@browser/McpSe
       }
     });
 
-    const open = Effect.fn("McpSession.open")(function* (rawUrl: string, options: OpenOptions = {}) {
+    const open = Effect.fn("McpSession.open")(function* (
+      rawUrl: string,
+      options: OpenOptions = {},
+    ) {
       const url = resolveUrl(rawUrl);
       yield* Effect.annotateCurrentSpan({ url });
       yield* Ref.set(savedScreenshotPathsRef, []);
