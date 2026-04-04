@@ -2150,6 +2150,9 @@ function CommandRow({ command, fade }: { command: string; fade?: boolean }) {
           )}
         </AnimatePresence>
       </button>
+      <span role="alert" className="sr-only">
+        {copied ? "Copied!" : ""}
+      </span>
     </motion.div>
   );
 }
