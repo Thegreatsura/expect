@@ -1,8 +1,5 @@
 # Expect
 
-[version](https://npmjs.com/package/expect-cli)
-[downloads](https://npmjs.com/package/expect-cli)
-
 **Expect** tests your app in a browser so you don't have to.
 
 - Run `/expect` inside Claude Code, Codex, [and more](https://github.com/millionco/expect#supported-agents)
