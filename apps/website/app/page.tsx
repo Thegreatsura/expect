@@ -1241,7 +1241,7 @@ export default function HomePage() {
                   <div
                     className={`left-0 top-0 [white-space-collapse:preserve] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[16px]/5.75 transition-colors duration-200 ${activeTab === "cli" ? "text-[#414141]" : "text-[#A0A0A0]"}`}
                   >
-                    npx
+                    cli
                   </div>
                 </button>
                 <button
