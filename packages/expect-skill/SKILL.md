@@ -41,7 +41,7 @@ Or add it to your MCP config (`.mcp.json`, `.cursor/mcp.json`, etc.):
 These are the ONLY tools you should use for browser interactions. Do NOT use any other browser automation tools.
 
 1. **open** — Launch a browser and navigate to a URL. Pass `cookies=true` to reuse local browser cookies. Pass `browser='webkit'` or `browser='firefox'` for cross-browser testing. Pass `cdp='ws://...'` to connect to an existing Chrome instance.
-2. **playwright** — Execute Playwright code in Node.js context. Globals: `page`, `context`, `browser`, `ref` (snapshot ref ID → Locator). Use `return` to send values back. Set `snapshotAfter=true` to auto-snapshot after DOM-changing actions.
+2. **playwright** — Execute Playwright code in Node.js context. Globals: `page`, `context`, `browser`, `ref` (snapshot ref ID → Locator). Use `return` to collect data — response is JSON: `{ result: <value>, resultFile: '<path>' }`. The result file persists until `close` so you can read or grep it later. Batch multiple actions AND data collection into a single `playwright` call. Set `snapshotAfter=true` to auto-snapshot after DOM-changing actions (response adds `snapshot` alongside result).
 3. **screenshot** — Capture page state. Modes: `snapshot` (ARIA accessibility tree with element refs — preferred), `screenshot` (PNG image), `annotated` (PNG with numbered labels on interactive elements). Pass `fullPage=true` for full scrollable content.
 4. **console_logs** — Get browser console messages. Filter by type (`error`, `warning`, `log`). Pass `clear=true` to reset after reading.
 5. **network_requests** — Get captured HTTP requests with automatic issue detection (4xx/5xx failures, duplicate requests, mixed content). Filter by method, URL, or resource type.
@@ -49,38 +49,41 @@ These are the ONLY tools you should use for browser interactions. Do NOT use any
 7. **accessibility_audit** — Run a WCAG accessibility audit using axe-core + IBM Equal Access. Returns violations sorted by severity with CSS selectors, HTML context, and fix guidance.
 8. **close** — Close the browser and end the session. Always call this when done — it flushes the session video and screenshots to disk.
 
-## Workflow
+## Execution Model
 
-Always run browser interactions inside a subagent/sub-task to keep browser state isolated from your main conversation.
+You have two execution modes — pick the right one.
 
-1. Spawn browser work in a background subagent so MCP tool calls don't block your main thread. Instruct it to use ONLY the expect MCP tools.
-2. Inside the subagent: `open` → interact with `playwright` and `screenshot` → observe with `console_logs` and `network_requests` → audit with `accessibility_audit` and `performance_metrics` → `close`.
-3. Return only the relevant findings (bugs, evidence, answers) to the main context.
-4. One browser session per subagent. For cross-browser testing (WebKit, Firefox), spawn separate subagents.
+**Background (subagent):** Spawn browser work in a subagent when you have other work to do in parallel. Keep at most 1 background subagent running at a time — kill stale ones before spawning new ones.
+
+**Foreground (sync):** Run browser work synchronously when the test result is the only thing blocking completion. Don't manufacture busywork just to justify a subagent.
+
+Inside either mode: `open` → interact with `playwright` and `screenshot` → observe with `console_logs` and `network_requests` → audit with `accessibility_audit` and `performance_metrics` → `close`. One browser session at a time.
 
 ## Snapshot Workflow
 
 Prefer screenshot mode `snapshot` for observing page state. Use `screenshot` or `annotated` only for purely visual checks.
 
 1. Call screenshot with `mode='snapshot'` to get the ARIA tree with refs like `[ref=e4]`.
-2. Use `ref()` in playwright to act on elements: `await ref('e3').fill('test@example.com'); await ref('e4').click();`
+2. Use `ref()` in playwright to act on elements AND collect data in a single call:
+   `await ref('e3').fill('test@example.com'); await ref('e4').fill('password'); await ref('e5').click(); return { title: await page.title(), url: page.url() };`
 3. Take a new snapshot only when the page structure changes (navigation, modal open/close, new content loaded).
 4. Always snapshot first, then use `ref()` to act. Never guess CSS selectors when refs are available.
 
-Batch actions that do NOT change DOM structure into a single playwright call. Do NOT batch across DOM-changing boundaries (dropdown open, modal, dialog, navigation). After a DOM-changing action, take a new snapshot for fresh refs.
+**Response format:**
+
+- No return → `"OK"`
+- With return → `{ result: <your value>, resultFile: "/tmp/.../result-<id>.json" }`
+- With return + `snapshotAfter=true` → `{ result: <value>, resultFile: "<path>", snapshot: { tree, refs, stats } }`
+- `snapshotAfter=true` only → `{ snapshot: { tree, refs, stats } }`
+
+The `resultFile` persists until the session closes. Read or grep it to reference collected data across multiple steps.
+
+Batch all actions that share the same page state into a single `playwright` call — fills, clicks, AND data collection. Do NOT batch across DOM-changing boundaries (dropdown open, modal, dialog, navigation). After a DOM-changing action, use `snapshotAfter=true` or take a new snapshot for fresh refs.
 
 ## Writing Test Instructions
 
-Think like a user trying to break the feature, not a QA checklist confirming it renders.
-
 **Bad:** "Check that the login form renders"
 **Good:** "Submit the login form empty, with invalid email, with wrong password, and with valid credentials. Verify error messages, redirect on success, and console errors."
-
-**Bad:** "Verify the settings page works"
-**Good:** "Change display name to empty string, to a 500-char string, and to a valid name. Toggle every switch off then on. Hit save without changes. Verify toasts, validation errors, and that refreshing persists the update."
-
-**Bad:** "Test the search feature"
-**Good:** "Search with no query, a single character, a query with no results, and a valid query. Click a result, go back, verify the previous query is preserved. Rapid-fire 5 searches and confirm no stale results appear."
 
 ## Best Practices
 
@@ -97,10 +100,10 @@ Think like a user trying to break the feature, not a QA checklist confirming it 
 
 You MUST complete every step. A skipped step is a failed task.
 
-1. Spawn a subagent that uses the expect MCP tools to test the changes with adversarial instructions
-2. Continue working on other tasks while it runs
-3. When the subagent returns, read the full output — count failures, read accessibility and performance results
-4. If ANY failure: fix the code, then immediately spawn a NEW subagent to re-verify
+1. Run the expect MCP tools to test the changes with adversarial instructions — background subagent if you have other work, foreground if this is the last step
+2. If backgrounded, continue working. If a previous subagent is still running and testing stale code, kill it first.
+3. When it finishes, read the full output — count failures, read accessibility and performance results
+4. If ANY failure: fix the code, then immediately run a NEW test to re-verify
 5. Repeat 3-4 until all checks pass with 0 failures
 6. Only then: state the claim WITH the passing evidence
 
@@ -108,9 +111,9 @@ You MUST complete every step. A skipped step is a failed task.
 
 You will reach for these — recognize them and do the opposite:
 
-- "I'll just wait for this one test" — No. Spawn a subagent. Always.
-- "It'll be quick" — No. Even 30 seconds blocks your main thread. Subagent.
-- "I need the result before I can continue" — No. Continue with other tasks. Read the result when the subagent returns.
-- "I'll run it in the foreground so I can watch" — No. Background it. Read the output when done.
-- "Let me re-run manually to be sure" — No. Spawn a new subagent for the re-run.
+- "I'll spawn a second subagent for this other feature" — No. Kill the stale one first. One background subagent at a time.
+- "The old subagent might still be useful" — Is it testing code you already changed? Kill it. Stale verification is noise.
+- "I'll make one `playwright` call per action" — No. Put the whole sequence in one `playwright` call. `ref('e3').fill(...); ref('e5').fill(...); ref('e7').click();` — that's one tool call, not three.
+- "I need a fresh snapshot between fills" — No. Fills don't change page structure. Batch them in one `playwright` script.
+- "I'll run it in the foreground even though I have other work" — No. Background it if you have tasks to do. But if the test is the last thing, sync is fine.
 

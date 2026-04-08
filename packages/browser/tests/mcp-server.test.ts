@@ -137,7 +137,8 @@ describe("MCP server tools", () => {
     const verifyResult = await callTool("playwright", {
       code: `return await page.locator('#result').innerText();`,
     });
-    expect(textContent(verifyResult)).toContain("Clicked: hello@test.com");
+    const verifyData = JSON.parse(textContent(verifyResult));
+    expect(verifyData.result).toContain("Clicked: hello@test.com");
   });
 
   it("screenshot modes return correct content types", async () => {
@@ -190,6 +191,7 @@ describe("MCP server tools", () => {
     });
     const data = JSON.parse(textContent(result));
     expect(data).toHaveProperty("result");
+    expect(data).toHaveProperty("resultFile");
     expect(data).toHaveProperty("snapshot");
     expect(data.snapshot).toHaveProperty("tree");
     expect(data.snapshot).toHaveProperty("refs");
@@ -213,12 +215,16 @@ describe("MCP server tools", () => {
     await callTool("close");
   });
 
-  it("playwright without snapshotAfter returns plain result", async () => {
+  it("playwright without snapshotAfter returns result with file path", async () => {
     await callTool("open", { url: testServerUrl });
     const result = await callTool("playwright", {
       code: `return 42;`,
     });
-    expect(textContent(result)).toBe("42");
+    const data = JSON.parse(textContent(result));
+    expect(data.result).toBe(42);
+    expect(data.resultFile).toBeDefined();
+    expect(typeof data.resultFile).toBe("string");
+    expect(data.resultFile).toContain("playwright-results");
     await callTool("close");
   });
 

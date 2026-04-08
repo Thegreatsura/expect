@@ -1,3 +1,4 @@
+import * as crypto from "node:crypto";
 import * as path from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -9,21 +10,79 @@ import { runAccessibilityAudit } from "../accessibility";
 import { formatPerformanceTrace } from "../performance-trace";
 import { McpSession } from "./mcp-session";
 import { OverlayController } from "./overlay-controller";
-import { DUPLICATE_REQUEST_WINDOW_MS, TMP_ARTIFACT_OUTPUT_DIRECTORY } from "./constants";
+import {
+  DUPLICATE_REQUEST_WINDOW_MS,
+  MAX_STRINGIFY_LENGTH,
+  PLAYWRIGHT_RESULTS_DIR,
+  TMP_ARTIFACT_OUTPUT_DIRECTORY,
+} from "./constants";
 
 const textResult = (text: string) => ({
   content: [{ type: "text" as const, text }],
 });
+
+const NON_SERIALIZABLE_CONSTRUCTORS = new Set([
+  "Locator",
+  "ElementHandle",
+  "JSHandle",
+  "Frame",
+  "Page",
+  "BrowserContext",
+  "Browser",
+  "CDPSession",
+]);
+
+const safeToString = (value: unknown): string => {
+  try {
+    return String(value);
+  } catch {
+    return "[unserializable]";
+  }
+};
 
 const safeJsonStringify = (data: unknown): string => {
   const seen = new WeakSet();
   return JSON.stringify(
     data,
     (_key, value) => {
-      if (typeof value === "object" && value !== null) {
-        if (seen.has(value)) return "[Circular]";
-        seen.add(value);
+      if (value === undefined) return undefined;
+      if (value === null) return null;
+
+      switch (typeof value) {
+        case "bigint":
+          return `${value}n`;
+        case "function":
+          return `[Function: ${value.name || "anonymous"}]`;
+        case "symbol":
+          return safeToString(value);
+        case "object":
+          break;
+        case "string":
+          if (value.length > MAX_STRINGIFY_LENGTH) {
+            return `${value.slice(0, MAX_STRINGIFY_LENGTH)}… [truncated ${value.length - MAX_STRINGIFY_LENGTH} chars]`;
+          }
+          return value;
+        default:
+          return value;
       }
+
+      if (seen.has(value)) return "[Circular]";
+      seen.add(value);
+
+      if (Buffer.isBuffer(value)) return `[Buffer: ${value.length} bytes]`;
+      if (value instanceof RegExp) return safeToString(value);
+      if (value instanceof Error) return { error: value.name, message: value.message };
+      if (value instanceof Map) return Array.from(value.entries());
+      if (value instanceof Set) return [...value];
+
+      const constructorName = value.constructor?.name;
+      if (
+        typeof constructorName === "string" &&
+        NON_SERIALIZABLE_CONSTRUCTORS.has(constructorName)
+      ) {
+        return `[${constructorName}: ${safeToString(value)}]`;
+      }
+
       return value;
     },
     2,
@@ -39,29 +98,43 @@ const imageResult = (base64: string) => ({
 // HACK: get AsyncFunction constructor for dynamic code evaluation in playwright tool
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
 
+const writeResultFile = (fileSystem: FileSystem, content: string) =>
+  Effect.gen(function* () {
+    const id = crypto.randomBytes(4).toString("hex");
+    const filePath = path.join(PLAYWRIGHT_RESULTS_DIR, `result-${id}.json`);
+    yield* fileSystem.makeDirectory(PLAYWRIGHT_RESULTS_DIR, { recursive: true });
+    yield* fileSystem.writeFileString(filePath, content);
+    return filePath;
+  }).pipe(
+    Effect.catchTag("PlatformError", (error) =>
+      Effect.logDebug("Failed to write playwright result file", {
+        error: error.message,
+      }).pipe(Effect.as(undefined)),
+    ),
+  );
+
 const buildExpectGuide = (): string =>
   [
     "You validate code changes that were just generated or modified by testing them in a real browser. Your job is to find bugs, verify correctness, audit accessibility, and measure performance before the changes are considered complete.",
     "",
     "You are the quality gate — the agent made code changes, and now you verify they actually work.",
     "",
-    "<subagent_strategy>",
-    "Always run browser interactions inside a subagent/sub-task. This keeps browser state (snapshots, console logs, network captures) isolated from your main conversation, improving context performance and reducing token usage.",
+    "<execution_strategy>",
+    "You can call the expect MCP tools directly or spawn a subagent — pick whichever fits. Use a subagent when you have other work to do in parallel. Call the tools directly when the browser check is the only thing left.",
     "",
-    "CRITICAL: The subagent MUST use the expect MCP tools (open, playwright, screenshot, console_logs, network_requests, performance_metrics, accessibility_audit, close) for all browser interactions. Do NOT use any other browser automation tools. The expect MCP server is the only way to interact with the browser.",
+    "Use the expect MCP tools (open, playwright, screenshot, console_logs, network_requests, performance_metrics, accessibility_audit, close) for browser interactions. Do NOT use other browser automation tools (Playwright MCP, chrome tools, etc.) — use the expect MCP tools.",
     "",
     "Workflow:",
-    "1. Spawn a subagent for browser work. Instruct it to use ONLY the expect MCP tools listed below.",
-    "2. Inside the subagent: use the expect `open` tool to launch a browser and navigate to a URL, interact using `playwright` and `screenshot`, observe with `console_logs` and `network_requests`, audit with `accessibility_audit` and `performance_metrics`, then `close`.",
-    "3. Return only the relevant findings (bugs, evidence, answers) to the main context.",
-    "4. One browser session per subagent. If you need to test a different engine (WebKit, Firefox), spawn a separate subagent.",
-    "</subagent_strategy>",
+    "1. Call the expect MCP tools directly, or spawn a subagent that uses them.",
+    "2. `open` → interact with `playwright` and `screenshot` → observe with `console_logs` and `network_requests` → audit with `accessibility_audit` and `performance_metrics` → `close`.",
+    "3. One browser session at a time. For cross-browser testing (WebKit, Firefox), close first, then open with a different engine.",
+    "</execution_strategy>",
     "",
     "<expect_mcp_tools>",
-    "These are the ONLY tools you should use for browser interactions. They are provided by the expect MCP server. Do NOT use any other browser tools.",
+    "Use these tools for browser interactions. They are provided by the expect MCP server.",
     "",
     "1. open: launch a browser and navigate to a URL. Pass headed=true to show the browser window. Pass cookies=true to reuse local browser cookies. Pass browser='webkit' or browser='firefox' for cross-browser testing. Pass cdp='ws://...' to connect to an existing Chrome instance.",
-    "2. playwright: execute Playwright code in Node.js context. Globals: page (Page), context (BrowserContext), browser (Browser), ref (function: snapshot ref ID → Locator). Use `return` to send values back. Set snapshotAfter=true to auto-snapshot after DOM-changing actions.",
+    "2. playwright: execute Playwright code in Node.js context. Globals: page (Page), context (BrowserContext), browser (Browser), ref (function: snapshot ref ID → Locator). Use `return` to collect data from the page — the response is JSON: { result: <your value>, resultFile: '<path>' }. The result is also written to a tmp file you can read or grep later. Batch multiple actions AND data collection into a single playwright call. Set snapshotAfter=true to auto-snapshot after DOM-changing actions (response adds snapshot alongside result).",
     "3. screenshot: capture page state. Modes: 'snapshot' (ARIA accessibility tree with element refs — preferred for interaction), 'screenshot' (PNG image), 'annotated' (PNG with numbered labels on interactive elements). Pass fullPage=true for full scrollable content.",
     "4. console_logs: get browser console messages. Filter by type ('error', 'warning', 'log'). Pass clear=true to reset after reading.",
     "5. network_requests: get captured HTTP requests with automatic issue detection (4xx/5xx failures, duplicate requests, mixed content). Filter by method, URL, or resource type.",
@@ -74,11 +147,20 @@ const buildExpectGuide = (): string =>
     "Prefer screenshot mode 'snapshot' for observing page state. Use 'screenshot' or 'annotated' only for purely visual checks.",
     "",
     "1. Call screenshot with mode='snapshot' to get the ARIA tree with refs like [ref=e4].",
-    "2. Use ref() in playwright to act on elements: await ref('e3').fill('test@example.com'); await ref('e4').click();",
+    "2. Use ref() in playwright to act on elements AND collect data in a single call:",
+    "   await ref('e3').fill('test@example.com'); await ref('e4').fill('password'); await ref('e5').click();",
+    "   return { title: await page.title(), url: page.url(), errorCount: (await page.$$('.error')).length };",
     "3. Take a new snapshot only when the page structure changes (navigation, modal open/close, new content loaded).",
     "4. Always snapshot first, then use ref() to act. Never guess CSS selectors when refs are available.",
     "",
-    "Batch actions that do NOT change DOM structure into a single playwright call. Do NOT batch across DOM-changing boundaries (dropdown open, modal, dialog, navigation). After a DOM-changing action, take a new snapshot for fresh refs.",
+    "Return value format:",
+    "- No return → 'OK'",
+    "- With return → JSON: { result: <your value>, resultFile: '/tmp/expect-artifacts/playwright-results/result-<id>.json' }",
+    "- With return + snapshotAfter → JSON: { result: <value>, resultFile: '<path>', snapshot: { tree, refs, stats } }",
+    "- snapshotAfter only (no return) → JSON: { snapshot: { tree, refs, stats } }",
+    "The resultFile persists until the session closes. Use it to read or grep collected data across multiple steps.",
+    "",
+    "Batch all actions that share the same page state into a single playwright call — fills, clicks, AND data collection. Do NOT batch across DOM-changing boundaries (dropdown open, modal, dialog, navigation). After a DOM-changing action, use snapshotAfter=true or take a new snapshot for fresh refs.",
     "",
     "Layered interactions (dropdowns, menus, popovers): click trigger, wait briefly, take a NEW snapshot, then click the revealed option. For native <select> elements, use ref('eN').selectOption('value') directly.",
     "",
@@ -186,7 +268,7 @@ export const createBrowserMcpServer = <E>(
     {
       title: "Execute Playwright",
       description:
-        "Execute Playwright code in the Node.js context. Available globals: page (Page), context (BrowserContext), browser (Browser), ref (function: ref ID from snapshot → Playwright Locator). Use `return` to send a value back as JSON. Supports await. Set snapshotAfter=true to automatically take a fresh ARIA snapshot after execution and get updated refs — useful after actions that change the DOM (opening dropdowns, dialogs, navigating).",
+        "Execute Playwright code in the Node.js context. Available globals: page (Page), context (BrowserContext), browser (Browser), ref (function: ref ID from snapshot → Playwright Locator). Supports await. Use `return` to collect data — response is JSON: { result: <your value>, resultFile: '<tmp path>' }. The result file persists until close so you can read or grep it later. With snapshotAfter=true, the response also includes a snapshot field with fresh refs. Without a return value, responds 'OK' (or just the snapshot if snapshotAfter=true).",
       inputSchema: {
         code: z.string().describe("Playwright code to execute"),
         description: z
@@ -248,31 +330,32 @@ export const createBrowserMcpServer = <E>(
             return textResult(`Error: ${codeResult.error}`);
           }
 
+          const hasReturnValue = codeResult.value !== undefined;
+          const fileSystem = yield* FileSystem;
+          const resultFile = hasReturnValue
+            ? yield* writeResultFile(fileSystem, safeJsonStringify(codeResult.value))
+            : undefined;
+
           if (snapshotAfter) {
             const snapshotResult = yield* session.snapshot(sessionData.page);
             yield* session.updateLastSnapshot(snapshotResult);
-            const resultPayload =
-              codeResult.value === undefined
-                ? {
-                    snapshot: {
-                      tree: snapshotResult.tree,
-                      refs: snapshotResult.refs,
-                      stats: snapshotResult.stats,
-                    },
-                  }
-                : {
-                    result: codeResult.value,
-                    snapshot: {
-                      tree: snapshotResult.tree,
-                      refs: snapshotResult.refs,
-                      stats: snapshotResult.stats,
-                    },
-                  };
-            return jsonResult(resultPayload);
+            const snapshotData = {
+              tree: snapshotResult.tree,
+              refs: snapshotResult.refs,
+              stats: snapshotResult.stats,
+            };
+            if (!hasReturnValue) {
+              return jsonResult({ snapshot: snapshotData });
+            }
+            return jsonResult({
+              result: codeResult.value,
+              resultFile,
+              snapshot: snapshotData,
+            });
           }
 
-          if (codeResult.value === undefined) return textResult("OK");
-          return jsonResult(codeResult.value);
+          if (!hasReturnValue) return textResult("OK");
+          return jsonResult({ result: codeResult.value, resultFile });
         }).pipe(Effect.withSpan(`mcp.tool.playwright`)),
       ),
   );
@@ -600,6 +683,14 @@ export const createBrowserMcpServer = <E>(
           }
           const result = yield* session.close();
           if (!result) return textResult("No browser open.");
+          const fileSystem = yield* FileSystem;
+          yield* fileSystem.remove(PLAYWRIGHT_RESULTS_DIR, { recursive: true }).pipe(
+            Effect.catchTag("PlatformError", (error) =>
+              Effect.logDebug("Failed to clean up playwright results", {
+                error: error.message,
+              }),
+            ),
+          );
           const lines = ["Browser closed."];
           if (result.tmpVideoPath) {
             lines.push(`Playwright video: ${result.tmpVideoPath}`);

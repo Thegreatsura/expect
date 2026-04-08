@@ -42,6 +42,7 @@ vi.mock("../src/mcp/install-expect-mcp", () => ({
   formatExpectMcpInstallSummary: vi.fn().mockReturnValue("Expect MCP installed for Claude Code."),
   getSupportedExpectMcpAgents: vi.fn((agents: string[]) => agents),
   getUnsupportedExpectMcpAgents: vi.fn().mockReturnValue([]),
+  inferDistTag: vi.fn().mockReturnValue(undefined),
   installExpectMcpForAgents: vi.fn().mockReturnValue({
     scope: "global",
     selectedAgents: ["claude"],

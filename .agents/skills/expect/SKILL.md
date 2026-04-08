@@ -4,93 +4,61 @@ description: "Use when editing .tsx/.jsx/.css/.html, React components, pages, ro
 license: MIT
 metadata:
   author: millionco
-  version: "2.2.0"
+  version: "2.3.0"
 ---
 
 # Expect
 
-You test code changes in a real browser to find bugs, verify correctness, audit accessibility, and measure performance before claiming work is complete.
+You verify code changes in a real browser before claiming they work. No browser evidence, no completion claim.
 
-**If you haven't run `expect-cli` in this message, you cannot claim the change works.** NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE.
+Use the expect MCP tools (`open`, `playwright`, `screenshot`, etc.) for all browser interactions. Do not use raw browser tools (Playwright MCP, chrome tools, etc.) unless the user explicitly asks.
 
-Always use `expect-cli` instead of raw browser tools (Playwright MCP, chrome tools, browser MCP), unless the user explicitly overrides your decision.
+## Compounding
 
-## Setup Check
+The `playwright` tool takes a `code` string with `ref()` to resolve snapshot refs to Locators. One call can do an entire interaction — fills, clicks, AND data collection. Use that.
 
-Before running any commands, verify `expect-cli` is installed:
+**BAD — 5 tool calls:**
 
-```bash
-expect-cli --version
+```
+screenshot (snapshot)
+playwright: await ref('e3').fill('Jane')
+screenshot (snapshot)                        ← WHY? page didn't change
+playwright: await ref('e5').fill('jane@example.com')
+playwright: await ref('e7').click()
 ```
 
-If the command is not found, install it and add the skill:
+**GOOD — 2 tool calls:**
 
-```bash
-npm install -g expect-cli@latest && expect-cli init -y
+```
+screenshot (snapshot)
+playwright (snapshotAfter=true):
+  await ref('e3').fill('Jane');
+  await ref('e5').fill('jane@example.com');
+  await ref('e7').click();
+  return { title: await page.title(), url: page.url(), errors: (await page.$$('.error')).length };
 ```
 
-Then confirm installation succeeded by re-running `expect-cli --version`. Do not proceed until the command resolves.
+Use `return` to collect data. Response: `{ result: <value>, resultFile: "<tmp path>", snapshot: { tree, refs, stats } }`. The `resultFile` persists until `close` — read or grep it later. Without a return value, responds `"OK"` (or just the snapshot if `snapshotAfter=true`).
 
-## The Command
-
-```bash
-expect-cli -m "[INSTRUCTION] on [URL]" -y --cookies
-```
-
-- `-y` skips interactive review, `--cookies` reuses the user's real browser cookies for authenticated tests
-- Include the URL of the app in the instruction
-- Accessibility and performance are checked automatically. Do not mention them in your instruction.
-
-## Parallel Execution
-
-`expect-cli` takes 1-30 minutes. Your main thread MUST never idle while it runs.
-
-1. **Set shell timeout to at least 1800 seconds** — the default will kill it
-2. **ALWAYS spawn `expect-cli` in a subagent** (Task/Agent tool or background shell with timeout 0 / `&`).
-3. **After spawning, immediately continue working.** Start the next feature, run type-checking and linting in parallel, write docs — whatever is next. Never wait for the subagent to return.
-4. **When testing multiple features, spawn one subagent per feature concurrently.**
+**Re-snapshot only across DOM boundaries.** Fills and hovers don't change page structure — keep using the same refs. Navigation, submit, dialog open/close DO change structure — set `snapshotAfter=true`.
 
 ## Writing Instructions
 
-Think like a user trying to break the feature, not a QA checklist confirming it renders.
-
-**Bad:** `expect-cli -m "Check that the login form renders on http://localhost:5173" -y --cookies`
-**Good:** `expect-cli -m "Submit the login form empty, with invalid email, with wrong password, and with valid credentials. Verify error messages, redirect on success, and console errors on http://localhost:5173" -y --cookies`
-
-**Bad:** `expect-cli -m "Verify the settings page works on http://localhost:5173/settings" -y --cookies`
-**Good:** `expect-cli -m "Change display name to empty string, to a 500-char string, and to a valid name. Toggle every switch off then on. Hit save without changes. Verify toasts, validation errors, and that refreshing persists the update on http://localhost:5173/settings" -y --cookies`
-
-**Bad:** `expect-cli -m "Test the search feature on http://localhost:5173" -y --cookies`
-**Good:** `expect-cli -m "Search with no query, a single character, a query with no results, and a valid query. Click a result, go back, verify the previous query is preserved. Rapid-fire 5 searches and confirm no stale results appear on http://localhost:5173" -y --cookies`
-
-## When Expect Itself Fails
-
-If `expect-cli` itself crashes, hangs, or errors (not a test failure — a tool bug):
-
-1. Re-run with `--verbose` and read the output for stack traces, connection errors, or unexpected exit codes
-2. Check `.expect/logs.md` for structured logs
-3. If confirmed as a tool bug, give the user a pre-filled issue link: `https://github.com/millionco/expect/issues/new?title=Bug:+[description]&body=[error+summary]` — include the command, error output, and `expect-cli --version`
-
-Do not guess at workarounds for tool bugs. Diagnose with `--verbose`, report with a link.
+**Bad:** `"Check that the login form renders on http://localhost:5173"`
+**Good:** `"Submit the login form empty, with invalid email, with wrong password, and with valid credentials. Verify error messages, redirect on success, and console errors on http://localhost:5173"`
 
 ## Before Claiming Completion
 
-You MUST complete every step. A skipped step is a failed task.
-
-1. Spawn `expect-cli -m "[instruction] on [URL]" -y --cookies` in a subagent with an adversarial instruction
-2. Continue working on other tasks while it runs
-3. When the subagent returns, read the full output — check exit code, count failures, read accessibility and performance results
-4. If ANY failure: fix the code, then immediately spawn a NEW `expect-cli` subagent to re-verify. Do not ask. Do not wait. Continue working on other tasks.
-5. Repeat 3-4 until exit 0 with 0 failures
-6. Only then: state the claim WITH the passing evidence
-
-Every re-run is a subagent spawn, not a blocking foreground command. Skip any step = lying, not verifying. No exceptions for "just this once", "it's simple enough", or "I already checked manually".
+1. Verify in a browser with adversarial instructions. Background it if you have other work, run inline if it's the last step.
+2. If a previous test is running on stale code, kill it first. One background test at a time.
+3. Read the full output — check failures, accessibility, performance.
+4. If ANY failure: fix the code, re-verify immediately. No asking, no waiting.
+5. Repeat until 0 failures, then state the claim with passing evidence.
 
 ## Rationalizations
 
-You will reach for these — recognize them and do the opposite:
-- "I'll just wait for this one test" — No. Spawn a subagent. Always.
-- "It'll be quick" — No. Even 30 seconds blocks your main thread. Subagent.
-- "I need the result before I can continue" — No. Continue with other tasks. Read the result when the subagent returns.
-- "I'll run it in the foreground so I can watch" — No. Background it. Read the output when done.
-- "Let me re-run manually to be sure" — No. Spawn a new subagent for the re-run.
+- "I'll make one `playwright` call per action" — No. Whole sequence in one call.
+- "I need a snapshot between fills" — No. Fills don't change DOM. Batch them.
+- "Let me snapshot to see what changed" — Did the page navigate or submit? No? Use `snapshotAfter=true` on the action that does.
+- "I'll spawn a second background test" — No. Kill the stale one first.
+- "I'll run it in the foreground even though I have other work" — Background it. But if the test is the last thing, sync is fine.

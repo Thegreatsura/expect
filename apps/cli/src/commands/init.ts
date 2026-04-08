@@ -16,6 +16,7 @@ import {
   formatExpectMcpInstallSummary,
   getSupportedExpectMcpAgents,
   getUnsupportedExpectMcpAgents,
+  inferDistTag,
   installExpectMcpForAgents,
   selectExpectMcpAgents,
   selectExpectMcpInstallScope,
@@ -161,7 +162,11 @@ export const runInit = async (options: InitOptions = {}) => {
     const scope = await selectExpectMcpInstallScope(options.yes);
     const selectedAgents = await selectExpectMcpAgents(supportedMcpAgents, options.yes, scope);
     const mcpSpinner = spinner("Installing Expect MCP...").start();
-    const installSummary = installExpectMcpForAgents(projectRoot, selectedAgents, { scope });
+    const distTag = inferDistTag(VERSION);
+    const installSummary = installExpectMcpForAgents(projectRoot, selectedAgents, {
+      scope,
+      version: distTag,
+    });
 
     if (
       installSummary.selectedAgents.length > 0 &&

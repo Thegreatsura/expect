@@ -128,6 +128,11 @@ const writeConfig = (
   writeTomlConfig(configPath, partialConfig);
 };
 
+export const inferDistTag = (version: string): string | undefined => {
+  const match = version.match(/^\d+\.\d+\.\d+-([a-zA-Z]+)/);
+  return match ? match[1].toLowerCase() : undefined;
+};
+
 const normalizeVersionSpecifier = (version?: string): string => {
   if (version === undefined || version.trim() === "") return "latest";
   const trimmedVersion = version.trim();

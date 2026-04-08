@@ -3,6 +3,7 @@ import {
   buildExpectMcpServerConfig,
   formatExpectMcpVersion,
   getExpectMcpPackageSpecifier,
+  inferDistTag,
 } from "../src/mcp/install-expect-mcp";
 
 describe("update", () => {
@@ -27,6 +28,28 @@ describe("update", () => {
 
     it("preserves dist-tags", () => {
       expect(formatExpectMcpVersion("canary")).toBe("canary");
+    });
+  });
+
+  describe("inferDistTag", () => {
+    it("returns undefined for stable versions", () => {
+      expect(inferDistTag("0.0.30")).toBeUndefined();
+    });
+
+    it("returns the dist tag for pre-release versions", () => {
+      expect(inferDistTag("0.0.30-canary.1")).toBe("canary");
+    });
+
+    it("returns the dist tag for other pre-release labels", () => {
+      expect(inferDistTag("1.2.3-beta.5")).toBe("beta");
+    });
+
+    it("normalizes uppercase tags to lowercase", () => {
+      expect(inferDistTag("0.0.30-RC.1")).toBe("rc");
+    });
+
+    it("returns undefined for dev", () => {
+      expect(inferDistTag("dev")).toBeUndefined();
     });
   });
 
