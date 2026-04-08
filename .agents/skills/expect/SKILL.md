@@ -49,16 +49,13 @@ Use `return` to collect data. Response: `{ result: <value>, resultFile: "<tmp pa
 
 ## Before Claiming Completion
 
-1. Verify in a browser with adversarial instructions. Background it if you have other work, run inline if it's the last step.
-2. If a previous test is running on stale code, kill it first. One background test at a time.
-3. Read the full output — check failures, accessibility, performance.
-4. If ANY failure: fix the code, re-verify immediately. No asking, no waiting.
-5. Repeat until 0 failures, then state the claim with passing evidence.
+1. Verify in a browser with adversarial instructions.
+2. Read the full output — check failures, accessibility, performance.
+3. If ANY failure: fix the code, re-verify immediately. No asking, no waiting.
+4. Repeat until 0 failures, then state the claim with passing evidence.
 
 ## Rationalizations
 
 - "I'll make one `playwright` call per action" — No. Whole sequence in one call.
 - "I need a snapshot between fills" — No. Fills don't change DOM. Batch them.
 - "Let me snapshot to see what changed" — Did the page navigate or submit? No? Use `snapshotAfter=true` on the action that does.
-- "I'll spawn a second background test" — No. Kill the stale one first.
-- "I'll run it in the foreground even though I have other work" — Background it. But if the test is the last thing, sync is fine.

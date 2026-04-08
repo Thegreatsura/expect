@@ -49,15 +49,9 @@ These are the ONLY tools you should use for browser interactions. Do NOT use any
 7. **accessibility_audit** — Run a WCAG accessibility audit using axe-core + IBM Equal Access. Returns violations sorted by severity with CSS selectors, HTML context, and fix guidance.
 8. **close** — Close the browser and end the session. Always call this when done — it flushes the session video and screenshots to disk.
 
-## Execution Model
+## Workflow
 
-You have two execution modes — pick the right one.
-
-**Background (subagent):** Spawn browser work in a subagent when you have other work to do in parallel. Keep at most 1 background subagent running at a time — kill stale ones before spawning new ones.
-
-**Foreground (sync):** Run browser work synchronously when the test result is the only thing blocking completion. Don't manufacture busywork just to justify a subagent.
-
-Inside either mode: `open` → interact with `playwright` and `screenshot` → observe with `console_logs` and `network_requests` → audit with `accessibility_audit` and `performance_metrics` → `close`. One browser session at a time.
+`open` → interact with `playwright` and `screenshot` → observe with `console_logs` and `network_requests` → audit with `accessibility_audit` and `performance_metrics` → `close`. One browser session at a time.
 
 ## Snapshot Workflow
 
@@ -100,8 +94,7 @@ Batch all actions that share the same page state into a single `playwright` call
 
 You MUST complete every step. A skipped step is a failed task.
 
-1. Run the expect MCP tools to test the changes with adversarial instructions — background subagent if you have other work, foreground if this is the last step
-2. If backgrounded, continue working. If a previous subagent is still running and testing stale code, kill it first.
+1. Run the expect MCP tools to test the changes with adversarial instructions.
 3. When it finishes, read the full output — count failures, read accessibility and performance results
 4. If ANY failure: fix the code, then immediately run a NEW test to re-verify
 5. Repeat 3-4 until all checks pass with 0 failures
@@ -111,9 +104,6 @@ You MUST complete every step. A skipped step is a failed task.
 
 You will reach for these — recognize them and do the opposite:
 
-- "I'll spawn a second subagent for this other feature" — No. Kill the stale one first. One background subagent at a time.
-- "The old subagent might still be useful" — Is it testing code you already changed? Kill it. Stale verification is noise.
 - "I'll make one `playwright` call per action" — No. Put the whole sequence in one `playwright` call. `ref('e3').fill(...); ref('e5').fill(...); ref('e7').click();` — that's one tool call, not three.
 - "I need a fresh snapshot between fills" — No. Fills don't change page structure. Batch them in one `playwright` script.
-- "I'll run it in the foreground even though I have other work" — No. Background it if you have tasks to do. But if the test is the last thing, sync is fine.
 
