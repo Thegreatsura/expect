@@ -1191,7 +1191,7 @@ export default function HomePage() {
         />
         <div className="w-full max-w-112.75 relative px-4 sm:px-0">
           <div className="flex justify-center sm:block">
-            <div className="scale-[0.82] sm:scale-[1.15] origin-top sm:origin-top-left translate-x-[6px] sm:translate-x-0">
+            <div className="scale-[0.9] sm:scale-[1.15] origin-top sm:origin-top-left translate-x-[27px] sm:translate-x-0">
               <TerminalIllustration />
             </div>
           </div>
