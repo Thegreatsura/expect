@@ -539,7 +539,7 @@ function BrowserPreview({
                  * https://app.paper.design/file/01KN3QGZ2REZDFZ3FZCNWXEANN?page=01KN3QGZ2RGSW995MW6F0D7HSJ&node=5IL-0
                  * on Apr 8, 2026
                  */}
-                <div className="w-19.5 h-6.25 shrink-0 rounded-full border border-solid border-[color(display-p3_0.358_0.627_1)] bg-[color(display-p3_0.263_0.575_0.997)] [outline:1px_solid_color(display-p3_0.263_0.575_0.997)]" />
+                <div className="w-18 h-6 shrink-0 rounded-full border border-solid border-[color(display-p3_0.358_0.627_1)] bg-[color(display-p3_0.263_0.575_0.997)] [outline:1px_solid_color(display-p3_0.263_0.575_0.997)]" />
               </div>
             </motion.div>
           )}
