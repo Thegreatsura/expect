@@ -314,7 +314,7 @@ function TerminalContent({
               update
             </div>
             <div className="[letter-spacing:-0.125px] [white-space-collapse:preserve] inline-block w-max text-[#1F1F1F] font-['JetBrains_Mono',system-ui,sans-serif] shrink-0 text-[12.5px]/4.5">
-              (signup.tsx)
+              (login.tsx)
             </div>
           </div>
         )}
@@ -346,16 +346,12 @@ function TerminalContent({
       )}
       {showExpect && (
         <div className="flex pl-0.5 items-start gap-1.25 mt-4">
-          <div className="inline-block text-[#0074F9] font-['BerkeleyMono-Regular','Berkeley_Mono',system-ui,sans-serif] shrink-0 text-[12.5px]/4.5">
+          <div className="inline-block text-[#E07800] font-['BerkeleyMono-Regular','Berkeley_Mono',system-ui,sans-serif] shrink-0 text-[12.5px]/4.5">
             ⏺
           </div>
           <div className="flex flex-col">
-            <div className="text-[#1F1F1F] font-['JetBrains_Mono',system-ui,sans-serif] font-semibold shrink-0 text-[12.5px]/4.5">
-              changes detected,
-            </div>
             <div className="font-['JetBrains_Mono',system-ui,sans-serif] font-semibold shrink-0 text-[12.5px]/4.5">
-              <span className="text-[#1F1F1F]">activating </span>
-              <span className="text-[#1A6DE0]">Expect</span>
+              <span className="text-[#E07800]">/expect</span>
             </div>
           </div>
         </div>
@@ -393,7 +389,7 @@ function TerminalContent({
               update
             </div>
             <div className="[letter-spacing:-0.125px] [white-space-collapse:preserve] inline-block w-max text-[#1F1F1F] font-['JetBrains_Mono',system-ui,sans-serif] shrink-0 text-[12.5px]/4.5">
-              (signup.tsx)
+              (login.tsx)
             </div>
           </div>
           <div className="flex flex-col w-full rounded-[3px] pt-1.25 pb-1.5 bg-[#D7F2D3] px-2">
@@ -1353,11 +1349,11 @@ export default function HomePage() {
              */}
             <div className="[font-synthesis:none] flex w-full min-w-0 flex-col items-stretch gap-2.5 antialiased p-0">
               <div className="flex w-full min-w-0 items-start gap-1.5">
-                <div className="h-5.75 text-[color(display-p3_0.722_0.722_0.722)] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium shrink-0 text-[16px]/5.75">
+                <div className="h-6.75 text-[color(display-p3_0.722_0.722_0.722)] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium shrink-0 text-[16px]/6.75">
                   •
                 </div>
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1.5">
-                  <div className="text-[#5a5a5a] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[16px]/5.75">
+                  <div className="text-[#5a5a5a] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[16px]/6.75">
                     Run
                   </div>
                   <div
@@ -1374,38 +1370,38 @@ export default function HomePage() {
                   >
                     <div
                       ref={expectRunCommandRef}
-                      className="text-[#7a4a08] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[16px]/5.75"
+                      className="text-[#7a4a08] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[16px]/6.75"
                     >
                       /expect
                     </div>
                   </div>
-                  <div className="text-[#5a5a5a] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[16px]/5.75">
+                  <div className="text-[#5a5a5a] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[16px]/6.75">
                     inside Claude Code, Codex,
                   </div>
                   <a
                     href="https://github.com/millionco/expect/tree/first-minor?tab=readme-ov-file#supported-agents"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="cursor-pointer text-[color(display-p3_0.1632_0.5398_0.9268)] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium underline decoration-[color(display-p3_0.669_0.821_1)] decoration-2 underline-offset-[5px] text-[16px]/5.75 transition-[text-decoration-color] duration-200 ease-out hover:decoration-[color(display-p3_0.48_0.66_0.92)]"
+                    className="cursor-pointer text-[color(display-p3_0.1632_0.5398_0.9268)] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium underline decoration-[color(display-p3_0.669_0.821_1)] decoration-2 underline-offset-[5px] text-[16px]/6.75 transition-[text-decoration-color] duration-200 ease-out hover:decoration-[color(display-p3_0.48_0.66_0.92)]"
                   >
                     and more
                   </a>
                 </div>
               </div>
               <div className="flex w-full min-w-0 items-start gap-1.5">
-                <div className="h-5.75 text-[color(display-p3_0.722_0.722_0.722)] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium shrink-0 text-[16px]/5.75">
+                <div className="h-6.75 text-[color(display-p3_0.722_0.722_0.722)] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium shrink-0 text-[16px]/6.75">
                   •
                 </div>
-                <div className="min-w-0 flex-1 text-[#5a5a5a] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[16px]/5.75">
+                <div className="min-w-0 flex-1 text-[#5a5a5a] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[16px]/6.75">
                   Expect spawns subagents simulating real logged-in users to find issues and
                   regressions
                 </div>
               </div>
               <div className="flex w-full min-w-0 items-start gap-1.5">
-                <div className="h-5.75 text-[color(display-p3_0.722_0.722_0.722)] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium shrink-0 text-[16px]/5.75">
+                <div className="h-6.75 text-[color(display-p3_0.722_0.722_0.722)] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium shrink-0 text-[16px]/6.75">
                   •
                 </div>
-                <div className="min-w-0 flex-1 text-[#5a5a5a] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[16px]/5.75">
+                <div className="min-w-0 flex-1 text-[#5a5a5a] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[16px]/6.75">
                   Your agent will fix any issues Expect finds, then re-run to verify
                 </div>
               </div>
@@ -1463,7 +1459,7 @@ export default function HomePage() {
           <div className="left-0 top-0 w-full min-w-0 [white-space-collapse:preserve] relative text-[#3F3F3F] font-['OpenRunde-Semibold','Open_Runde',system-ui,sans-serif] font-semibold text-[18px]/5.75 mt-14" style={{ marginBottom: "10px" }}>
             MCP clients
           </div>
-          <div className="[letter-spacing:0em] max-w-102 [white-space-collapse:preserve] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[16px]/5.75 text-[#707070] mt-1.5">
+          <div className="[letter-spacing:0em] max-w-102 [white-space-collapse:preserve] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[16px]/6.75 text-[#707070] mt-1.5">
             Expect supports all MCP clients that implement the stdio transport. Below are configuration examples for popular clients.
           </div>
           <div
@@ -1579,15 +1575,15 @@ export default function HomePage() {
                 question: "What is Expect?",
                 answer: (
                   <div className="flex flex-col mt-1.5">
-                    <div className="[letter-spacing:0em] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[14px]/5.5 text-[#858585] mb-2.5">
+                    <div className="[letter-spacing:0em] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[15px]/5.5 text-[#858585] mb-2.5">
                       A skill that reads your git changes, generates a test plan, and runs it in a
                       real browser with Playwright.
                     </div>
-                    <div className="[letter-spacing:0em] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[14px]/5.5 text-[#858585] mb-2.5">
+                    <div className="[letter-spacing:0em] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[15px]/5.5 text-[#858585] mb-2.5">
                       It hooks into your existing agent (Claude Code, Codex, Cursor) and runs
                       entirely on your machine.
                     </div>
-                    <div className="[letter-spacing:0em] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[14px]/5.5 text-[#858585] mb-2.5">
+                    <div className="[letter-spacing:0em] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[15px]/5.5 text-[#858585] mb-2.5">
                       It checks for:
                     </div>
                     <div className="flex items-center justify-between pt-2 pb-2">
@@ -1759,7 +1755,7 @@ export default function HomePage() {
                 >
                   <div className="overflow-hidden">
                     {typeof faq.answer === "string" && (
-                      <div className="[letter-spacing:0em] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[14px]/5.5 text-[#858585] whitespace-pre-line mt-1.5">
+                      <div className="[letter-spacing:0em] font-['OpenRunde-Medium','Open_Runde',system-ui,sans-serif] font-medium text-[15px]/5.5 text-[#858585] whitespace-pre-line mt-1.5">
                         {faq.answer}
                       </div>
                     )}
