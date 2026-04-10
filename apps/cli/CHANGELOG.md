@@ -1,5 +1,11 @@
 # expect-cli
 
+## 0.1.3
+
+### Patch Changes
+
+- Pin @effect/platform-node-shared to exact version to fix ERR_MODULE_NOT_FOUND when installing via npx
+
 ## 0.1.2
 
 ### Patch Changes
